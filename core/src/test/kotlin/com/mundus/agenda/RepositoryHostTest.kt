@@ -79,6 +79,48 @@ class RepositoryHostTest {
     }
 
     @Test
+    fun quickEntryPreviewThenCreate() = runBlocking {
+        val dataDir = Files.createTempDirectory("agenda-host-test").toString()
+        try {
+            EngineAgendaRepository(dataDir).use { repository ->
+                // The real Engine path that crashed on the "+" sheet: the
+                // UniFFI quick_entry_preview JSON decodes into the Kotlin
+                // QuickEntryPreview, then quickEntry writes the task.
+                val preview =
+                    repository.quickEntryPreview(
+                        "купить молоко завтра",
+                        null,
+                        false,
+                        false,
+                        null,
+                        false,
+                    )
+                assertEquals("купить молоко", preview.title)
+                assertEquals(
+                    LocalDate.now().plusDays(1).toString(),
+                    preview.scheduledDate,
+                )
+
+                repository.quickEntry(
+                    "купить молоко завтра",
+                    null,
+                    null,
+                    false,
+                    false,
+                    null,
+                    false,
+                )
+                val board = (repository.boardFlow().first() as BoardState.Ready).board
+                assertTrue(
+                    board.list(SmartList.WEEK).any { it.title == "купить молоко" }
+                )
+            }
+        } finally {
+            java.io.File(dataDir).deleteRecursively()
+        }
+    }
+
+    @Test
     fun quickEntrySchedulesDate() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
         try {

@@ -1,6 +1,7 @@
 package com.mundus.agenda
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
 /**
  * Read surface every screen consumes. `boardFlow` emits a fresh [Board]
@@ -15,6 +16,7 @@ class WriteConflict(message: String) : Exception(message)
 
 /** The decision chips the quick-entry sheet shows while typing
  * (agenda-core `quick_entry_decision` — UI renders, never decides). */
+@Serializable
 data class QuickEntryPreview(
     val title: String,
     val scheduledDate: String? = null,
