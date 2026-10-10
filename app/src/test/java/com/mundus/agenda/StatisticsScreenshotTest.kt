@@ -3,6 +3,7 @@ package com.mundus.agenda
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.mundus.agenda.ui.AgendaTheme
@@ -69,5 +70,28 @@ class StatisticsScreenshotTest {
             }
         }
         assertTrue("share card rendered blank", opaque > 50)
+    }
+
+    @Test
+    fun `heatmap scrolls horizontally`() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = false) {
+                StatisticsScreen(board = board, today = LocalDate.of(2026, 10, 12))
+            }
+        }
+        val hscroll =
+            androidx.compose.ui.test.SemanticsMatcher("hscroll") {
+                it.config.getOrElseNullable(
+                    androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange
+                ) { null } != null
+            }
+        val hnode = composeTestRule.onNode(hscroll).fetchSemanticsNode()
+        composeTestRule.onNode(hscroll).performScrollToIndex(40)
+        composeTestRule.waitForIdle()
+        val offset =
+            hnode.config.getOrElseNullable(
+                androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange
+            ) { null }!!.value()
+        assertTrue("scroll offset after scrollToIndex(40) = $offset", offset > 100f)
     }
 }

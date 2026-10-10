@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,9 +13,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -211,14 +213,36 @@ fun StatisticsScreen(
             modifier = Modifier.padding(top = 28.dp),
         )
 
-        // Heatmap + month captions, scrollable (statistics.rs:100-197).
-        Column(Modifier.padding(top = 12.dp).horizontalScroll(rememberScrollState())) {
-            HeatmapGrid(heat, today)
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                for (w in 0 until heat.weeks) {
+        // Heatmap + month captions, lazy-scrolled (statistics.rs:100-197).
+        // Each item is one week column with its caption under it.
+        LazyRow(
+            Modifier.padding(top = 12.dp).height(CELL * 7 + GAP * 6 + 8.dp + 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(GAP),
+        ) {
+            items(heat.weeks) { w ->
+                Column(verticalArrangement = Arrangement.spacedBy(GAP)) {
+                    for (row in 0 until 7) {
+                        val date = heat.date(w, row)
+                        if (!date.isAfter(today)) {
+                            val v = heat.value(w, row)
+                            val bg =
+                                if (v <= 0) c.fg(0.06f) else c.accent.copy(alpha = heat.alpha(v))
+                            val tip = "$v задач ${date.dayOfMonth} ${MONTH_LONG[date.monthValue - 1]}"
+                            Box(
+                                Modifier
+                                    .size(CELL)
+                                    .clip(RoundedCornerShape(2.5.dp))
+                                    .background(bg)
+                                    .semanticsTooltip(tip)
+                            )
+                        } else {
+                            // Above today the column shrinks — the grid ends at today.
+                            Box(Modifier.size(CELL))
+                        }
+                    }
                     // Cell-width anchor; the label spills right into the
                     // following columns (months are ≥4 weeks apart).
-                    Box(Modifier.width(CELL)) {
+                    Box(Modifier.width(CELL).padding(top = 8.dp - GAP)) {
                         Text(
                             heat.monthLabels[w],
                             style = AgendaType.label.copy(fontSize = 10.sp),
@@ -228,32 +252,6 @@ fun StatisticsScreen(
                             modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true),
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HeatmapGrid(heat: Heatmap, today: LocalDate) {
-    val c = AgendaTheme.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-        for (w in 0 until heat.weeks) {
-            Column(verticalArrangement = Arrangement.spacedBy(GAP)) {
-                for (row in 0 until 7) {
-                    val date = heat.date(w, row)
-                    if (date.isAfter(today)) break // the grid ends at today
-                    val v = heat.value(w, row)
-                    val bg =
-                        if (v <= 0) c.fg(0.06f) else c.accent.copy(alpha = heat.alpha(v))
-                    val tip = "$v задач ${date.dayOfMonth} ${MONTH_LONG[date.monthValue - 1]}"
-                    Box(
-                        Modifier
-                            .size(CELL)
-                            .clip(RoundedCornerShape(2.5.dp))
-                            .background(bg)
-                            .semanticsTooltip(tip)
-                    )
                 }
             }
         }
