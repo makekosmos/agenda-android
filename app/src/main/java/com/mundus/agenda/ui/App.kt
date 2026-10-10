@@ -200,7 +200,6 @@ fun AgendaHome(
             onToggle = { t -> run { repository?.toggleComplete(t) } },
             onTrash = { t -> run { repository?.setTrashed(t, true) } },
             onRestore = { t -> run { repository?.setTrashed(t, false) } },
-            onMoveToWeek = { t -> run { repository?.moveToWeek(t) } },
             onProjectOpen = { p -> navigate(Route.Project(p.id)) },
             onProjectRename = { p ->
                 renameDraft = p.title

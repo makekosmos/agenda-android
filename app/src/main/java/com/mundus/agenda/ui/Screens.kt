@@ -77,7 +77,6 @@ class TaskActions(
     val onToggle: (Task) -> Unit = {},
     val onTrash: (Task) -> Unit = {},
     val onRestore: (Task) -> Unit = {},
-    val onMoveToWeek: (Task) -> Unit = {},
     // Project actions — the desktop sidebar right-click menu
     // (chrome.rs:184-215) and the logbook row menu (logbook.rs:39-63).
     val onProjectOpen: (com.mundus.agenda.Project) -> Unit = {},
@@ -108,8 +107,8 @@ private fun DateChip(text: String, overdue: Boolean) {
  * Task row in the desktop language (rows/task.rs): status ring in a 20dp
  * cell on the left grid line, one-line title, muted meta, hairline
  * separator below. Long-press opens the same context menu as desktop
- * right-click (Восстановить in trash, Удалить otherwise, «На неделю» on
- * overdue).
+ * right-click (Восстановить in trash, Удалить otherwise; no
+ * reschedule — date UI removed per Jack, p4-fix).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -187,9 +186,6 @@ fun TaskRow(
             if (task.isTrashed) {
                 AMenuItem("Восстановить") { menuOpen = false; actions.onRestore(task) }
             } else {
-                if (dateView.overdue) {
-                    AMenuItem("На неделю") { menuOpen = false; actions.onMoveToWeek(task) }
-                }
                 AMenuItem("Удалить") { menuOpen = false; actions.onTrash(task) }
             }
         }

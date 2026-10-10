@@ -117,21 +117,4 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-dark.png")
     }
 
-    /** The date dropdown open on the edit sheet — DropKind::Date menu. */
-    @Test
-    fun dateDropdownLight() {
-        composeTestRule.setContent {
-            AgendaTheme(darkTheme = false) {
-                AgendaHome(
-                    board = board,
-                    repository = FakeRepository(),
-                    initialEditTaskId = "dev-today-2",
-                )
-            }
-        }
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Дата").performClick()
-        composeTestRule.waitForIdle()
-        composeTestRule.onRoot().captureRoboImage("roborazzi/datedropdown-light.png")
-    }
 }
