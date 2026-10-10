@@ -26,7 +26,10 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,6 +38,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.SmartList
+import com.mundus.agenda.WriteConflict
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -102,20 +107,49 @@ fun AgendaApp(repository: BoardRepository) {
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-        is com.mundus.agenda.BoardState.Ready -> AgendaHome(s.board)
+        is com.mundus.agenda.BoardState.Ready -> AgendaHome(s.board, repository)
     }
 }
 
-/** Route-free content root: Roborazzi tests render this with a fixed board. */
+/** Route-free content root: Roborazzi tests render this with a fixed board
+ * and no repository — write actions stay inert. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaHome(
     board: Board,
+    repository: BoardRepository? = null,
     initialRoute: Route = Route.List(SmartList.INBOX),
+    initialCreate: Boolean = false,
+    initialEditTaskId: String? = null,
 ) {
     var route by rememberSaveable { mutableStateOf(routeKey(initialRoute)) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
+    var editingTaskId by rememberSaveable { mutableStateOf(initialEditTaskId) }
+
+    // Every write goes through this boundary: the engine write itself is
+    // local (optimistic by construction), errors land as a quiet snackbar.
+    fun run(op: suspend () -> Unit) {
+        scope.launch {
+            try {
+                op()
+            } catch (_: WriteConflict) {
+                snackbarHostState.showSnackbar("Задача изменилась на другом устройстве")
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar("Не удалось сохранить")
+            }
+        }
+    }
+    val actions =
+        TaskActions(
+            onOpen = { editingTaskId = it.id },
+            onToggle = { t -> run { repository?.toggleComplete(t) } },
+            onTrash = { t -> run { repository?.setTrashed(t, true) } },
+            onRestore = { t -> run { repository?.setTrashed(t, false) } },
+            onMoveToWeek = { t -> run { repository?.moveToWeek(t) } },
+        )
 
     fun back() {
         route = routeKey(Route.List(SmartList.INBOX))
@@ -154,6 +188,12 @@ fun AgendaHome(
         },
     ) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { createOpen = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "Новая задача")
+                }
+            },
             topBar = {
                 TopAppBar(
                     title = {
@@ -188,15 +228,40 @@ fun AgendaHome(
         ) { padding ->
             Surface(modifier = Modifier.fillMaxSize().padding(padding)) {
                 when (val r = current) {
-                    is Route.List -> TaskListScreen(board = board, list = r.list)
+                    is Route.List ->
+                        TaskListScreen(board = board, list = r.list, actions = actions)
                     is Route.Project ->
                         ProjectScreen(
                             board = board,
                             projectId = r.id,
                             hideProjectMeta = true,
+                            actions = actions,
                         )
                 }
             }
+        }
+    }
+
+    // Desktop quick-entry/panel: create from the FAB, edit on row tap.
+    if (createOpen) {
+        QuickEntrySheet(
+            board = board,
+            repository = repository,
+            editing = null,
+            onDismiss = { createOpen = false },
+            run = ::run,
+            initialWeek = current == Route.List(SmartList.WEEK),
+        )
+    }
+    editingTaskId?.let { id ->
+        board.task(id)?.let { task ->
+            QuickEntrySheet(
+                board = board,
+                repository = repository,
+                editing = task,
+                onDismiss = { editingTaskId = null },
+                run = ::run,
+            )
         }
     }
 }

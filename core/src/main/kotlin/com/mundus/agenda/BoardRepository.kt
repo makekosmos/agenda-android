@@ -13,6 +13,17 @@ import kotlinx.coroutines.flow.Flow
  * write was NOT applied — the caller reloads and shows a snackbar. */
 class WriteConflict(message: String) : Exception(message)
 
+/** The decision chips the quick-entry sheet shows while typing
+ * (agenda-core `quick_entry_decision` — UI renders, never decides). */
+data class QuickEntryPreview(
+    val title: String,
+    val scheduledDate: String? = null,
+    val projectId: String? = null,
+    val status: String = "inbox",
+    val isToday: Boolean = false,
+    val isSomeday: Boolean = false,
+)
+
 interface BoardRepository : AutoCloseable {
     fun boardFlow(): Flow<BoardState>
 
@@ -54,6 +65,22 @@ interface BoardRepository : AutoCloseable {
 
     /** Trash / restore (desktop `TrashTodo` / `RestoreTodo`). */
     suspend fun setTrashed(task: Task, trashed: Boolean)
+
+    suspend fun quickEntryPreview(
+        rawTitle: String,
+        selectedDate: String?,
+        week: Boolean,
+        someday: Boolean,
+        projectId: String?,
+        projectTouched: Boolean,
+    ): QuickEntryPreview
+
+    /** Desktop date-property label for a picked day («Сегодня» /
+     * «Следующая неделя» / «18 сент»). */
+    suspend fun dayLabel(date: String): String
+
+    /** Desktop `next_monday_key` — the «Следующая неделя» target. */
+    suspend fun nextMondayKey(): String
 
     override fun close() {}
 }

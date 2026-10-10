@@ -224,4 +224,44 @@ class FakeRepository : BoardRepository {
     override suspend fun editTitleNotes(task: Task, title: String, notes: String?) {}
 
     override suspend fun setTrashed(task: Task, trashed: Boolean) {}
+
+    override suspend fun quickEntryPreview(
+        rawTitle: String,
+        selectedDate: String?,
+        week: Boolean,
+        someday: Boolean,
+        projectId: String?,
+        projectTouched: Boolean,
+    ): QuickEntryPreview {
+        // Enough of the real parser for screenshots: «завтра» resolves to
+        // the next day and @Релиз… to the release project.
+        var title = rawTitle
+        var date = selectedDate
+        if ("завтра" in rawTitle && selectedDate == null) {
+            title = rawTitle.replace("завтра", "").trim()
+            date = "2026-10-13"
+        }
+        var pid = projectId
+        val mention = Regex("@(.+)$").find(rawTitle)?.groupValues?.get(1)?.trim()
+        if (projectId == null && mention != null) {
+            title = rawTitle.replace(Regex("@.+$"), "").trim()
+            pid = projects.firstOrNull { it.title == mention }?.id
+        }
+        return QuickEntryPreview(
+            title = title,
+            scheduledDate = date,
+            projectId = pid,
+            isToday = week,
+            isSomeday = someday,
+        )
+    }
+
+    override suspend fun dayLabel(date: String) =
+        when (date) {
+            day -> "Сегодня"
+            "2026-10-19" -> "Следующая неделя"
+            else -> java.time.LocalDate.parse(date).let { "${it.dayOfMonth} окт" }
+        }
+
+    override suspend fun nextMondayKey() = "2026-10-19"
 }

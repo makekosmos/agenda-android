@@ -359,6 +359,41 @@ class EngineAgendaRepository(
         }
     }
 
+    override suspend fun quickEntryPreview(
+        rawTitle: String,
+        selectedDate: String?,
+        week: Boolean,
+        someday: Boolean,
+        projectId: String?,
+        projectTouched: Boolean,
+    ): QuickEntryPreview = withContext(Dispatchers.IO) {
+        val (today, offset) = localDay()
+        val (projects, _) = projectsAndTags()
+        json.decodeFromString(
+            quickEntryPreview(
+                rawTitle,
+                selectedDate,
+                week,
+                someday,
+                projectId,
+                projectTouched,
+                json.encodeToString(projects),
+                today,
+                offset,
+            )
+        )
+    }
+
+    override suspend fun dayLabel(date: String): String = withContext(Dispatchers.IO) {
+        val (today, offset) = localDay()
+        dayLabel(date, today, offset)
+    }
+
+    override suspend fun nextMondayKey(): String = withContext(Dispatchers.IO) {
+        val (today, offset) = localDay()
+        nextMondayKey(today, offset)
+    }
+
     override fun close() {
         if (engineLazy.isInitialized()) engineLazy.value.shutdown()
     }

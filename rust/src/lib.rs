@@ -510,3 +510,68 @@ pub fn task_status_name(todo_json: String) -> Result<String, AgendaError> {
         .map(|s| s.trim_matches('"').to_string())
         .map_err(|e| AgendaError::Mapping(e.to_string()))
 }
+
+/// Quick-entry draft preview (the chips the sheet shows while typing):
+/// the agenda-core decision fields only — the UI renders, never decides.
+#[uniffi::export]
+#[allow(clippy::too_many_arguments)]
+pub fn quick_entry_preview(
+    raw_title: String,
+    selected_date: Option<String>,
+    week: bool,
+    someday: bool,
+    project_id: Option<String>,
+    project_touched: bool,
+    projects_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let projects: Vec<agenda_core::Project> =
+        serde_json::from_str(&projects_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let d = agenda_core::quick_entry_decision(
+        raw_title.trim(),
+        selected_date,
+        week,
+        someday,
+        project_id,
+        project_touched,
+        &projects,
+        &day,
+    );
+    Ok(json!({
+        "title": d.title,
+        "scheduledDate": d.scheduled_date,
+        "projectId": d.project_id,
+        "status": d.status,
+        "isToday": d.is_today,
+        "isSomeday": d.is_someday,
+    })
+    .to_string())
+}
+
+/// Date property labels exactly as desktop renders them: «Сегодня» for the
+/// current day, «Следующая неделя» for next Monday, «18 сент» otherwise.
+#[uniffi::export]
+pub fn day_label(
+    date: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    Ok(if date == day.today_key() {
+        "Сегодня".to_string()
+    } else if Some(&date) == day.next_monday_key().as_ref() {
+        "Следующая неделя".to_string()
+    } else {
+        agenda_core::fmt_day_month(&date)
+    })
+}
+
+/// The «Следующая неделя» target — desktop `next_monday_key`.
+#[uniffi::export]
+pub fn next_monday_key(today: String, utc_offset_seconds: i32) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    day.next_monday_key()
+        .ok_or_else(|| AgendaError::Invalid("no next monday".into()))
+}

@@ -4,7 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.mundus.agenda.ui.AgendaHome
@@ -67,4 +69,64 @@ class ScreenshotTest {
 
     @Test fun drawerLight() = drawerShot("drawer-light", false)
     @Test fun drawerDark() = drawerShot("drawer-dark", true)
+
+    @Test
+    fun quickEntryLight() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = false) {
+                AgendaHome(board = board, repository = FakeRepository(), initialCreate = true)
+            }
+        }
+        composeTestRule.onNodeWithText("Новая задача").performTextInput("купить молоко завтра")
+        composeTestRule.mainClock.advanceTimeBy(600)
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-light.png")
+    }
+
+    @Test
+    fun quickEntryDark() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = true) {
+                AgendaHome(board = board, repository = FakeRepository(), initialCreate = true)
+            }
+        }
+        composeTestRule.onNodeWithText("Новая задача").performTextInput("купить молоко завтра")
+        composeTestRule.mainClock.advanceTimeBy(600)
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-dark.png")
+    }
+
+    private fun editShot(name: String, dark: Boolean) {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = dark) {
+                AgendaHome(
+                    board = board,
+                    repository = FakeRepository(),
+                    initialEditTaskId = "dev-checklist-1",
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun editLight() {
+        editShot("edit-light", false)
+        composeTestRule.onRoot().captureRoboImage("roborazzi/edit-light.png")
+    }
+
+    @Test
+    fun editDark() {
+        editShot("edit-dark", true)
+        composeTestRule.onRoot().captureRoboImage("roborazzi/edit-dark.png")
+    }
+
+    @Test
+    fun rescheduleLight() {
+        // The date property dropdown open — the desktop DropKind::Date rows.
+        editShot("reschedule-light", false)
+        composeTestRule.onNodeWithText("Дата").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/reschedule-light.png")
+    }
 }

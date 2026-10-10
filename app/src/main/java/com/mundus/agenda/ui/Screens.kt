@@ -1,7 +1,9 @@
 package com.mundus.agenda.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +24,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,8 +86,20 @@ private fun EmptyState(list: SmartList) {
  * accent-fg, Canceled = muted ring + ×, Started = warn ring + half fill,
  * everything else a plain muted ring.
  */
+/** Write actions a task row exposes — no-ops by default so Roborazzi
+ * boards render without a repository. */
+class TaskActions(
+    val onOpen: (Task) -> Unit = {},
+    val onToggle: (Task) -> Unit = {},
+    val onTrash: (Task) -> Unit = {},
+    val onRestore: (Task) -> Unit = {},
+    val onMoveToWeek: (Task) -> Unit = {},
+)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CheckRing(task: Task) {
+private fun CheckRing(task: Task, onToggle: (Task) -> Unit = {}) {
+    val toggle = { if (!task.isTrashed) onToggle(task) }
     val status =
         when {
             task.isCompleted -> "done"
@@ -88,6 +108,7 @@ private fun CheckRing(task: Task) {
             else -> "open"
         }
     val warnColor = AgendaTheme.extra.warn
+    Box(modifier = Modifier.combinedClickable(onClick = { toggle() }, onLongClick = {})) {
     when (status) {
         "done" ->
             Box(
@@ -146,6 +167,7 @@ private fun CheckRing(task: Task) {
                         .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
             )
     }
+    }
 }
 
 @Composable
@@ -162,20 +184,28 @@ private fun Chip(text: String, color: Color) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskRow(
     board: Board,
     task: Task,
     modifier: Modifier = Modifier,
     hideProjectMeta: Boolean = false,
+    actions: TaskActions = TaskActions(),
 ) {
     val dateView = board.dateView(task)
+    var menuOpen by remember { mutableStateOf(false) }
     Surface(color = Color.Transparent, modifier = modifier.fillMaxWidth()) {
+    Box {
+    Row(modifier = Modifier.combinedClickable(
+        onClick = { actions.onOpen(task) },
+        onLongClick = { menuOpen = true },
+    )) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CheckRing(task)
+            CheckRing(task, actions.onToggle)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -225,6 +255,29 @@ fun TaskRow(
             }
         }
     }
+        // Desktop right-click menu (rows/task.rs): trash rows offer
+        // Восстановить, live rows Удалить; «На неделю» on overdue.
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            if (task.isTrashed) {
+                DropdownMenuItem(
+                    text = { Text("Восстановить") },
+                    onClick = { menuOpen = false; actions.onRestore(task) },
+                )
+            } else {
+                if (dateView.overdue) {
+                    DropdownMenuItem(
+                        text = { Text("На неделю") },
+                        onClick = { menuOpen = false; actions.onMoveToWeek(task) },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text("Удалить") },
+                    onClick = { menuOpen = false; actions.onTrash(task) },
+                )
+            }
+        }
+    }
+    }
 }
 
 @Composable
@@ -244,7 +297,7 @@ private fun SectionHeader(title: String) {
  * archived tasks (pages/logbook.rs).
  */
 @Composable
-fun TaskListScreen(board: Board, list: SmartList) {
+fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskActions()) {
     val tasks = board.list(list)
     val archivedProjects =
         if (list == SmartList.LOGBOOK) board.projects.filter { it.status == 2 } else emptyList()
@@ -257,7 +310,7 @@ fun TaskListScreen(board: Board, list: SmartList) {
             item(key = "header-tasks") { SectionHeader("Задачи") }
         }
         items(tasks, key = { it.id }) { task ->
-            TaskRow(board, task)
+            TaskRow(board, task, actions = actions)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(start = 50.dp),
@@ -297,6 +350,7 @@ fun ProjectScreen(
     board: Board,
     projectId: String,
     hideProjectMeta: Boolean = false,
+    actions: TaskActions = TaskActions(),
 ) {
     val tasks = board.projectTasks[projectId].orEmpty()
     if (tasks.isEmpty()) {
@@ -324,7 +378,7 @@ fun ProjectScreen(
     val done = tasks.filter { it.isCompleted || it.isCancelled }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(active, key = { it.id }) { task ->
-            TaskRow(board, task, hideProjectMeta = hideProjectMeta)
+            TaskRow(board, task, hideProjectMeta = hideProjectMeta, actions = actions)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(start = 50.dp),
@@ -340,7 +394,7 @@ fun ProjectScreen(
                 )
             }
             items(done, key = { it.id }) { task ->
-                TaskRow(board, task, hideProjectMeta = hideProjectMeta)
+                TaskRow(board, task, hideProjectMeta = hideProjectMeta, actions = actions)
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
                     modifier = Modifier.padding(start = 50.dp),
