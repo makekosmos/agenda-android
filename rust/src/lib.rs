@@ -500,3 +500,13 @@ pub fn task_edit_title_notes(
     agenda_core::edit_title_notes(&mut t, &title, notes);
     todo_to_json(&t)
 }
+
+/// `task_status` as a lowercase string — the checkbox toggle decides
+/// done-vs-complete exactly like desktop `MenuAction::CompleteTodo`.
+#[uniffi::export]
+pub fn task_status_name(todo_json: String) -> Result<String, AgendaError> {
+    let t = parse_todo(&todo_json)?;
+    serde_json::to_string(&agenda_core::task_status(&t))
+        .map(|s| s.trim_matches('"').to_string())
+        .map_err(|e| AgendaError::Mapping(e.to_string()))
+}

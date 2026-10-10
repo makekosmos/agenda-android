@@ -201,5 +201,27 @@ class FakeRepository : BoardRepository {
 
     override fun boardFlow(): Flow<BoardState> = flowOf(BoardState.Ready(board))
 
-    override suspend fun addTask(rawTitle: String) {}
+    override suspend fun quickEntry(
+        rawTitle: String,
+        notes: String?,
+        selectedDate: String?,
+        week: Boolean,
+        someday: Boolean,
+        projectId: String?,
+        projectTouched: Boolean,
+    ) {}
+
+    override suspend fun toggleComplete(task: Task) {}
+
+    override suspend fun setStatus(task: Task, status: String) {}
+
+    override suspend fun setScheduled(task: Task, date: String?) {}
+
+    override suspend fun moveToWeek(task: Task) {}
+
+    override suspend fun moveToProject(task: Task, projectId: String?) {}
+
+    override suspend fun editTitleNotes(task: Task, title: String, notes: String?) {}
+
+    override suspend fun setTrashed(task: Task, trashed: Boolean) {}
 }

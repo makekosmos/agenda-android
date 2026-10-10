@@ -37,7 +37,7 @@ class RepositoryHostTest {
                     }
                 )
             try {
-                repository.addTask("Call mom")
+                repository.quickEntry("Call mom", null, null, false, false, null, false)
 
                 val sawUpsert =
                     withTimeout(10_000) {
@@ -83,7 +83,7 @@ class RepositoryHostTest {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
         try {
             EngineAgendaRepository(dataDir).use { repository ->
-                repository.addTask("позвонить маме завтра")
+                repository.quickEntry("позвонить маме завтра", null, null, false, false, null, false)
                 val board =
                     (repository.boardFlow().first() as BoardState.Ready).board
                 // Desktop quick_entry_save: a parsed date is a commitment,

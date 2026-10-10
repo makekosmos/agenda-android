@@ -49,7 +49,9 @@ class EngineAgendaRepository(
         LocalDate.now(zone).toString() to zone.rules.getOffset(now).totalSeconds
     },
 ) : BoardRepository {
-    private val json = Json { ignoreUnknownKeys = true }
+    // encodeDefaults: Rust side structs (Project, RecurrenceRule) require
+    // fields whose values equal the Kotlin default — never elide them.
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val engineLazy = lazy { MobileEngine.open(dataDir) }
     internal val engine: MobileEngine
@@ -68,7 +70,7 @@ class EngineAgendaRepository(
 
     /** The local civil day the Rust rules need: `YYYY-MM-DD` + UTC offset.
      * Injectable so host tests can pin `today` against the golden dump. */
-    private fun localDay(): Pair<String, Int> = localDayProvider()
+    internal fun localDay(): Pair<String, Int> = localDayProvider()
 
     private fun todoJsons(): List<String> =
         json.decodeFromString<List<String>>(
@@ -203,39 +205,131 @@ class EngineAgendaRepository(
         board().list(SmartList.INBOX)
     }
 
-    /** Quick-entry add: desktop `quick_entry_save` end to end — the
+    /** Quick-entry save: desktop `quick_entry_save` end to end — the
      * agenda-core decision (date words, @project mention, status rule)
      * produces the full Todo, written as the same `com.kosmos.task` object
      * shape agenda-gpui produces. */
-    override suspend fun addTask(rawTitle: String): Unit = withContext(Dispatchers.IO) {
+    override suspend fun quickEntry(
+        rawTitle: String,
+        notes: String?,
+        selectedDate: String?,
+        week: Boolean,
+        someday: Boolean,
+        projectId: String?,
+        projectTouched: Boolean,
+    ): Unit = withContext(Dispatchers.IO) {
         val (today, offset) = localDay()
         val now = Instant.now().toString()
         val (projects, _) = projectsAndTags()
         val id = "task-${UUID.randomUUID()}"
         val todo =
-            json.parseToJsonElement(
-                    quickEntryNewTask(
-                        id = id,
-                        rawTitle = rawTitle,
-                        notes = null,
-                        selectedDate = null,
-                        week = false,
-                        someday = false,
-                        projectId = null,
-                        projectTouched = false,
-                        projectsJson = json.encodeToString(projects),
-                        sortOrder = todoJsons().size,
-                        createdAt = now,
-                        today = today,
-                        utcOffsetSeconds = offset,
-                    )
+            quickEntryNewTask(
+                id = id,
+                rawTitle = rawTitle,
+                notes = notes,
+                selectedDate = selectedDate,
+                week = week,
+                someday = someday,
+                projectId = projectId,
+                projectTouched = projectTouched,
+                projectsJson = json.encodeToString(projects),
+                sortOrder = todoJsons().size,
+                createdAt = now,
+                today = today,
+                utcOffsetSeconds = offset,
+            )
+        save(null, json.decodeFromString(todo))
+    }
+
+    override suspend fun toggleComplete(task: Task): Unit = withContext(Dispatchers.IO) {
+        // Both arms are no-ops on trashed rows (desktop complete_todo /
+        // set_todo_status guards).
+        if (task.isTrashed) return@withContext
+        val (today, offset) = localDay()
+        val now = Instant.now().toString()
+        val beforeJson = json.encodeToString(task)
+        if (taskStatusName(beforeJson) == "done") {
+            save(task, json.decodeFromString(taskSetStatus(beforeJson, "todo", now)))
+            return@withContext
+        }
+        val completed = json.decodeFromString<Task>(taskComplete(beforeJson, now))
+        val next =
+            taskNextRecurrence(
+                    beforeJson,
+                    json.encodeToString(completed),
+                    UUID.randomUUID().toString(),
+                    todoJsons().size,
+                    now,
+                    today,
+                    offset,
                 )
-                .jsonObject
+                ?.let { json.decodeFromString<Task>(it) }
+        saveWithNext(task, completed, next)
+    }
+
+    override suspend fun setStatus(task: Task, status: String): Unit =
+        withContext(Dispatchers.IO) {
+            if (task.isTrashed) return@withContext
+            val now = Instant.now().toString()
+            save(task, json.decodeFromString(taskSetStatus(json.encodeToString(task), status, now)))
+        }
+
+    override suspend fun setScheduled(task: Task, date: String?): Unit =
+        withContext(Dispatchers.IO) {
+            save(task, json.decodeFromString(taskSetScheduled(json.encodeToString(task), date)))
+        }
+
+    override suspend fun moveToWeek(task: Task): Unit = withContext(Dispatchers.IO) {
+        save(task, json.decodeFromString(taskMoveToWeek(json.encodeToString(task))))
+    }
+
+    override suspend fun moveToProject(task: Task, projectId: String?): Unit =
+        withContext(Dispatchers.IO) {
+            save(task, json.decodeFromString(taskMoveToProject(json.encodeToString(task), projectId)))
+        }
+
+    override suspend fun editTitleNotes(task: Task, title: String, notes: String?): Unit =
+        withContext(Dispatchers.IO) {
+            save(
+                task,
+                json.decodeFromString(taskEditTitleNotes(json.encodeToString(task), title, notes)),
+            )
+        }
+
+    override suspend fun setTrashed(task: Task, trashed: Boolean): Unit =
+        withContext(Dispatchers.IO) {
+            save(task, json.decodeFromString(taskSetTrashed(json.encodeToString(task), trashed)))
+        }
+
+    /** `get_object` + `mapping::read` pair — the engine's current stored
+     * object and its decoded Todo, or nulls when the id is unknown. */
+    private fun currentTodo(id: String): Pair<JsonElement, Task?> {
+        val obj = call("get_object", buildJsonObject { put("id", id) })
+        if (obj is JsonNull || (obj is JsonObject && obj.isEmpty())) {
+            return JsonNull to null
+        }
+        return obj to json.decodeFromString(taskFromEngineObject(obj.toString()))
+    }
+
+    /** Desktop `Store::save`: `before` is the precondition — when it no
+     * longer matches the engine's stored object the write is rejected as a
+     * [WriteConflict] and nothing is written. */
+    private fun save(before: Task?, todo: Task) {
+        val (today, offset) = localDay()
+        val now = Instant.now().toString()
+        val (currentObj, currentTodo) = currentTodo(todo.id)
+        if (before != null) {
+            if (currentTodo == null || currentTodo != before) {
+                throw WriteConflict("local: precondition failed (stale or missing)")
+            }
+        } else if (currentTodo != null) {
+            throw WriteConflict("local: object already exists")
+        }
         val objectJson =
             taskToEngineObject(
-                todo.toString(),
-                existingObjectJson = null,
-                beforeTodoJson = null,
+                json.encodeToString(todo),
+                existingObjectJson = if (currentTodo == null) null else currentObj.toString(),
+                beforeTodoJson = before?.let { json.encodeToString(it) },
                 now = now,
                 today = today,
                 utcOffsetSeconds = offset,
@@ -244,6 +338,25 @@ class EngineAgendaRepository(
             "upsert_object",
             buildJsonObject { put("object", json.parseToJsonElement(objectJson)) },
         )
+    }
+
+    /** Desktop `save_with_next`: write the completed todo, then the spawned
+     * recurrence; on a lost acknowledgement re-read before deciding — a
+     * stored-but-unacked next still counts as saved, a missing one rolls
+     * the completion back. */
+    private fun saveWithNext(before: Task, completed: Task, next: Task?) {
+        save(before, completed)
+        if (next == null) return
+        try {
+            save(null, next)
+        } catch (e: Exception) {
+            val (_, stored) = currentTodo(next.id)
+            if (stored == next) return
+            if (stored == null) {
+                runCatching { save(completed, before) }
+            }
+            throw e
+        }
     }
 
     override fun close() {

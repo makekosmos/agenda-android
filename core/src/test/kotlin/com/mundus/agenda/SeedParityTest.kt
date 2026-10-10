@@ -35,42 +35,9 @@ class SeedParityTest {
                 )
                 .jsonObject
 
-        // board() evaluates rules against the injected fixed LocalDay —
-        // the same determinism the desktop golden dump uses.
-        val fixedDay =
-            golden["today"]!!.jsonPrimitive.content to
-                golden["utcOffsetSeconds"]!!.jsonPrimitive.content.toInt()
-        val dataDir = Files.createTempDirectory("agenda-parity-test").toString()
+        val (repository, dataDir) = seededRepository(json, golden)
         try {
-            EngineAgendaRepository(dataDir) { fixedDay }.use { repository ->
-                // `com.kosmos.agenda.references` is a non-canonical type the
-                // desktop DB carries from before the canonical registry; a
-                // fresh phone DB must register it before upsert.
-                repository.call(
-                    "upsert_object_type",
-                    buildJsonObject {
-                        put(
-                            "object_type",
-                            buildJsonObject {
-                                put("id", "com.kosmos.agenda.references")
-                                put("name", "Agenda references")
-                                put("schemaJson", "{}")
-                                put("uiSchemaJson", "{}")
-                                put("createdAt", golden["today"]!!.jsonPrimitive.content)
-                                put("updatedAt", golden["today"]!!.jsonPrimitive.content)
-                                put("systemLocked", false)
-                            },
-                        )
-                    },
-                )
-                for (obj in golden["objects"]!!.jsonArray) {
-                    try {
-                        repository.call("upsert_object", buildJsonObject { put("object", obj) })
-                    } catch (e: IllegalStateException) {
-                        throw AssertionError("upsert failed for ${obj.jsonObject["id"]}: ${e.message}")
-                    }
-                }
-
+            repository.use { repository ->
                 val state = withTimeout(15_000) { repository.boardFlow().first() }
                 val board =
                     (state as? BoardState.Ready)?.board
