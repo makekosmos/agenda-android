@@ -75,8 +75,18 @@ android {
         applicationId = "com.mundus.agenda"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        // -PagendaVersionCode / -PagendaVersionName override for scratch
+        // builds (e.g. an older "installed" build in the updater e2e).
+        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "2").toInt()
+        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.1"
+        // Self-update feed BASE (manifest.json first, latest-android.yml
+        // fallback — cortex feed.rs:15,63-93). Override with
+        // -PagendaUpdateFeedBase=… for tests.
+        buildConfigField(
+            "String",
+            "UPDATE_FEED_BASE",
+            "\"${(findProperty("agendaUpdateFeedBase") as String?) ?: "https://github.com/makekosmos/cortex/releases/latest/download/android"}\"",
+        )
     }
 
     buildFeatures {
