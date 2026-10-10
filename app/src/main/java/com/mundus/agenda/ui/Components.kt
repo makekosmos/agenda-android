@@ -32,10 +32,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -251,6 +254,50 @@ fun BackGesturePreview(
     }
 }
 
+/**
+ * Editable top-bar title — the desktop project-page heading
+ * (pages/project.rs:67-87): opened focused with the whole name selected,
+ * Enter commits. `onEdit` reports the draft, `onCommit` fires on Done.
+ */
+@Composable
+fun InlineTitleEditor(
+    initial: String,
+    onEdit: (String) -> Unit,
+    onCommit: (String) -> Unit,
+) {
+    val c = AgendaTheme.colors
+    var value by
+        remember {
+            mutableStateOf(
+                androidx.compose.ui.text.input.TextFieldValue(
+                    initial,
+                    androidx.compose.ui.text.TextRange(0, initial.length),
+                )
+            )
+        }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = {
+            value = it
+            onEdit(it.text)
+        },
+        textStyle = AgendaType.pageTitle.copy(color = c.fg),
+        singleLine = true,
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(c.accent),
+        keyboardOptions =
+            androidx.compose.foundation.text.KeyboardOptions(
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+            ),
+        keyboardActions =
+            androidx.compose.foundation.text.KeyboardActions(
+                onDone = { onCommit(value.text) }
+            ),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus).padding(vertical = 10.dp),
+    )
+    androidx.compose.runtime.LaunchedEffect(Unit) { focus.requestFocus() }
+}
+
 /** Menu surface — the desktop popover look: `popover` bg, hairline
  * `border`, 8dp radius, 40dp items. */
 @Composable
@@ -300,9 +347,20 @@ fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit)
 }
 
 @Composable
-fun AMenuItem(label: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun AMenuItem(
+    label: String,
+    enabled: Boolean = true,
+    destructive: Boolean = false,
+    onClick: () -> Unit,
+) {
     ARow(onClick = onClick, enabled = enabled, minHeight = 40.dp, verticalPadding = 9.dp) { glyph ->
-        Text(label, style = AgendaType.body, color = glyph, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            style = AgendaType.body,
+            color = if (destructive) AgendaTheme.colors.destructive else glyph,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

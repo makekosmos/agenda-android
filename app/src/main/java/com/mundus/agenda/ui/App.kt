@@ -135,6 +135,10 @@ fun AgendaHome(
     var toast by remember { mutableStateOf<String?>(null) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     var editingTaskId by rememberSaveable { mutableStateOf(initialEditTaskId) }
+    // Project rename: the project page title becomes an editable heading,
+    // like desktop edit_project_title (app/projects.rs:111-114).
+    var renamingProjectId by rememberSaveable { mutableStateOf<String?>(null) }
+    var renameDraft by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val c = AgendaTheme.colors
 
@@ -159,6 +163,37 @@ fun AgendaHome(
             }
         }
     }
+    fun navigate(r: Route) {
+        navDir = 1
+        route = routeKey(r)
+    }
+    fun commitRename(title: String) {
+        val pid = renamingProjectId ?: return
+        board.project(pid)?.let { p -> run { repository?.renameProject(p, title) } }
+        renamingProjectId = null
+    }
+    fun back() {
+        // Leaving the page commits a pending rename (desktop commits on
+        // Enter/Blur — blur here is navigation away).
+        if (renamingProjectId != null) commitRename(renameDraft)
+        if (route != "home") {
+            navDir = -1
+            route = "home"
+        }
+    }
+    fun onCreateProject() {
+        scope.launch {
+            try {
+                val id = repository?.createProject() ?: return@launch
+                renameDraft = "Новый проект"
+                renamingProjectId = id
+                navigate(Route.Project(id))
+            } catch (_: Exception) {
+                showToast("Не удалось сохранить")
+            }
+        }
+    }
+
     val actions =
         TaskActions(
             onOpen = { editingTaskId = it.id },
@@ -166,18 +201,21 @@ fun AgendaHome(
             onTrash = { t -> run { repository?.setTrashed(t, true) } },
             onRestore = { t -> run { repository?.setTrashed(t, false) } },
             onMoveToWeek = { t -> run { repository?.moveToWeek(t) } },
+            onProjectOpen = { p -> navigate(Route.Project(p.id)) },
+            onProjectRename = { p ->
+                renameDraft = p.title
+                renamingProjectId = p.id
+                navigate(Route.Project(p.id))
+            },
+            onProjectArchive = { p -> run { repository?.setProjectStatus(p, 2) } },
+            onProjectRestore = { p -> run { repository?.setProjectStatus(p, 0) } },
+            onProjectDelete = { p ->
+                // Deleting the open project returns home (desktop
+                // navigates to Inbox first, app/projects.rs:133-135).
+                if (parseRoute(route).let { it is Route.Project && it.id == p.id }) back()
+                run { repository?.deleteProject(p) }
+            },
         )
-
-    fun navigate(r: Route) {
-        navDir = 1
-        route = routeKey(r)
-    }
-    fun back() {
-        if (route != "home") {
-            navDir = -1
-            route = "home"
-        }
-    }
     // Predictive back: gesture progress drives the same slide+fade pair the
     // committed transition runs (forward = +it/4 in, -it/6 out; back
     // reverses them). A bare KEYCODE_BACK delivers no progress events, so
@@ -211,12 +249,36 @@ fun AgendaHome(
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            // Shared top bar: identical title geometry on every page.
-            AgendaTopBar(title = title, onBack = if (current !is Route.Home) ::back else null)
+            // Shared top bar: identical title geometry on every page. On a
+            // project page in rename mode the title is the desktop editable
+            // heading — focused with the whole name selected.
+            val renamingProject =
+                (current as? Route.Project)
+                    ?.takeIf { renamingProjectId == it.id }
+            AgendaTopBar(
+                title = title,
+                onBack = if (current !is Route.Home) ::back else null,
+                titleContent =
+                    renamingProject?.let { r ->
+                        {
+                            InlineTitleEditor(
+                                initial = board.project(r.id)?.title ?: renameDraft,
+                                onEdit = { renameDraft = it },
+                                onCommit = ::commitRename,
+                            )
+                        }
+                    },
+            )
             @Composable
             fun PageContent(r: Route) {
                 when (r) {
-                    is Route.Home -> HomePage(board = board, onNavigate = ::navigate)
+                    is Route.Home ->
+                        HomePage(
+                            board = board,
+                            onNavigate = ::navigate,
+                            actions = actions,
+                            onCreateProject = ::onCreateProject,
+                        )
                     is Route.List ->
                         TaskListScreen(board = board, list = r.list, actions = actions)
                     is Route.Project ->
@@ -337,9 +399,10 @@ private fun HomeRow(
     iconRes: Int?,
     label: String,
     enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
     onClick: (() -> Unit)?,
 ) {
-    ARow(onClick = onClick, enabled = enabled) { glyph ->
+    ARow(onClick = onClick, enabled = enabled, onLongClick = onLongClick) { glyph ->
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (iconRes != null) {
                 AIcon(iconRes, tint = glyph.copy(alpha = if (enabled) 0.85f else 0.5f))
@@ -372,7 +435,12 @@ private fun HomeRow(
  * No counts: the desktop sidebar renders none.
  */
 @Composable
-fun HomePage(board: Board, onNavigate: (Route) -> Unit) {
+fun HomePage(
+    board: Board,
+    onNavigate: (Route) -> Unit,
+    actions: TaskActions = TaskActions(),
+    onCreateProject: () -> Unit = {},
+) {
     Column(
         modifier =
             Modifier
@@ -398,14 +466,49 @@ fun HomePage(board: Board, onNavigate: (Route) -> Unit) {
             }
         }
 
+        // Desktop renders the «Проекты» group unconditionally with a «+»
+        // button on its header (chrome.rs:457-474) — same here, including
+        // the empty state.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ASectionHeader("Проекты", Modifier.weight(1f))
+            AIconButton(
+                R.drawable.ic_plus,
+                desc = "Новый проект",
+                onClick = onCreateProject,
+                modifier = Modifier.size(32.dp),
+            )
+        }
         val projects = board.projects.filter { it.status == 0 }
         if (projects.isNotEmpty()) {
-            ASectionHeader("Проекты")
             HomeGroup {
                 projects.forEachIndexed { i, p ->
                     if (i > 0) ADivider(indent = 44.dp)
-                    HomeRow(iconRes = null, label = p.title) {
-                        onNavigate(Route.Project(p.id))
+                    var menuOpen by remember(p.id) { mutableStateOf(false) }
+                    Box {
+                        HomeRow(
+                            iconRes = null,
+                            label = p.title,
+                            onLongClick = { menuOpen = true },
+                            onClick = { actions.onProjectOpen(p) },
+                        )
+                        // Desktop sidebar right-click menu (chrome.rs:184-215).
+                        AMenu(open = menuOpen, onDismiss = { menuOpen = false }) {
+                            AMenuItem("Переименовать") {
+                                menuOpen = false
+                                actions.onProjectRename(p)
+                            }
+                            AMenuItem("Архивировать") {
+                                menuOpen = false
+                                actions.onProjectArchive(p)
+                            }
+                            AMenuItem("Удалить", destructive = true) {
+                                menuOpen = false
+                                actions.onProjectDelete(p)
+                            }
+                        }
                     }
                 }
             }

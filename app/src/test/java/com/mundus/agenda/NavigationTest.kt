@@ -2,7 +2,9 @@ package com.mundus.agenda
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -103,6 +105,28 @@ class NavigationTest {
                     n.parent?.let(::isDisabled) == true
             assert(isDisabled(node)) { "'$label' row must be disabled on home" }
         }
+    }
+
+    @Test
+    fun createProjectOpensRenameHeading() {
+        val repo = FakeRepository()
+        composeTestRule.setContent {
+            AgendaTheme { AgendaHome(board = board, repository = repo) }
+        }
+        composeTestRule.waitForIdle()
+        // Sidebar «+» on the «Проекты» header (desktop chrome.rs:457-474).
+        composeTestRule
+            .onNodeWithText("Проекты")
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithContentDescription("Новый проект")
+            .performClick()
+        composeTestRule.waitForIdle()
+        // Lands on the new project page with the heading editable —
+        // desktop edit_project_title focuses the title with select-all.
+        composeTestRule
+            .onNode(hasSetTextAction())
+            .assertIsDisplayed()
     }
 
     @Test

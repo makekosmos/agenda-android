@@ -78,6 +78,13 @@ class TaskActions(
     val onTrash: (Task) -> Unit = {},
     val onRestore: (Task) -> Unit = {},
     val onMoveToWeek: (Task) -> Unit = {},
+    // Project actions — the desktop sidebar right-click menu
+    // (chrome.rs:184-215) and the logbook row menu (logbook.rs:39-63).
+    val onProjectOpen: (com.mundus.agenda.Project) -> Unit = {},
+    val onProjectRename: (com.mundus.agenda.Project) -> Unit = {},
+    val onProjectArchive: (com.mundus.agenda.Project) -> Unit = {},
+    val onProjectRestore: (com.mundus.agenda.Project) -> Unit = {},
+    val onProjectDelete: (com.mundus.agenda.Project) -> Unit = {},
 )
 
 @Composable
@@ -222,22 +229,39 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
         if (archivedProjects.isNotEmpty()) {
             item(key = "header-projects") { ASectionHeader("Проекты") }
             items(archivedProjects, key = { it.id }) { project ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier =
-                            Modifier.size(8.dp)
-                                .clip(CircleShape)
-                                .background(c.mutedFg),
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    Text(
-                        project.title,
-                        style = AgendaType.body,
-                        color = c.mutedFg,
-                    )
+                // Desktop logbook row menu (logbook.rs:39-63):
+                // Восстановить + destructive Удалить.
+                var menuOpen by remember { mutableStateOf(false) }
+                Box {
+                    ARow(
+                        onClick = { actions.onProjectOpen(project) },
+                        onLongClick = { menuOpen = true },
+                    ) { glyph ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier =
+                                    Modifier.size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(c.mutedFg),
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text(
+                                project.title,
+                                style = AgendaType.body,
+                                color = c.mutedFg,
+                            )
+                        }
+                    }
+                    AMenu(open = menuOpen, onDismiss = { menuOpen = false }) {
+                        AMenuItem("Восстановить") {
+                            menuOpen = false
+                            actions.onProjectRestore(project)
+                        }
+                        AMenuItem("Удалить", destructive = true) {
+                            menuOpen = false
+                            actions.onProjectDelete(project)
+                        }
+                    }
                 }
                 RowDivider()
             }

@@ -121,6 +121,58 @@ class RepositoryHostTest {
     }
 
     @Test
+    fun projectLifecycle() = runBlocking {
+        val dataDir = Files.createTempDirectory("agenda-host-test").toString()
+        try {
+            EngineAgendaRepository(dataDir).use { repository ->
+                // Desktop create_project (app.rs:1372-1397): «Новый проект»
+                // lands at the bottom of the sidebar and can be opened.
+                val id = repository.createProject()
+                var board = (repository.boardFlow().first() as BoardState.Ready).board
+                val created = board.projects.single { it.id == id }
+                assertEquals("Новый проект", created.title)
+                assertEquals(0, created.status)
+
+                // Heading edit commits a rename (projects.rs:57-108).
+                repository.renameProject(created, "Переезд в Казань")
+                board = (repository.boardFlow().first() as BoardState.Ready).board
+                assertEquals("Переезд в Казань", board.project(id)!!.title)
+
+                // Quick entry into the project via @mention.
+                repository.quickEntry(
+                    "собрать коробки @Переезд в Казань",
+                    null, null, false, false, null, false,
+                )
+                board = (repository.boardFlow().first() as BoardState.Ready).board
+                val boxed = board.todos.single { it.title == "собрать коробки" }
+                assertEquals(id, boxed.projectId)
+
+                // Archive (set_project_status 2) removes it from the active
+                // sidebar set; restore brings it back.
+                repository.setProjectStatus(board.project(id)!!, 2)
+                board = (repository.boardFlow().first() as BoardState.Ready).board
+                assertEquals(2, board.project(id)!!.status)
+
+                repository.setProjectStatus(board.project(id)!!, 0)
+                board = (repository.boardFlow().first() as BoardState.Ready).board
+                assertEquals(0, board.project(id)!!.status)
+
+                // Delete (delete_project): soft-deleted object, tasks go
+                // back to Inbox.
+                repository.deleteProject(board.project(id)!!)
+                board = (repository.boardFlow().first() as BoardState.Ready).board
+                assertTrue("deleted project must not be listed",
+                    board.projects.none { it.id == id })
+                val moved = board.todos.single { it.title == "собрать коробки" }
+                assertEquals(null, moved.projectId)
+                assertTrue(board.list(SmartList.INBOX).any { it.id == moved.id })
+            }
+        } finally {
+            java.io.File(dataDir).deleteRecursively()
+        }
+    }
+
+    @Test
     fun quickEntrySchedulesDate() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
         try {

@@ -65,6 +65,21 @@ interface BoardRepository : AutoCloseable {
     /** Panel title/notes edit (desktop `panel_persist`). */
     suspend fun editTitleNotes(task: Task, title: String, notes: String?)
 
+    /** Sidebar «+» (desktop `create_project`, app.rs:1372-1397): creates
+     * «Новый проект» with sort_order = max+1 and returns its id so the
+     * caller can open it for rename. */
+    suspend fun createProject(): String
+
+    /** Desktop `rename_project` — heading edit commits the new title. */
+    suspend fun renameProject(project: Project, title: String)
+
+    /** Archive / restore (desktop `set_project_status`, save.rs:108-124). */
+    suspend fun setProjectStatus(project: Project, status: Int)
+
+    /** Desktop `delete_project`: the project's tasks return to Inbox,
+     * the object soft-deletes (`deletedAt`). */
+    suspend fun deleteProject(project: Project)
+
     /** Trash / restore (desktop `TrashTodo` / `RestoreTodo`). */
     suspend fun setTrashed(task: Task, trashed: Boolean)
 

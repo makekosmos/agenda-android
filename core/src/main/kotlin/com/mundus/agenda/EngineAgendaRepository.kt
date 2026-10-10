@@ -301,6 +301,103 @@ class EngineAgendaRepository(
             save(task, json.decodeFromString(taskSetTrashed(json.encodeToString(task), trashed)))
         }
 
+    // --- Projects: desktop app.rs create_project / projects.rs rename,
+    // save.rs set_project_status, projects.rs delete_project + the engine's
+    // soft delete (src/store/projects.rs). Same write pattern as tasks:
+    // get_object precondition -> project_to_engine_object -> upsert_object.
+
+    private fun projectObject(id: String): JsonElement =
+        call("get_object", buildJsonObject { put("id", id) })
+
+    private fun JsonElement.isPresent() = this is JsonObject && isNotEmpty()
+
+    private fun upsertProjectObject(objectJson: JsonElement) {
+        call("upsert_object", buildJsonObject { put("object", objectJson) })
+    }
+
+    private fun saveProject(before: Project?, project: Project) {
+        val now = Instant.now().toString()
+        val current = projectObject(project.id)
+        val exists = current.isPresent()
+        if (before != null) {
+            val stored =
+                if (exists) json.decodeFromString<Project>(
+                    projectFromEngineObject(current.toString())
+                ) else null
+            if (stored != before) {
+                throw WriteConflict("local: precondition failed (stale or missing)")
+            }
+        } else if (exists) {
+            throw WriteConflict("local: object already exists")
+        }
+        upsertProjectObject(
+            json.parseToJsonElement(
+                projectToEngineObject(
+                    json.encodeToString(project),
+                    if (exists) current.toString() else null,
+                    now,
+                )
+            )
+        )
+    }
+
+    override suspend fun createProject(): String = withContext(Dispatchers.IO) {
+        val (projects, _) = projectsAndTags()
+        val id = UUID.randomUUID().toString()
+        saveProject(
+            null,
+            Project(
+                id = id,
+                title = "Новый проект",
+                status = 0,
+                sortOrder = (projects.maxOfOrNull { it.sortOrder } ?: 0) + 1,
+            ),
+        )
+        id
+    }
+
+    override suspend fun renameProject(project: Project, title: String): Unit =
+        withContext(Dispatchers.IO) {
+            // Desktop commit_project_title: an empty title keeps the old one.
+            saveProject(project, project.copy(title = title.ifBlank { project.title }))
+        }
+
+    override suspend fun setProjectStatus(project: Project, status: Int): Unit =
+        withContext(Dispatchers.IO) {
+            saveProject(project, project.copy(status = status))
+        }
+
+    override suspend fun deleteProject(project: Project): Unit = withContext(Dispatchers.IO) {
+        val now = Instant.now().toString()
+        // Tasks return to Inbox (desktop delete_project arm).
+        for (t in board().todos.filter { it.projectId == project.id }) {
+            val moved =
+                t.copy(
+                    projectId = null,
+                    status =
+                        if (t.status == "todo" && t.scheduledDate == null && !t.isToday)
+                            "inbox"
+                        else t.status,
+                )
+            if (moved != t) save(t, moved)
+        }
+        // Soft delete: the object stays with deletedAt, like trash.
+        val current = projectObject(project.id)
+        val objectJson =
+            json.parseToJsonElement(
+                projectToEngineObject(
+                    json.encodeToString(project),
+                    if (current.isPresent()) current.toString() else null,
+                    now,
+                )
+            )
+        upsertProjectObject(
+            JsonObject(objectJson.jsonObject.toMutableMap().apply {
+                put("deletedAt", JsonPrimitive(now))
+            })
+        )
+    }
+
     /** `get_object` + `mapping::read` pair — the engine's current stored
      * object and its decoded Todo, or nulls when the id is unknown. */
     private fun currentTodo(id: String): Pair<JsonElement, Task?> {

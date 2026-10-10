@@ -225,6 +225,32 @@ class FakeRepository : BoardRepository {
 
     override suspend fun setTrashed(task: Task, trashed: Boolean) {}
 
+    var createdProjects = mutableListOf<Project>()
+
+    override suspend fun createProject(): String {
+        val id = "dev-proj-created-${createdProjects.size + 1}"
+        createdProjects += Project(id = id, title = "Новый проект", sortOrder = projects.size + createdProjects.size + 1)
+        return id
+    }
+
+    var renames = mutableListOf<Pair<String, String>>()
+
+    override suspend fun renameProject(project: Project, title: String) {
+        renames += project.id to title
+    }
+
+    var statusChanges = mutableListOf<Pair<String, Int>>()
+
+    override suspend fun setProjectStatus(project: Project, status: Int) {
+        statusChanges += project.id to status
+    }
+
+    var deletedProjects = mutableListOf<String>()
+
+    override suspend fun deleteProject(project: Project) {
+        deletedProjects += project.id
+    }
+
     override suspend fun quickEntryPreview(
         rawTitle: String,
         selectedDate: String?,
