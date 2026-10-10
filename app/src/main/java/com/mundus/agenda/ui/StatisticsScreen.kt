@@ -10,13 +10,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +38,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mundus.agenda.Board
@@ -164,45 +164,42 @@ fun StatisticsScreen(
             )
         }
 
-        // Summary strip: five divided columns in a bordered card (:58-98).
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp)
-                    .border(1.dp, c.border, RoundedCornerShape(10.dp))
-                    .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val items =
-                listOf(
-                    "${stats.total}" to "Всего выполнено",
-                    "${stats.last7}" to "За 7 дней",
-                    "${stats.last30}" to "За 30 дней",
-                    "${stats.streak}" to "Текущая серия",
-                    "${stats.bestStreak}" to "Лучшая серия",
-                )
-            items.forEachIndexed { i, (value, label) ->
-                if (i > 0) {
-                    Box(Modifier.width(1.dp).height(28.dp).background(c.fg(0.08f)))
-                }
-                Column(
-                    Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        value,
-                        style = AgendaType.body.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-                        color = c.fg,
-                        maxLines = 1,
-                    )
-                    Text(
-                        label,
-                        style = AgendaType.meta.copy(fontSize = 12.sp),
-                        color = c.mutedFg,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+        // Summary: a 2-column card grid — full labels, no truncation
+        // (same five metrics as the desktop strip, statistics.rs:58-98).
+        val items =
+            listOf(
+                "${stats.total}" to "Всего выполнено",
+                "${stats.last7}" to "За 7 дней",
+                "${stats.last30}" to "За 30 дней",
+                "${stats.streak}" to "Текущая серия",
+                "${stats.bestStreak}" to "Лучшая серия",
+            )
+        Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { (value, label) ->
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(c.card)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        ) {
+                            Text(
+                                value,
+                                style = AgendaType.body.copy(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
+                                color = c.fg,
+                                maxLines = 1,
+                            )
+                            Text(
+                                label,
+                                style = AgendaType.meta.copy(fontSize = 12.sp),
+                                color = c.mutedFg,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -219,14 +216,18 @@ fun StatisticsScreen(
             HeatmapGrid(heat, today)
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(GAP)) {
                 for (w in 0 until heat.weeks) {
-                    Text(
-                        heat.monthLabels[w],
-                        style = AgendaType.label.copy(fontSize = 10.sp),
-                        color = c.mutedFg,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier.width(CELL),
-                    )
+                    // Cell-width anchor; the label spills right into the
+                    // following columns (months are ≥4 weeks apart).
+                    Box(Modifier.width(CELL)) {
+                        Text(
+                            heat.monthLabels[w],
+                            style = AgendaType.label.copy(fontSize = 10.sp),
+                            color = c.mutedFg,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true),
+                        )
+                    }
                 }
             }
         }

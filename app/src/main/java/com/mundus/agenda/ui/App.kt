@@ -367,14 +367,18 @@ fun AgendaHome(
             }
         }
 
-        QuickEntryButton(
-            onClick = { createOpen = true },
+        // Desktop only offers task creation on task pages (not
+        // Settings/Statistics/About).
+        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About) {
+            QuickEntryButton(
+                onClick = { createOpen = true },
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
                     .padding(end = 20.dp, bottom = 20.dp),
-        )
+            )
+        }
 
         AToast(
             message = toast,
