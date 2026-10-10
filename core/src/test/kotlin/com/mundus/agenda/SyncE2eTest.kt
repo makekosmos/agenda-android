@@ -150,19 +150,29 @@ class SyncE2eTest {
         title: String,
         id: String = "task-${UUID.randomUUID()}",
     ): Pair<String, String> {
-        val todoJson = newTaskJson(id, title)
+        // Same field set the app writes: real created_at + sort_order,
+        // not the blank defaults from newTaskJson.
         val zone = ZoneId.systemDefault()
         val now = Instant.now()
+        val todoJson =
+            buildJsonObject {
+                json.parseToJsonElement(newTaskJson(id, title)).jsonObject.forEach { (k, v) ->
+                    put(k, v)
+                }
+                put("created_at", JsonPrimitive(now.toString()))
+                put("sort_order", JsonPrimitive(0))
+            }
+        val todoJsonStr = todoJson.toString()
         val objectJson =
             taskToEngineObject(
-                todoJson,
+                todoJsonStr,
                 null,
                 null,
                 now.toString(),
                 LocalDate.now(zone).toString(),
                 zone.rules.getOffset(now).totalSeconds,
             )
-        return todoJson to objectJson
+        return todoJsonStr to objectJson
     }
 
     private fun freeTcpPort(): Int = ServerSocket(0).use { it.localPort }

@@ -1,6 +1,7 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,15 +39,6 @@ import androidx.compose.ui.unit.dp
 import com.mundus.agenda.Board
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
-
-private fun tagColor(name: String): Color =
-    when (name) {
-        "red" -> Color(0xFFCE222C)
-        "blue" -> Color(0xFF3B82F6)
-        "green" -> Color(0xFF03A14A)
-        "yellow" -> Color(0xFFE58212)
-        else -> Color(0xFF8D8A94)
-    }
 
 private fun emptyHint(list: SmartList): Pair<String, String> =
     when (list) {
@@ -80,38 +74,78 @@ private fun EmptyState(list: SmartList) {
     }
 }
 
+/**
+ * Desktop `status_ring` (widgets.rs): Done = accent fill + check in
+ * accent-fg, Canceled = muted ring + ×, Started = warn ring + half fill,
+ * everything else a plain muted ring.
+ */
 @Composable
 private fun CheckRing(task: Task) {
-    val done = task.isCompleted
-    val canceled = task.isCancelled
-    val border =
+    val status =
         when {
-            canceled -> MaterialTheme.colorScheme.onSurfaceVariant
-            done -> AgendaTheme.extra.success
-            task.priority >= 3 -> MaterialTheme.colorScheme.error
-            task.priority == 2 -> AgendaTheme.extra.warn
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            task.isCompleted -> "done"
+            task.isCancelled -> "canceled"
+            task.status == "started" -> "started"
+            else -> "open"
         }
-    Box(
-        modifier =
-            Modifier.size(18.dp)
-                .clip(CircleShape)
-                .border(1.5.dp, border, CircleShape)
-                .then(
-                    if (done)
-                        Modifier.background(AgendaTheme.extra.success, CircleShape)
-                    else Modifier,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (done) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.size(12.dp),
+    val warnColor = AgendaTheme.extra.warn
+    when (status) {
+        "done" ->
+            Box(
+                modifier =
+                    Modifier.size(18.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
+        "canceled" ->
+            Box(
+                modifier =
+                    Modifier.size(18.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
+        "started" ->
+            Canvas(Modifier.size(18.dp)) {
+                val r = size.minDimension / 2
+                drawCircle(
+                    color = warnColor,
+                    style = Stroke(width = 1.5.dp.toPx()),
+                    radius = r - 0.75.dp.toPx(),
+                )
+                drawArc(
+                    color = warnColor,
+                    startAngle = -90f,
+                    sweepAngle = 180f,
+                    useCenter = true,
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        center.x - r * 0.77f, center.y - r * 0.77f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(r * 1.54f, r * 1.54f),
+                )
+            }
+        else ->
+            Box(
+                modifier =
+                    Modifier.size(18.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
             )
-        }
     }
 }
 
@@ -196,19 +230,66 @@ fun TaskRow(
 }
 
 @Composable
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+    )
+}
+
+/**
+ * List screen for every smart list. Logbook additionally renders the
+ * desktop «Проекты» section: completed (status 2) projects below the
+ * archived tasks (pages/logbook.rs).
+ */
+@Composable
 fun TaskListScreen(board: Board, list: SmartList, onTaskClick: (String) -> Unit) {
     val tasks = board.list(list)
-    if (tasks.isEmpty()) {
+    val archivedProjects =
+        if (list == SmartList.LOGBOOK) board.projects.filter { it.status == 2 } else emptyList()
+    if (tasks.isEmpty() && archivedProjects.isEmpty()) {
         EmptyState(list)
         return
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        if (list == SmartList.LOGBOOK && tasks.isNotEmpty()) {
+            item(key = "header-tasks") { SectionHeader("Задачи") }
+        }
         items(tasks, key = { it.id }) { task ->
             TaskRow(board, task, onClick = { onTaskClick(task.id) })
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(start = 50.dp),
             )
+        }
+        if (archivedProjects.isNotEmpty()) {
+            item(key = "header-projects") { SectionHeader("Проекты") }
+            items(archivedProjects, key = { it.id }) { project ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.size(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        project.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(start = 50.dp),
+                )
+            }
         }
     }
 }

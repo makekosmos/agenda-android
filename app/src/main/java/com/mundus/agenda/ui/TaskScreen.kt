@@ -1,7 +1,6 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,10 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,8 +49,13 @@ private fun priorityLabel(priority: Int): String? =
     }
 
 private fun recurrenceLabel(rule: com.mundus.agenda.RecurrenceRule): String {
-    val freq = arrayOf("день", "неделю", "месяц", "год").getOrElse(rule.frequency) { "день" }
-    val base = if (rule.interval > 1) "Каждые ${rule.interval} $freq" else "Каждый $freq"
+    // frequency: 0 daily, 1 weekly, 2 monthly, 3 yearly — accusative and
+    // genitive plural forms for RU.
+    val acc = arrayOf("день", "неделю", "месяц", "год").getOrElse(rule.frequency) { "день" }
+    val genPlural =
+        arrayOf("дней", "недель", "месяцев", "лет").getOrElse(rule.frequency) { "дней" }
+    val base =
+        if (rule.interval > 1) "Каждые ${rule.interval} $genPlural" else "Каждый $acc"
     return if (rule.recurrenceType == 1) "$base, после выполнения" else base
 }
 
@@ -77,13 +78,7 @@ private fun FieldRow(label: String, value: String, valueColor: Color? = null) {
 
 @Composable
 private fun TagChip(title: String, colorName: String) {
-    val color =
-        when (colorName) {
-            "red" -> Color(0xFFCE222C)
-            "blue" -> Color(0xFF3B82F6)
-            "green" -> Color(0xFF03A14A)
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
-        }
+    val color = tagColor(colorName, MaterialTheme.colorScheme.onSurfaceVariant)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -144,7 +139,7 @@ fun TaskScreen(board: Board, taskId: String) {
         dateView.deadlineLabel?.let { FieldRow("Дедлайн", it) }
         dateView.reminderLabel?.let { FieldRow("Напоминание", it) }
         task.projectId?.let { pid -> board.project(pid)?.let { FieldRow("Проект", it.title) } }
-        task.areaId?.let { FieldRow("Область", it.removePrefix("dev-area-")) }
+        if (task.isToday && dateView.dateKey == null) FieldRow("Эта неделя", "да")
         priorityLabel(task.priority)?.let { FieldRow("Приоритет", it) }
         task.recurrence?.let { FieldRow("Повтор", recurrenceLabel(it)) }
         if (task.isEvening) FieldRow("Вечер", "да")
@@ -166,56 +161,11 @@ fun TaskScreen(board: Board, taskId: String) {
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(12.dp))
-            Text(
+            val doneCount = task.checklist.count { it.isCompleted }
+            FieldRow(
                 "Чеклист",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "$doneCount/${task.checklist.size} выполнено",
             )
-            Spacer(Modifier.height(6.dp))
-            task.checklist.forEachIndexed { i, item ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    Box(
-                        modifier =
-                            Modifier.size(16.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .border(
-                                    1.5.dp,
-                                    if (item.isCompleted) AgendaTheme.extra.success
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    RoundedCornerShape(4.dp),
-                                )
-                                .then(
-                                    if (item.isCompleted)
-                                        Modifier.background(
-                                            AgendaTheme.extra.success,
-                                            RoundedCornerShape(4.dp),
-                                        )
-                                    else Modifier,
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (item.isCompleted) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier.size(11.dp),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "Пункт ${i + 1}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color =
-                            if (item.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
         }
     }
 }

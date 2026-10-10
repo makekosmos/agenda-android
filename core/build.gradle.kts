@@ -13,6 +13,11 @@ val buildRustHost = tasks.register<Exec>("buildRustHost") {
     commandLine("cargo", "build", "--lib")
     environment("CARGO_BUILD_JOBS", "4")
     inputs.dir(rustDir.resolve("src"))
+    inputs.files(rustDir.resolve("Cargo.toml"), rustDir.resolve("Cargo.lock"))
+    // Path dependencies: agenda-core / engine-mobile / ark-core sources.
+    inputs.dir("/workspace/wt/agenda-gpui-android/crates/agenda-core/src")
+    inputs.dir("/workspace/wt/cortex-android/runtime/crates/engine-mobile/src")
+    inputs.dir("/workspace/wt/cortex-android/core/crates/ark-core/src")
     outputs.file(rustDir.resolve("target/debug/libagenda_mobile.so"))
 }
 

@@ -120,6 +120,7 @@ class FakeRepository : BoardRepository {
             Project("dev-proj-release", "Релиз Agenda 1.0", status = 0, deadline = "2026-10-22", sortOrder = 0, areaId = "dev-area-work"),
             Project("dev-proj-home", "Дом и быт", status = 0, sortOrder = 1, areaId = "dev-area-life"),
             Project("dev-proj-someday", "Путешествие в Японию", status = 1, sortOrder = 2, areaId = "dev-area-life"),
+            Project("dev-proj-archive", "Старый сайт", status = 2, sortOrder = 3, areaId = "dev-area-work"),
         )
 
     private val tags =
@@ -139,8 +140,10 @@ class FakeRepository : BoardRepository {
                 mapOf(
                     SmartList.INBOX to
                         listOf("dev-inbox-1", "dev-inbox-2", "dev-inbox-3"),
+                    // Golden order from today_idx: overdue first, dated-today
+                    // tasks, then this-week completions dated today.
                     SmartList.TODAY to
-                        listOf("dev-overdue-1", "dev-done-today", "dev-today-2", "dev-recurring-1"),
+                        listOf("dev-overdue-1", "dev-today-2", "dev-recurring-1", "dev-done-today"),
                     SmartList.WEEK to
                         listOf(
                             "dev-overdue-1",
@@ -206,7 +209,7 @@ class FakeRepository : BoardRepository {
                 },
         )
 
-    override fun boardFlow(): Flow<Board> = flowOf(board)
+    override fun boardFlow(): Flow<BoardState> = flowOf(BoardState.Ready(board))
 
     override suspend fun addTask(rawTitle: String) {}
 }

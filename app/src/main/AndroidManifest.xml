@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- iroh sync ops in engine-mobile open sockets. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:name=".AgendaApplication"
         android:label="Agenda"

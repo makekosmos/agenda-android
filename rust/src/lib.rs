@@ -310,3 +310,75 @@ pub fn references_from_engine_object(object_json: String) -> Result<String, Agen
         agenda_core::projects::read_references(&object).map_err(AgendaError::Mapping)?;
     Ok(json!([projects, tags]).to_string())
 }
+
+/// Convert a `list_objects_by_type` payload (array of Engine objects) into
+/// an array of agenda `Todo` JSON — one FFI call for the whole board.
+#[uniffi::export]
+pub fn tasks_from_engine_objects(objects_json: String) -> Result<String, AgendaError> {
+    let objects: Vec<Value> =
+        serde_json::from_str(&objects_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let todos: Vec<String> = objects
+        .iter()
+        .map(|o| {
+            agenda_core::mapping::read(o)
+                .and_then(|t| serde_json::to_string(&t).map_err(|e| e.to_string()))
+                .map_err(AgendaError::Mapping)
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(json!(todos).to_string())
+}
+
+/// The whole read board in one FFI call: per-list index arrays, per-project
+/// and per-tag membership, and per-task date views — every rule evaluated
+/// inside agenda-core on a single `todos_json` parse.
+#[uniffi::export]
+pub fn board_lists(
+    todos_json: String,
+    project_ids_json: String,
+    tag_ids_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let todos = parse_todos(&todos_json)?;
+    let project_ids: Vec<String> =
+        serde_json::from_str(&project_ids_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let tag_ids: Vec<String> =
+        serde_json::from_str(&tag_ids_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let idx = |v: Vec<usize>| v.into_iter().map(|i| i as u32).collect::<Vec<_>>();
+    let lists = json!({
+        "inbox": idx(agenda_core::filter_idx(SmartList::Inbox, &todos, &day)),
+        "today": idx(agenda_core::today_idx(&todos, &day)),
+        "week": idx(agenda_core::filter_idx(SmartList::Week, &todos, &day)),
+        "nextWeek": idx(agenda_core::filter_idx(SmartList::NextWeek, &todos, &day)),
+        "someday": idx(agenda_core::filter_idx(SmartList::Someday, &todos, &day)),
+        "logbook": idx(agenda_core::filter_idx(SmartList::Logbook, &todos, &day)),
+        "trash": idx(agenda_core::filter_idx(SmartList::Trash, &todos, &day)),
+    });
+    let project_tasks: serde_json::Map<String, Value> = project_ids
+        .iter()
+        .map(|id| {
+            (
+                id.clone(),
+                json!(idx(agenda_core::project_page_idx(id, &todos, &day))),
+            )
+        })
+        .collect();
+    let tag_tasks: serde_json::Map<String, Value> = tag_ids
+        .iter()
+        .map(|id| {
+            (
+                id.clone(),
+                json!(idx(agenda_core::tag_page_idx(id, &todos))),
+            )
+        })
+        .collect();
+    let date_views: Vec<Value> = todos.iter().map(|t| date_view_json(t, &day)).collect();
+    Ok(json!({
+        "lists": lists,
+        "projectTasks": project_tasks,
+        "tagTasks": tag_tasks,
+        "dateViews": date_views,
+    })
+    .to_string())
+}

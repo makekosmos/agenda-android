@@ -14,6 +14,11 @@ val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
     workingDir = rootDir
     commandLine("${rootDir}/scripts/build-rust.sh", "android")
     inputs.dir(rootDir.resolve("rust/src"))
+    inputs.files(rootDir.resolve("rust/Cargo.toml"), rootDir.resolve("rust/Cargo.lock"))
+    // Path dependencies: agenda-core / engine-mobile / ark-core sources.
+    inputs.dir("/workspace/wt/agenda-gpui-android/crates/agenda-core/src")
+    inputs.dir("/workspace/wt/cortex-android/runtime/crates/engine-mobile/src")
+    inputs.dir("/workspace/wt/cortex-android/core/crates/ark-core/src")
     outputs.dir(jniLibsDir)
 }
 

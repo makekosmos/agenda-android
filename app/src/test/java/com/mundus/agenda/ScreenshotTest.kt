@@ -25,7 +25,10 @@ import org.robolectric.annotation.GraphicsMode
 class ScreenshotTest {
     @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val board = runBlocking { FakeRepository().boardFlow().first() }
+    private val board =
+        runBlocking {
+            (FakeRepository().boardFlow().first() as BoardState.Ready).board
+        }
 
     private fun shot(name: String, dark: Boolean, route: Route) {
         composeTestRule.setContent {

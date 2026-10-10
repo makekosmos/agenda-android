@@ -23,6 +23,7 @@ class RepositoryHostTest {
     @Test
     fun createListEventReopen() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
+        val dataDirFile = java.io.File(dataDir)
 
         var repository = EngineAgendaRepository(dataDir)
         try {
@@ -52,8 +53,12 @@ class RepositoryHostTest {
                 assertEquals(1, tasks.size)
                 assertEquals("Call mom", tasks[0].title)
 
-                val emitted = withTimeout(10_000) { repository.boardFlow().map { it.list(SmartList.INBOX) }.first() }
-                assertTrue(emitted.any { it.title == "Call mom" })
+                val emitted =
+                    withTimeout(10_000) {
+                        repository.boardFlow().first()
+                    }
+                val ready = emitted as BoardState.Ready
+                assertTrue(ready.board.list(SmartList.INBOX).any { it.title == "Call mom" })
             } finally {
                 subscription.close()
             }
@@ -69,17 +74,22 @@ class RepositoryHostTest {
             )
         } finally {
             repository.close()
+            dataDirFile.deleteRecursively()
         }
     }
 
     @Test
     fun quickEntrySchedulesDate() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
-        EngineAgendaRepository(dataDir).use { repository ->
-            repository.addTask("позвонить маме завтра")
-            val task = repository.tasks().single()
-            assertEquals("позвонить маме", task.title)
-            assertEquals(LocalDate.now().plusDays(1).toString(), task.scheduledDate)
+        try {
+            EngineAgendaRepository(dataDir).use { repository ->
+                repository.addTask("позвонить маме завтра")
+                val task = repository.tasks().single()
+                assertEquals("позвонить маме", task.title)
+                assertEquals(LocalDate.now().plusDays(1).toString(), task.scheduledDate)
+            }
+        } finally {
+            java.io.File(dataDir).deleteRecursively()
         }
     }
 }

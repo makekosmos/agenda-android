@@ -37,7 +37,11 @@
         "dev-done-today"
       ]
     },
+    "logbookProjects": [
+      "dev-proj-archive"
+    ],
     "projects": {
+      "dev-proj-archive": [],
       "dev-proj-home": [
         "dev-week-3"
       ],
@@ -1311,6 +1315,33 @@
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
+      "contentJson": {
+        "content": [
+          {
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T12:00:00+00:00",
+      "deletedAt": null,
+      "id": "dev-proj-archive",
+      "propsJson": {
+        "color": null,
+        "dueAt": null,
+        "extensions": {
+          "areaId": "dev-area-work",
+          "sortOrder": 3
+        },
+        "scheduledAt": null,
+        "status": "completed"
+      },
+      "title": "Старый сайт",
+      "typeId": "com.kosmos.project",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
       "contentJson": null,
       "createdAt": "2026-10-12T12:00:00+00:00",
       "deletedAt": null,
@@ -1365,6 +1396,14 @@
       "sortOrder": 2,
       "status": 1,
       "title": "Путешествие в Японию"
+    },
+    {
+      "areaId": "dev-area-work",
+      "deadline": null,
+      "id": "dev-proj-archive",
+      "sortOrder": 3,
+      "status": 2,
+      "title": "Старый сайт"
     }
   ],
   "tags": [

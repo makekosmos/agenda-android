@@ -2,6 +2,8 @@ package com.mundus.agenda.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +17,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -66,8 +70,10 @@ sealed interface Route {
 }
 
 class BoardViewModel(repository: BoardRepository) : ViewModel() {
-    val board: StateFlow<Board> =
-        repository.boardFlow().stateIn(viewModelScope, SharingStarted.Eagerly, Board())
+    val board: StateFlow<com.mundus.agenda.BoardState> =
+        repository
+            .boardFlow()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, com.mundus.agenda.BoardState.Loading)
 }
 
 class BoardViewModelFactory(private val repository: BoardRepository) :
@@ -76,21 +82,26 @@ class BoardViewModelFactory(private val repository: BoardRepository) :
     override fun <T : ViewModel> create(modelClass: Class<T>): T = BoardViewModel(repository) as T
 }
 
-private fun tagColor(name: String): Color =
-    when (name) {
-        "red" -> Color(0xFFCE222C)
-        "blue" -> Color(0xFF3B82F6)
-        "green" -> Color(0xFF03A14A)
-        "yellow" -> Color(0xFFE58212)
-        else -> Color(0xFF8D8A94)
-    }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaApp(repository: BoardRepository) {
     val viewModel: BoardViewModel = viewModel(factory = BoardViewModelFactory(repository))
-    val board by viewModel.board.collectAsStateWithLifecycle()
-    AgendaHome(board)
+    val state by viewModel.board.collectAsStateWithLifecycle()
+    when (val s = state) {
+        is com.mundus.agenda.BoardState.Loading ->
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        is com.mundus.agenda.BoardState.Error ->
+            Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    "Не удалось открыть локальные данные: ${s.message}",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        is com.mundus.agenda.BoardState.Ready -> AgendaHome(s.board)
+    }
 }
 
 /** Route-free content root: Roborazzi tests render this with a fixed board. */
@@ -234,7 +245,9 @@ fun parseRoute(key: String): Route {
 
 @Composable
 private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> Unit) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+    Column(
+        modifier = Modifier.padding(vertical = 8.dp).verticalScroll(rememberScrollState())
+    ) {
         Text(
             "Agenda",
             style = MaterialTheme.typography.titleMedium,
@@ -261,9 +274,12 @@ private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> 
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
         }
-        if (board.projects.isNotEmpty()) {
+        // Desktop sidebar shows active (status 0) projects only —
+        // someday lives in «Потом», completed in the Logbook.
+        val drawerProjects = board.projects.filter { it.status == 0 }
+        if (drawerProjects.isNotEmpty()) {
             DrawerHeader("Проекты")
-            for (p in board.projects) {
+            for (p in drawerProjects) {
                 NavigationDrawerItem(
                     label = { Text(p.title) },
                     selected = current is Route.Project && current.id == p.id,
@@ -284,7 +300,9 @@ private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> 
                 NavigationDrawerItem(
                     label = { Text(t.title) },
                     selected = current is Route.Tag && current.id == t.id,
-                    icon = { ColorDot(tagColor(t.color)) },
+                    icon = {
+                        ColorDot(tagColor(t.color, MaterialTheme.colorScheme.onSurfaceVariant))
+                    },
                     onClick = { onNavigate(routeKey(Route.Tag(t.id))) },
                     colors =
                         NavigationDrawerItemDefaults.colors(

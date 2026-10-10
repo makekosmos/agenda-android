@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
  * fake in tests/screenshots.
  */
 interface BoardRepository : AutoCloseable {
-    fun boardFlow(): Flow<Board>
+    fun boardFlow(): Flow<BoardState>
 
     suspend fun addTask(rawTitle: String)
 

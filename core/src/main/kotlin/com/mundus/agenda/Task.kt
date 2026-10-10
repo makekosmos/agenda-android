@@ -89,6 +89,16 @@ enum class SmartList(val titleRu: String) {
     TRASH("Корзина"),
 }
 
+/** Repository state surfaced to the UI: loading until the first board
+ * arrives, error if the engine fails before any board was produced. */
+sealed interface BoardState {
+    data object Loading : BoardState
+
+    data class Ready(val board: Board) : BoardState
+
+    data class Error(val message: String) : BoardState
+}
+
 /** Everything a screen needs, recomputed when the engine emits a change. */
 data class Board(
     val todos: List<Task> = emptyList(),

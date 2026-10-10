@@ -2,12 +2,19 @@ package com.mundus.agenda.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Agenda "default" palette from imago-gpui `THEMES` (zeron oklch→sRGB,
@@ -82,7 +89,7 @@ class AgendaExtra(
 )
 
 val LocalAgendaExtra =
-    staticCompositionLocalOf {
+    compositionLocalOf {
         AgendaExtra(Color(0xFF03A14A), Color(0xFFE58212), Color(0xFFF3F2F4), Color(0xFFE2E1E4))
     }
 
@@ -102,6 +109,40 @@ private val ExtraDark =
         sidebarDivider = Color(0xFF1B1A1E),
     )
 
+/** Desktop tag colors — imago-gpui `theme::tag_color` verbatim. */
+fun tagColor(name: String, fallback: Color): Color =
+    when (name) {
+        "red" -> Color(0xFFE66F64)
+        "orange" -> Color(0xFFD9975C)
+        "yellow" -> Color(0xFFCCAE59)
+        "green" -> Color(0xFF3DB07C)
+        "blue" -> Color(0xFF548BD0)
+        "purple" -> Color(0xFFA074D0)
+        "pink" -> Color(0xFFD981AC)
+        "gray", "grey" -> Color(0xFF7A7A7A)
+        else -> fallback
+    }
+
+/** Desktop type scale and radii mapped onto M3: body rows are 13-14px,
+ * page titles ~17px semibold, cards/rows use 6-10px radii. */
+private val AgendaTypography =
+    Typography(
+        titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+        titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
+        bodyLarge = TextStyle(fontSize = 14.sp),
+        bodyMedium = TextStyle(fontSize = 13.5.sp),
+        bodySmall = TextStyle(fontSize = 12.sp),
+        labelSmall = TextStyle(fontSize = 11.sp),
+        labelMedium = TextStyle(fontSize = 12.sp),
+    )
+
+private val AgendaShapes =
+    Shapes(
+        small = RoundedCornerShape(6.dp),
+        medium = RoundedCornerShape(10.dp),
+        large = RoundedCornerShape(14.dp),
+    )
+
 object AgendaTheme {
     val extra: AgendaExtra
         @Composable get() = LocalAgendaExtra.current
@@ -112,6 +153,8 @@ fun AgendaTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable
     CompositionLocalProvider(LocalAgendaExtra provides if (darkTheme) ExtraDark else ExtraLight) {
         MaterialTheme(
             colorScheme = if (darkTheme) AgendaDark else AgendaLight,
+            typography = AgendaTypography,
+            shapes = AgendaShapes,
             content = content,
         )
     }
