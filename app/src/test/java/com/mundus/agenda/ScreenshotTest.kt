@@ -69,8 +69,7 @@ class ScreenshotTest {
             }
         }
         composeTestRule.onAllNodes(hasSetTextAction())[0].performTextInput("купить молоко завтра")
-        composeTestRule.waitForIdle()
-        Thread.sleep(400)
+        composeTestRule.mainClock.advanceTimeBy(500)
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-light.png")
     }
@@ -83,8 +82,7 @@ class ScreenshotTest {
             }
         }
         composeTestRule.onAllNodes(hasSetTextAction())[0].performTextInput("купить молоко завтра")
-        composeTestRule.waitForIdle()
-        Thread.sleep(400)
+        composeTestRule.mainClock.advanceTimeBy(500)
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-dark.png")
     }

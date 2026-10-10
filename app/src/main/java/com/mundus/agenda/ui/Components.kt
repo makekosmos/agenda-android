@@ -179,7 +179,35 @@ fun AIconButton(
 fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
     if (!open) return
     val c = AgendaTheme.colors
-    Popup(onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+    // Anchor below the row, flip above when the menu would leave the
+    // window — the desktop popover grows from its button the same way.
+    val positioner = remember {
+        object : androidx.compose.ui.window.PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: androidx.compose.ui.unit.IntRect,
+                windowSize: androidx.compose.ui.unit.IntSize,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                popupContentSize: androidx.compose.ui.unit.IntSize,
+            ): androidx.compose.ui.unit.IntOffset {
+                val x =
+                    anchorBounds.left.coerceIn(
+                        0,
+                        (windowSize.width - popupContentSize.width).coerceAtLeast(0),
+                    )
+                val y =
+                    if (anchorBounds.bottom + popupContentSize.height <= windowSize.height)
+                        anchorBounds.bottom
+                    else
+                        (anchorBounds.top - popupContentSize.height).coerceAtLeast(0)
+                return androidx.compose.ui.unit.IntOffset(x, y)
+            }
+        }
+    }
+    Popup(
+        popupPositionProvider = positioner,
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
         Box(
             Modifier
                 .widthIn(min = 200.dp)
@@ -343,6 +371,11 @@ fun SheetField(
         onValueChange = onValueChange,
         textStyle = style.copy(color = c.fg),
         cursorBrush = androidx.compose.ui.graphics.SolidColor(c.accent),
+        keyboardOptions =
+            androidx.compose.foundation.text.KeyboardOptions(
+                capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+            ),
         modifier = modifier.fillMaxWidth(),
         decorationBox = { inner ->
             Box {
