@@ -57,8 +57,10 @@ android {
             )
             signingConfig = signingConfigs.findByName("release")
             ndk {
-                // Real phones only; the Rust .so is built just for arm64.
-                abiFilters += "arm64-v8a"
+                // Real phones: arm64 only. -PagendaAbis=x86_64 gives an
+                // emulator build with the same R8 config (docs/testing-on-device.md).
+                abiFilters += ((findProperty("agendaAbis") as String?) ?: "arm64-v8a")
+                    .split(' ', ',').filter { it.isNotBlank() }
             }
         }
     }
