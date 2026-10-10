@@ -21,7 +21,13 @@ build_host() {
 }
 
 build_android() {
-    (cd "$RUST_DIR" && cargo ndk -t arm64-v8a -t x86_64 -o "$OUT_JNILIBS" build --release)
+    # AGENDA_ANDROID_ABIS="arm64-v8a" limits the build (release APK for
+    # real phones); default keeps x86_64 for emulators.
+    local abis="${AGENDA_ANDROID_ABIS:-arm64-v8a x86_64}" targets=() abi
+    for abi in $abis; do targets+=(-t "$abi"); done
+    # Drop stale ABI dirs so a narrowed build doesn't ship old .so files.
+    rm -rf "$OUT_JNILIBS"
+    (cd "$RUST_DIR" && cargo ndk "${targets[@]}" -o "$OUT_JNILIBS" build --release)
     # cargo-ndk copies every cdylib in the dep tree; the app ships exactly
     # one .so (agenda_mobile statically contains engine-mobile + ark-core).
     find "$OUT_JNILIBS" -name '*.so' ! -name 'libagenda_mobile.so' -delete

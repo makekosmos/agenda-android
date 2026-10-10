@@ -13,6 +13,9 @@ val jniLibsDir = layout.buildDirectory.dir("rust-jnilibs")
 val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
     workingDir = rootDir
     commandLine("${rootDir}/scripts/build-rust.sh", "android")
+    // -PagendaAbis=arm64-v8a narrows the Rust build (see build-rust.sh).
+    (findProperty("agendaAbis") as String?)?.let { environment("AGENDA_ANDROID_ABIS", it) }
+    inputs.property("agendaAbis", findProperty("agendaAbis") ?: "default")
     inputs.dir(rootDir.resolve("rust/src"))
     inputs.files(rootDir.resolve("rust/Cargo.toml"), rootDir.resolve("rust/Cargo.lock"))
     // Path dependencies: agenda-core / engine-mobile / ark-core sources.
@@ -22,9 +25,43 @@ val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
     outputs.dir(jniLibsDir)
 }
 
+// Release signing comes from ~/.gradle/gradle.properties or env vars
+// (AGENDA_RELEASE_STORE_FILE / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD).
+// Nothing secret lives in the repo; without them the release build is unsigned.
+fun releaseSecret(name: String): String? =
+    (findProperty(name) as String?) ?: System.getenv(name)
+
 android {
     namespace = "com.mundus.agenda"
     compileSdk = 35
+
+    signingConfigs {
+        val storeFile = releaseSecret("AGENDA_RELEASE_STORE_FILE")
+        if (storeFile != null) {
+            create("release") {
+                this.storeFile = file(storeFile)
+                storePassword = releaseSecret("AGENDA_RELEASE_STORE_PASSWORD")
+                keyAlias = releaseSecret("AGENDA_RELEASE_KEY_ALIAS")
+                keyPassword = releaseSecret("AGENDA_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.findByName("release")
+            ndk {
+                // Real phones only; the Rust .so is built just for arm64.
+                abiFilters += "arm64-v8a"
+            }
+        }
+    }
 
     testOptions {
         unitTests {
@@ -67,7 +104,12 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":core"))
+    // Android needs JNA's AAR (it carries libjnidispatch.so per ABI); the
+    // plain jar :core uses on the JVM only has desktop natives.
+    implementation(project(":core")) {
+        exclude(group = "net.java.dev.jna", module = "jna")
+    }
+    implementation(libs.jna) { artifact { type = "aar" } }
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
@@ -80,6 +122,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(libs.junit)
+    testImplementation(libs.jna)
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)

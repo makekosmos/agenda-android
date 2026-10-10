@@ -51,6 +51,7 @@ import com.mundus.agenda.SmartList
 import com.mundus.agenda.WriteConflict
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -65,6 +66,9 @@ class BoardViewModel(repository: BoardRepository) : ViewModel() {
     val board: StateFlow<BoardState> =
         repository
             .boardFlow()
+            // An engine that fails to open (e.g. corrupt ark.db) throws from
+            // subscribe(); show the error screen instead of crashing.
+            .catch { e -> emit(BoardState.Error(e.message ?: "engine error")) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, BoardState.Loading)
 }
 
