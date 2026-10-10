@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -182,11 +183,17 @@ fun QuickEntrySheet(
             )
         preview?.scheduledDate?.let { dateLabel = repository.dayLabel(it) }
     }
+
     val projectValue =
         projectId?.let { pid -> board.projects.firstOrNull { it.id == pid }?.title }
             ?: "Без проекта"
     // Desktop dropdowns skip completed (status 2) projects.
     val projectChoices = board.projects.filter { it.status != 2 }
+
+    // The title field gets focus and the keyboard on open — quick entry
+    // starts typing immediately (Microsoft To Do / Todoist behavior).
+    val titleFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
     fun dismissWithSave() {
         val t = editing
@@ -194,6 +201,28 @@ fun QuickEntrySheet(
             run { repository?.editTitleNotes(t, title, notes.ifBlank { null }) }
         }
         onDismiss()
+    }
+
+    // Enter/Done in create mode: write the task and keep the sheet open,
+    // fields cleared, title still focused — rapid multi-entry like
+    // Todoist / Microsoft To Do (Jack's p4 requirement; desktop's panel
+    // closes, but the sheet staying open is the phone flow).
+    fun createAndContinue() {
+        if (title.isBlank()) return
+        // Snapshot before run{}: the lambda executes on the next main-loop
+        // turn, after the fields below are already cleared.
+        val t = title
+        val n = notes.ifBlank { null }
+        val d: String? = null
+        val w = weekFlag
+        val s = somedayFlag
+        val p = projectId
+        val pt = projectTouched
+        run { repository?.quickEntry(t, n, d, w, s, p, pt) }
+        title = ""
+        notes = ""
+        preview = null
+        titleFocus.requestFocus()
     }
 
     ModalBottomSheet(
@@ -212,14 +241,29 @@ fun QuickEntrySheet(
             )
         },
     ) {
-        Column(modifier = Modifier.padding(bottom = 24.dp)) {
+        Column(modifier = Modifier.imePadding().padding(bottom = 24.dp)) {
             SheetField(
                 value = title,
                 onValueChange = { title = it },
                 placeholder = if (editing == null) "Новая задача" else "",
                 style = AgendaType.input,
                 modifier = Modifier.padding(horizontal = 16.dp),
+                singleLine = true,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                keyboardActions =
+                    androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            if (editing == null) createAndContinue()
+                            else dismissWithSave()
+                        }
+                    ),
+                focusRequester = titleFocus,
             )
+            // After the field exists: focus it and show the keyboard.
+            LaunchedEffect(Unit) {
+                titleFocus.requestFocus()
+                keyboard?.show()
+            }
             Spacer(Modifier.height(6.dp))
             SheetField(
                 value = notes,
@@ -282,22 +326,7 @@ fun QuickEntrySheet(
                 ) {
                     SheetButton("Отмена") { onDismiss() }
                     Spacer(Modifier.width(4.dp))
-                    SheetButton("Сохранить", primary = true) {
-                        if (title.isNotBlank()) {
-                            run {
-                                repository?.quickEntry(
-                                    title,
-                                    notes.ifBlank { null },
-                                    null,
-                                    weekFlag,
-                                    somedayFlag,
-                                    projectId,
-                                    projectTouched,
-                                )
-                            }
-                            onDismiss()
-                        }
-                    }
+                    SheetButton("Сохранить", primary = true) { createAndContinue() }
                 }
             }
         }

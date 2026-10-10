@@ -201,6 +201,8 @@ class FakeRepository : BoardRepository {
 
     override fun boardFlow(): Flow<BoardState> = flowOf(BoardState.Ready(board))
 
+    var quickEntryCalls = mutableListOf<String>()
+
     override suspend fun quickEntry(
         rawTitle: String,
         notes: String?,
@@ -209,7 +211,9 @@ class FakeRepository : BoardRepository {
         someday: Boolean,
         projectId: String?,
         projectTouched: Boolean,
-    ) {}
+    ) {
+        quickEntryCalls += rawTitle
+    }
 
     override suspend fun toggleComplete(task: Task) {}
 

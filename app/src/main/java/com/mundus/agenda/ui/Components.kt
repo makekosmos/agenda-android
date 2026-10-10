@@ -500,6 +500,12 @@ fun SheetField(
     placeholder: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
+    singleLine: Boolean = false,
+    imeAction: androidx.compose.ui.text.input.ImeAction =
+        androidx.compose.ui.text.input.ImeAction.Default,
+    keyboardActions: androidx.compose.foundation.text.KeyboardActions =
+        androidx.compose.foundation.text.KeyboardActions.Default,
+    focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
 ) {
     val c = AgendaTheme.colors
     androidx.compose.foundation.text.BasicTextField(
@@ -507,12 +513,18 @@ fun SheetField(
         onValueChange = onValueChange,
         textStyle = style.copy(color = c.fg),
         cursorBrush = androidx.compose.ui.graphics.SolidColor(c.accent),
+        singleLine = singleLine,
         keyboardOptions =
             androidx.compose.foundation.text.KeyboardOptions(
                 capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
+                imeAction = imeAction,
             ),
-        modifier = modifier.fillMaxWidth(),
+        keyboardActions = keyboardActions,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
         decorationBox = { inner ->
             Box {
                 if (value.isEmpty()) Text(placeholder, style = style, color = c.mutedFg)

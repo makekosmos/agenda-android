@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mundus.agenda.ui.AgendaHome
 import com.mundus.agenda.ui.AgendaTheme
@@ -171,6 +173,37 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("HOME_PAGE").assertIsDisplayed()
         composeTestRule.onNodeWithText("INNER_PAGE").assertIsDisplayed()
+    }
+
+    @Test
+    fun quickEntryEnterCreatesTitledTaskAndStaysOpen() {
+        // p4-fix (g) regression: run{} defers to the next main-loop turn,
+        // so quickEntry must capture the field values before they clear —
+        // otherwise tasks land in the engine with empty titles.
+        val repo = FakeRepository()
+        composeTestRule.setContent {
+            AgendaTheme {
+                AgendaHome(board = board, repository = repo, initialCreate = true)
+            }
+        }
+        composeTestRule.waitForIdle()
+        val field = { composeTestRule.onAllNodes(hasSetTextAction())[0] }
+        field().performTextInput("первая задача")
+        field().performImeAction()
+        composeTestRule.waitForIdle()
+        field().performTextInput("вторая задача")
+        field().performImeAction()
+        composeTestRule.waitForIdle()
+        assert(repo.quickEntryCalls == listOf("первая задача", "вторая задача")) {
+            "quickEntry titles: ${repo.quickEntryCalls}"
+        }
+        // Sheet stays open for the next entry (multi-entry flow).
+        assert(
+            composeTestRule
+                .onAllNodes(hasSetTextAction())
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        ) { "quick entry sheet closed after Enter" }
     }
 
     @Test
