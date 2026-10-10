@@ -3,7 +3,8 @@
 # Fallback for agents when the mobile-mcp MCP server is unavailable.
 # See docs/testing-on-device.md.
 #
-#   scripts/device.sh boot                 # start headless emulator (AVD $AVD), wait for boot
+#   scripts/device.sh boot                 # start headless emulator (AVD $AVD, default agenda30 = only image with working screenshots here), wait for boot
+#     env: AVD=agenda34atd (API 34, no screenshots), GPU=guest|swiftshader_indirect|host, EMU_EXTRA="...", KVM=1 (never on this box)
 #   scripts/device.sh stop                 # kill the emulator
 #   scripts/device.sh build [release|debug]  # x86_64 APK for the emulator
 #   scripts/device.sh install [apk]        # default: latest x86_64 release build
@@ -22,15 +23,17 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SDK="${ANDROID_SDK_ROOT_EMU:-/home/box/android}"          # has emulator + system image
 ADB="${ADB:-/home/box/android-sdk/platform-tools/adb}"
-AVD="${AVD:-agenda34atd}"
+AVD="${AVD:-agenda30}"
 SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 PKG="com.mundus.agenda"
 EMU_LOG="${EMU_LOG:-/tmp/agenda-emulator.log}"
 a() { "$ADB" -s "$SERIAL" "$@"; }
 
 accel_flag() {
-    # KVM only if this user can actually open it; otherwise pure software (TCG, slow).
-    if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then echo "-accel on"; else echo "-accel off"; fi
+    # Default: pure software (TCG). On this box /dev/kvm exists but creating a vCPU
+    # hits a host kernel BUG (kvm_spurious_fault, nested VMX broken), so KVM is opt-in
+    # only (KVM=1) for machines where it really works.
+    if [ "${KVM:-0}" = 1 ]; then echo "-accel on"; else echo "-accel off"; fi
 }
 
 cmd="${1:-}"; shift || true
@@ -40,8 +43,8 @@ case "$cmd" in
     start=$(date +%s)
     # shellcheck disable=SC2046
     ANDROID_SDK_ROOT="$SDK" ANDROID_HOME="$SDK" nohup "$SDK/emulator/emulator" -avd "$AVD" \
-        $(accel_flag) -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect \
-        -no-snapshot -memory 2048 -cores 4 -port "${SERIAL#emulator-}" >"$EMU_LOG" 2>&1 &
+        $(accel_flag) -no-window -no-audio -no-boot-anim -gpu "${GPU:-guest}" \
+        ${EMU_EXTRA:-} -no-snapshot -memory 2048 -cores 4 -port "${SERIAL#emulator-}" >"$EMU_LOG" 2>&1 &
     "$ADB" start-server >/dev/null
     until [ "$(a shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
         sleep 5
@@ -52,6 +55,7 @@ case "$cmd" in
         for k in window_animation_scale transition_animation_scale animator_duration_scale; do a shell settings put global $k 0; done
     fi
     a shell input keyevent KEYCODE_WAKEUP; a shell wm dismiss-keyguard || true
+    a shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null || true  # post-boot "isn't responding" dialogs
     echo "booted in $(( $(date +%s) - start ))s ($(accel_flag))"
     ;;
   stop) a emu kill || true ;;

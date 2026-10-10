@@ -9,16 +9,29 @@ the "does it actually run" check.
 
 - Emulator + system images: `/home/box/android` (emulator 37.2.12).
   `adb`: `/home/box/android-sdk/platform-tools/adb`.
-- AVDs (default `AVD=agenda34atd` recommended): `agenda34atd` (`system-images;android-34;aosp_atd;x86_64`, lightest,
-  preferred) and `agenda35` (API 35 google_apis x86_64).
-- The emulator needs KVM to be usable. The box user is not in the group that
-  owns `/dev/kvm` (root:103, 0660), so `scripts/device.sh boot` falls back to
-  `-accel off` (pure software, TCG). See "Status" below for what that means.
+- AVDs:
+  - `agenda30` (default): `system-images;android-30;default;x86_64`, Pixel 6
+    skin 1080x2400. **The only image on this box whose screenshots are not
+    black.** No system predictive-back (API 30); in-app back transitions still
+    run (system back = KEYCODE_BACK / 3-button nav).
+  - `agenda34atd`: `android-34;aosp_atd;x86_64`. Boots faster (~220 s) and
+    has API 34 behaviour (predictive back callbacks), but nothing renders:
+    `screencap` is black and `gfxinfo` shows 0 frames rendered. Use it only for
+    crash/logcat/uiautomator checks of API 34 behaviour.
+  - `agenda35` (API 35 google_apis): unusable (system_server restart loop).
+- **No KVM on this box.** `/dev/kvm` exists but creating a vCPU hits a host
+  kernel BUG (`kvm_spurious_fault` in `kvm_arch_vcpu_create`, dmesg; nested
+  VMX is advertised but broken). Never boot with `KVM=1` here: every try
+  oopses the box kernel. `device.sh boot` always uses `-accel off` (TCG).
 
 ```
-AVD=agenda34atd scripts/device.sh boot      # headless, waits for sys.boot_completed
-scripts/device.sh stop                      # always stop it when done (2+ GB RAM)
+scripts/device.sh boot                      # agenda30, headless, waits for sys.boot_completed
+AVD=agenda34atd scripts/device.sh boot      # API 34, behaviour only (no screenshots)
+scripts/device.sh stop                      # always stop it when done (~2.5 GB RAM)
 ```
+
+Knobs: `GPU=` (default `guest`; the images fall back to host
+swiftshader/lavapipe anyway), `EMU_EXTRA="..."` extra emulator flags.
 
 ## Build for the emulator
 
@@ -76,20 +89,28 @@ launch/install. Check with `devin mcp list`. The device must be booted first.
 
 Typical smoke loop: `clear; launch; shot 0.png; tapon "<label>"; shot 1.png; crash`.
 
-## Status (2026-10-10, measured on the box, no KVM, TCG)
+## Status (2026-10-10 evening, measured on the box, TCG)
 
-| step | agenda34atd (ATD API 34) | agenda35 (google_apis API 35) |
+| step | agenda30 (API 30 default) | agenda34atd (ATD API 34) |
 |---|---|---|
-| boot to `sys.boot_completed` | 390 s | never: system_server died and zygote restarted 11x in 13 min |
-| `adb install` release APK (30 MB) | 81 s | - |
-| cold start (`am start -W`) | 12.4 s (+ a "system isn't responding" ANR dialog right after boot, tap Wait) | - |
-| warm start | 4.8 s | - |
-| `uiautomator dump` | ~27 s | - |
-| `screencap` | ~23 s, and the image is **black** (rendering broken under TCG + swiftshader_indirect) | - |
+| boot to `sys.boot_completed` | ~400 s | ~220 s (390 s with the old flags) |
+| `adb install` release APK (30 MB) | 13 s | 81 s |
+| cold start (`am start -W` TotalTime) | 7.0 s | 3.3-10.8 s |
+| `screencap` | ~15-20 s, **real image** | black (0 frames rendered) |
+| mobile-mcp from Devin (list devices, screenshot, list elements) | works | elements only |
 
-So without KVM the rig works for **crash/logcat and UI-tree driven tests**
-(tap by coordinates from `ui`/`find`, then `crash`), but not for visual checks:
-screenshots come back blank. Untested next step: boot with `-gpu guest`.
+Right after boot a "System UI isn't responding" dialog may appear (slow
+TCG); `device.sh boot` closes system dialogs, otherwise `tapon Wait`.
+
+What did not fix the black screenshots on API 34 ATD: `-gpu swiftshader_indirect`,
+`-gpu guest` (image has no guest renderer, falls back to swangle/lavapipe),
+`-gpu host` on an own Xvfb (Mesa llvmpipe), `-feature -Vulkan`, and
+`service call SurfaceFlinger 1008 i32 1` (force client composition, as root).
+Switching to the API 30 image did.
+
+mobile-mcp probe (Devin, swe-2-medium): `mobile_list_available_devices`,
+`mobile_take_screenshot`, `mobile_list_elements_on_screen` all succeeded
+against `agenda30` with the app in foreground.
 
 First result: tapping "+" (content-desc "Новая задача") on the x86_64 release
 build reproduces Jack's crash:
@@ -103,11 +124,3 @@ SerializationException: Serializer for class 'QuickEntryPreview' is not found.
 `QuickEntryPreview` (core/.../BoardRepository.kt) has no `@Serializable`, but
 `EngineAgendaRepository.quickEntryPreview` decodes it with
 `json.decodeFromString`. It is not R8: debug builds crash the same way.
-
-Options that give a usable device:
-
-1. KVM for the box user (infra change: add the box user to group 103 or an
-   ACL on `/dev/kvm`). Then `device.sh boot` uses `-accel on` automatically.
-2. GitHub Actions emulator (`reactivecircus/android-emulator-runner`) on a
-   public repo (Actions minutes are free there; private repos in makekosmos
-   have no working Actions billing).
