@@ -191,25 +191,8 @@ fun AgendaHome(
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            // Custom top bar: back affordance on drill-in, quiet otherwise.
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (current !is Route.Home) {
-                    AIconButton(R.drawable.ic_arrow_left, desc = "Назад", onClick = ::back)
-                } else {
-                    Spacer(Modifier.width(16.dp))
-                }
-                Text(
-                    title,
-                    style = if (current is Route.Home) AgendaType.pageTitle else AgendaType.barTitle,
-                    color = c.fg,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(vertical = 10.dp),
-                )
-            }
+            // Shared top bar: identical title geometry on every page.
+            AgendaTopBar(title = title, onBack = if (current !is Route.Home) ::back else null)
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 AnimatedContent(
                     targetState = current,

@@ -17,11 +17,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -170,6 +172,43 @@ fun AIconButton(
         contentAlignment = Alignment.Center,
     ) {
         AIcon(res, tint = tint, desc = desc)
+    }
+}
+
+/**
+ * The single top bar every page shares: one 40dp back slot (empty on
+ * home), the page title in `pageTitle` type at a fixed baseline. Home and
+ * inner pages get identical geometry — same padding, height and text
+ * metrics, so drilling in never shifts the title.
+ */
+@Composable
+fun AgendaTopBar(
+    title: String,
+    onBack: (() -> Unit)? = null,
+    titleContent: (@Composable () -> Unit)? = null,
+) {
+    val c = AgendaTheme.colors
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            AIconButton(R.drawable.ic_arrow_left, desc = "Назад", onClick = onBack)
+        } else {
+            Spacer(Modifier.width(16.dp))
+        }
+        if (titleContent != null) {
+            titleContent()
+        } else {
+            Text(
+                title,
+                style = AgendaType.pageTitle,
+                color = c.fg,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 10.dp),
+            )
+        }
     }
 }
 
