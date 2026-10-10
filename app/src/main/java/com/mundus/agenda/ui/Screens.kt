@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mundus.agenda.Board
+import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
 
@@ -262,6 +265,186 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
                 RowDivider()
             }
         }
+    }
+}
+
+/**
+ * Completion counters — the desktop statistics page numbers
+ * (pages/statistics.rs:59-63) computed from `completedAt` dates.
+ * Total / last 7 / last 30 days, current and best day-streak.
+ */
+data class CompletionStats(
+    val total: Int,
+    val last7: Int,
+    val last30: Int,
+    val streak: Int,
+    val bestStreak: Int,
+)
+
+fun completionStats(todos: List<Task>, today: java.time.LocalDate): CompletionStats {
+    val days =
+        todos
+            .mapNotNull { it.completedAt?.take(10) }
+            .mapNotNull { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+    val byDay = days.groupingBy { it }.eachCount()
+    val total = days.size
+    val last7 = days.count { it >= today.minusDays(6) }
+    val last30 = days.count { it >= today.minusDays(29) }
+    fun streakFrom(start: java.time.LocalDate): Int {
+        var d = start
+        var n = 0
+        while ((byDay[d] ?: 0) > 0) {
+            n++
+            d = d.minusDays(1)
+        }
+        return n
+    }
+    // A day with no completions yet still continues today's streak, like
+    // the desktop counter (streak counts back from the last done day).
+    val streak =
+        streakFrom(if ((byDay[today] ?: 0) > 0) today else today.minusDays(1))
+    var best = 0
+    var run = 0
+    val sorted = byDay.keys.sorted()
+    var prev: java.time.LocalDate? = null
+    for (d in sorted) {
+        run = if (prev != null && d == prev!!.plusDays(1)) run + 1 else 1
+        best = maxOf(best, run)
+        prev = d
+    }
+    return CompletionStats(total, last7, last30, streak, best)
+}
+
+/**
+ * Settings — only what desktop has AND a phone can back
+ * (chrome.rs:295-372 settings sidebar):
+ * «Отображение» theme tiles (settings.rs:100-103), «Статистика» counters
+ * (statistics.rs:59-63). VSync / dev tools / hotkeys are desktop-only —
+ * no row at all.
+ */
+@Composable
+fun SettingsScreen(
+    board: Board,
+    themeMode: String,
+    onThemeMode: (String) -> Unit,
+    onAbout: () -> Unit,
+) {
+    val c = AgendaTheme.colors
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 8.dp, bottom = 96.dp)
+    ) {
+        ASectionHeader("Отображение")
+        SettingsGroup {
+            for ((mode, label) in listOf("system" to "Системная", "light" to "Светлая", "dark" to "Тёмная")) {
+                if (mode != "system") ADivider(indent = 44.dp)
+                ARow(onClick = { onThemeMode(mode) }) { glyph ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            label,
+                            style = AgendaType.body,
+                            color = glyph,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (themeMode == mode) {
+                            AIcon(R.drawable.ic_check, tint = c.accent)
+                        }
+                    }
+                }
+            }
+        }
+        ASectionHeader("Статистика")
+        val stats =
+            completionStats(board.todos, java.time.LocalDate.now())
+        SettingsGroup {
+            val rows =
+                listOf(
+                    "Всего выполнено" to stats.total,
+                    "За 7 дней" to stats.last7,
+                    "За 30 дней" to stats.last30,
+                    "Текущая серия" to stats.streak,
+                    "Лучшая серия" to stats.bestStreak,
+                )
+            rows.forEachIndexed { i, (label, value) ->
+                if (i > 0) ADivider(indent = 16.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(label, style = AgendaType.body, color = c.fg, modifier = Modifier.weight(1f))
+                    Text("$value", style = AgendaType.body, color = c.mutedFg)
+                }
+            }
+        }
+        ASectionHeader("Другое")
+        SettingsGroup {
+            ARow(onClick = onAbout) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AIcon(R.drawable.ic_help_circle, tint = glyph.copy(alpha = 0.85f))
+                    Spacer(Modifier.width(12.dp))
+                    Text("О приложении", style = AgendaType.body, color = glyph)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsGroup(content: @Composable () -> Unit) {
+    val c = AgendaTheme.colors
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.sidebarBg)
+    ) {
+        content()
+    }
+}
+
+/**
+ * About — the desktop About page (pages/settings.rs:127-191): hero +
+ * the one real diagnostics check (Engine data access; the screen only
+ * renders when the board loaded, so it is Ok).
+ */
+@Composable
+fun AboutScreen() {
+    val c = AgendaTheme.colors
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        AIcon(R.drawable.ic_calendar_01, tint = c.accent, modifier = Modifier.size(56.dp))
+        Spacer(Modifier.height(16.dp))
+        Text("Agenda", style = AgendaType.pageTitle, color = c.fg)
+        Spacer(Modifier.height(4.dp))
+        Text("Версия ${com.mundus.agenda.BuildConfig.VERSION_NAME}", style = AgendaType.body, color = c.mutedFg)
+        Spacer(Modifier.height(24.dp))
+        SettingsGroup {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Доступ к данным Agenda через Engine",
+                    style = AgendaType.body,
+                    color = c.fg,
+                    modifier = Modifier.weight(1f),
+                )
+                Text("Ok", style = AgendaType.body, color = c.success)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text("© Yoso Industries 2025–2026", style = AgendaType.meta, color = c.mutedFg)
     }
 }
 

@@ -61,6 +61,8 @@ sealed interface Route {
     data object Home : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
+    data object Settings : Route
+    data object About : Route
 }
 
 class BoardViewModel(repository: BoardRepository) : ViewModel() {
@@ -80,7 +82,11 @@ class BoardViewModelFactory(private val repository: BoardRepository) :
 }
 
 @Composable
-fun AgendaApp(repository: BoardRepository) {
+fun AgendaApp(
+    repository: BoardRepository,
+    themeMode: String = "system",
+    onThemeMode: (String) -> Unit = {},
+) {
     val viewModel: BoardViewModel = viewModel(factory = BoardViewModelFactory(repository))
     val state by viewModel.board.collectAsStateWithLifecycle()
     val c = AgendaTheme.colors
@@ -97,7 +103,8 @@ fun AgendaApp(repository: BoardRepository) {
                     style = AgendaType.body,
                 )
             }
-        is BoardState.Ready -> AgendaHome(s.board, repository)
+        is BoardState.Ready ->
+            AgendaHome(s.board, repository, themeMode = themeMode, onThemeMode = onThemeMode)
     }
 }
 
@@ -127,6 +134,8 @@ fun AgendaHome(
     initialRoute: Route = Route.Home,
     initialCreate: Boolean = false,
     initialEditTaskId: String? = null,
+    themeMode: String = "system",
+    onThemeMode: (String) -> Unit = {},
 ) {
     var route by rememberSaveable { mutableStateOf(routeKey(initialRoute)) }
     // Direction of the last nav: 1 = drill in, -1 = back. Drives the
@@ -242,6 +251,8 @@ fun AgendaHome(
             is Route.Home -> "Agenda"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
+            is Route.Settings -> "Настройки"
+            is Route.About -> "О приложении"
         }
     val animate = animationsEnabled()
     val slideDur = if (animate) 240 else 0
@@ -280,6 +291,14 @@ fun AgendaHome(
                         )
                     is Route.List ->
                         TaskListScreen(board = board, list = r.list, actions = actions)
+                    is Route.Settings ->
+                        SettingsScreen(
+                            board = board,
+                            themeMode = themeMode,
+                            onThemeMode = onThemeMode,
+                            onAbout = { navigate(Route.About) },
+                        )
+                    is Route.About -> AboutScreen()
                     is Route.Project ->
                         ProjectScreen(
                             board = board,
@@ -363,10 +382,14 @@ fun routeKey(route: Route): String =
         is Route.Home -> "home"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
+        is Route.Settings -> "settings"
+        is Route.About -> "about"
     }
 
 fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
+        "settings" -> Route.Settings
+        "about" -> Route.About
         "project" -> Route.Project(key.substringAfter(':'))
         "list" ->
             Route.List(
@@ -523,11 +546,13 @@ fun HomePage(
                 onNavigate(Route.List(SmartList.TRASH))
             }
             ADivider(indent = 44.dp)
-            // Desktop popover order kept; Android has no settings/about
-            // screens yet, so these two stay visible but disabled.
-            HomeRow(R.drawable.ic_settings, "Настройки", enabled = false, onClick = null)
+            HomeRow(R.drawable.ic_settings, "Настройки") {
+                onNavigate(Route.Settings)
+            }
             ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_help_circle, "О приложении", enabled = false, onClick = null)
+            HomeRow(R.drawable.ic_help_circle, "О приложении") {
+                onNavigate(Route.About)
+            }
         }
     }
 }

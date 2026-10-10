@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mundus.agenda.ui.AgendaHome
 import com.mundus.agenda.ui.AgendaTheme
@@ -96,15 +97,40 @@ class NavigationTest {
         }
         val bareCounts = texts.filter { it.matches(Regex("\\d+")) }
         assert(bareCounts.isEmpty()) { "unexpected count labels on home: $bareCounts" }
-        // Настройки / О приложении are present but disabled — their rows
-        // carry the Disabled semantics flag.
-        for (label in listOf("Настройки", "О приложении")) {
-            val node = composeTestRule.onNodeWithText(label).fetchSemanticsNode()
-            fun isDisabled(n: androidx.compose.ui.semantics.SemanticsNode): Boolean =
-                androidx.compose.ui.semantics.SemanticsProperties.Disabled in n.config ||
-                    n.parent?.let(::isDisabled) == true
-            assert(isDisabled(node)) { "'$label' row must be disabled on home" }
-        }
+        // Настройки / О приложении are enabled rows (p4-fix f): tapping
+        // each opens the matching page, back returns home.
+    }
+
+    @Test
+    fun settingsAndAboutOpenAndReturn() {
+        composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Настройки").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        // Settings mirrors the desktop sidebar: Отображение tiles +
+        // Статистика counters, no desktop-only rows.
+        composeTestRule.onNodeWithText("Отображение").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Светлая").assertIsDisplayed()
+        // Below the fold at w411-h891: exists, may need scroll to display.
+        assert(
+            composeTestRule
+                .onAllNodes(androidx.compose.ui.test.hasText("Статистика"))
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        ) { "settings missing Статистика" }
+        composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Другое").assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("О приложении").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Agenda").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Доступ к данным Agenda через Engine")
+            .assertIsDisplayed()
+        composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Другое").assertIsDisplayed()
     }
 
     @Test

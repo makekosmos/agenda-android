@@ -11,7 +11,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val repository = (application as AgendaApplication).repository
-        setContent { AgendaTheme { AgendaApp(repository) } }
+        val app = application as AgendaApplication
+        setContent {
+            AgendaTheme(
+                darkTheme =
+                    when (app.themeMode.value) {
+                        "light" -> false
+                        "dark" -> true
+                        else -> androidx.compose.foundation.isSystemInDarkTheme()
+                    }
+            ) {
+                AgendaApp(
+                    app.repository,
+                    themeMode = app.themeMode.value,
+                    onThemeMode = app::setThemeMode,
+                )
+            }
+        }
     }
 }

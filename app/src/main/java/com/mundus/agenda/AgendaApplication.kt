@@ -12,4 +12,17 @@ class AgendaApplication : Application() {
     val repository: EngineAgendaRepository by lazy {
         EngineAgendaRepository(filesDir.absolutePath)
     }
+
+    // «Отображение» theme (desktop settings.rs appearance tiles):
+    // "system" | "light" | "dark", persisted across launches.
+    private val prefs by lazy { getSharedPreferences("agenda", MODE_PRIVATE) }
+
+    val themeMode by lazy {
+        androidx.compose.runtime.mutableStateOf(prefs.getString("theme", "system") ?: "system")
+    }
+
+    fun setThemeMode(mode: String) {
+        themeMode.value = mode
+        prefs.edit().putString("theme", mode).apply()
+    }
 }
