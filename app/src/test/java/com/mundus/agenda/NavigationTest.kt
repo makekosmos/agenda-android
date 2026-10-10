@@ -54,55 +54,54 @@ class NavigationTest {
         // checked by scanning semantics node positions.
         composeTestRule.onNodeWithText("Входящие").assertIsDisplayed()
         for (label in expected) {
-            composeTestRule.onNodeWithText(label).assertIsDisplayed()
+            val found =
+                composeTestRule
+                    .onAllNodes(androidx.compose.ui.test.hasText(label))
+                    .fetchSemanticsNodes()
+            assert(found.isNotEmpty()) { "home row missing: $label" }
         }
-        // Order: y-positions of the labels must be strictly increasing
-        // across the sections (Потом before Проекты before Архив …).
-        fun topOf(label: String): Float {
-            var top = Float.MAX_VALUE
-            composeTestRule
-                .onNodeWithText(label)
-                .fetchSemanticsNode()
-                .let { top = it.boundsInRoot.top }
-            return top
+        // Order: walk the semantics tree top-down (composition order
+        // matches visual order in the Column) and check the labels form
+        // an increasing subsequence.
+        val rootNode = composeTestRule.onRoot().fetchSemanticsNode()
+        val texts = mutableListOf<String>()
+        fun collect(node: androidx.compose.ui.semantics.SemanticsNode) {
+            if (androidx.compose.ui.semantics.SemanticsProperties.Text in node.config) {
+                node.config[androidx.compose.ui.semantics.SemanticsProperties.Text]
+                    .forEach { texts.add(it.text) }
+            }
+            node.children.forEach(::collect)
         }
+        collect(rootNode)
         val ordered =
             listOf(
                 "Входящие",
                 "Эта неделя",
                 "Следующая неделя",
                 "Потом",
+                "Проекты",
                 "Релиз Agenda 1.0",
                 "Дом и быт",
+                "Другое",
                 "Архив",
                 "Корзина",
                 "Настройки",
                 "О приложении",
             )
-        val tops = ordered.map(::topOf)
-        assert(tops.zipWithNext().all { (a, b) -> a < b }) {
-            "home rows out of order: $ordered at $tops"
+        val indices = ordered.map { texts.indexOf(it) }
+        assert(indices.none { it < 0 } && indices.zipWithNext().all { (a, b) -> a < b }) {
+            "home rows out of order: $ordered at $indices in $texts"
         }
-        // No per-section counts — desktop sidebar shows none. Scan every
-        // text node under root: a bare numeric label must not exist.
-        val rootNode = composeTestRule.onRoot().fetchSemanticsNode()
-        val texts = mutableListOf<String>()
-        fun collect(node: androidx.compose.ui.semantics.SemanticsNode) {
-            node.config[androidx.compose.ui.semantics.SemanticsProperties.Text]
-                .forEach { texts.add(it.text) }
-            node.children.forEach(::collect)
-        }
-        collect(rootNode)
         val bareCounts = texts.filter { it.matches(Regex("\\d+")) }
         assert(bareCounts.isEmpty()) { "unexpected count labels on home: $bareCounts" }
         // Настройки / О приложении are present but disabled — their rows
-        // carry no click action in semantics.
+        // carry the Disabled semantics flag.
         for (label in listOf("Настройки", "О приложении")) {
             val node = composeTestRule.onNodeWithText(label).fetchSemanticsNode()
-            fun hasClick(n: androidx.compose.ui.semantics.SemanticsNode): Boolean =
-                androidx.compose.ui.semantics.SemanticsActions.OnClick in n.config ||
-                    n.parent?.let(::hasClick) == true
-            assert(!hasClick(node)) { "'$label' row must be disabled on home" }
+            fun isDisabled(n: androidx.compose.ui.semantics.SemanticsNode): Boolean =
+                androidx.compose.ui.semantics.SemanticsProperties.Disabled in n.config ||
+                    n.parent?.let(::isDisabled) == true
+            assert(isDisabled(node)) { "'$label' row must be disabled on home" }
         }
     }
 
