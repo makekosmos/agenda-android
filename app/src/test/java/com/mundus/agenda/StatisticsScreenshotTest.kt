@@ -10,6 +10,7 @@ import com.mundus.agenda.ui.StatisticsScreen
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,4 +46,28 @@ class StatisticsScreenshotTest {
     @Test fun statisticsDark() = shot("statistics-dark", true)
     @Test fun statisticsEmptyLight() = shot("statistics-empty-light", false, Board())
     @Test fun statisticsEmptyDark() = shot("statistics-empty-dark", true, Board())
+
+    @Test
+    fun `share card renders non-blank pixels`() {
+        val today = LocalDate.of(2026, 10, 12)
+        val stats =
+            com.mundus.agenda.stats.statistics(board.todos, today)
+        val colors =
+            com.mundus.agenda.ui.ShareCardColors(
+                cardBg = 0xFFFFFFFF.toInt(),
+                border = 0xFFDDDDDD.toInt(),
+                fg = 0xFF1A1A1A.toInt(),
+                muted = 0xFF777777.toInt(),
+                accent = 0xFF7C3AED.toInt(),
+            )
+        val bmp = com.mundus.agenda.ui.renderShareCard(stats, today, colors)
+        assertTrue(bmp.width >= 1120 && bmp.height > 300)
+        var opaque = 0
+        for (x in 0 until bmp.width step 37) {
+            for (y in 0 until bmp.height step 37) {
+                if (bmp.getPixel(x, y) != 0) opaque++
+            }
+        }
+        assertTrue("share card rendered blank", opaque > 50)
+    }
 }
