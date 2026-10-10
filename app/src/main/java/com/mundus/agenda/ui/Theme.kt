@@ -1,10 +1,9 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -12,102 +11,183 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mundus.agenda.R
 
 /**
- * Agenda "default" palette from imago-gpui `THEMES` (zeron oklch→sRGB,
- * same values desktop renders) mapped onto Material 3 tokens.
- * `AgendaExtra` carries tokens M3 has no slot for.
+ * Agenda "default" palette verbatim from imago-gpui THEMES[0]
+ * (`imago-gpui/src/palettes.rs:40-42`, token layout `theme.rs:16-33`).
+ * These are the only color tokens the UI reads — M3 stays for
+ * MaterialTheme plumbing but every custom component pulls from here.
  */
-private val AgendaLight =
-    lightColorScheme(
-        primary = Color(0xFF7239CA),
-        onPrimary = Color(0xFFF9F9FA),
-        primaryContainer = Color(0xFFD1C0EC),
-        onPrimaryContainer = Color(0xFF5E33A1),
-        secondary = Color(0xFF986ED7),
-        onSecondary = Color(0xFFF9F9FA),
-        secondaryContainer = Color(0xFFEBEBED),
-        onSecondaryContainer = Color(0xFF222027),
-        background = Color(0xFFF8F7F9),
-        onBackground = Color(0xFF222027),
-        surface = Color(0xFFF8F7F9),
-        onSurface = Color(0xFF222027),
-        surfaceVariant = Color(0xFFF3F2F4),
-        onSurfaceVariant = Color(0xFF615F67),
-        surfaceContainer = Color(0xFFF3F2F4),
-        surfaceContainerHigh = Color(0xFFFAFAFB),
-        outline = Color(0xFFDEDDE0),
-        outlineVariant = Color(0xFFE2E1E4),
-        error = Color(0xFFCE222C),
-        onError = Color(0xFFF9F9FA),
-        errorContainer = Color(0xFFFBE9EA),
-        onErrorContainer = Color(0xFFCE222C),
-        inverseSurface = Color(0xFF222027),
-        inverseOnSurface = Color(0xFFF8F7F9),
-        inversePrimary = Color(0xFFAF94F9),
-        scrim = Color(0x80222027),
-    )
-
-private val AgendaDark =
-    darkColorScheme(
-        primary = Color(0xFFAF94F9),
-        onPrimary = Color(0xFF0C0A0F),
-        primaryContainer = Color(0xFF453C5E),
-        onPrimaryContainer = Color(0xFFBDA8F5),
-        secondary = Color(0xFF826EB8),
-        onSecondary = Color(0xFF0C0A0F),
-        secondaryContainer = Color(0xFF1C1B20),
-        onSecondaryContainer = Color(0xFFE7E5EA),
-        background = Color(0xFF0D0C10),
-        onBackground = Color(0xFFE7E5EA),
-        surface = Color(0xFF0D0C10),
-        onSurface = Color(0xFFE7E5EA),
-        surfaceVariant = Color(0xFF131216),
-        onSurfaceVariant = Color(0xFF8D8A94),
-        surfaceContainer = Color(0xFF131216),
-        surfaceContainerHigh = Color(0xFF18161C),
-        outline = Color(0xFF27262A),
-        outlineVariant = Color(0xFF1B1A1E),
-        error = Color(0xFFFA686A),
-        onError = Color(0xFF0C0A0F),
-        errorContainer = Color(0xFF45262B),
-        onErrorContainer = Color(0xFFFA686A),
-        inverseSurface = Color(0xFFE7E5EA),
-        inverseOnSurface = Color(0xFF0D0C10),
-        inversePrimary = Color(0xFF7239CA),
-        scrim = Color(0x8009080C),
-    )
-
-class AgendaExtra(
-    val success: Color,
-    val warn: Color,
-    val sidebar: Color,
+class AgendaColors(
+    val bg: Color,
+    val fg: Color,
+    val mutedFg: Color,
+    val border: Color,
+    val accent: Color,
+    val accentFg: Color,
+    val accentDim: Color,
+    val secondary: Color,
+    val card: Color,
+    val popover: Color,
+    val sidebarBg: Color,
     val sidebarDivider: Color,
-)
+    val destructive: Color,
+    val warn: Color,
+    val success: Color,
+    val qeChipBg: Color,
+    val qeChipFg: Color,
+) {
+    /** Desktop `rgba(FG, a)` — hover/press/active fills and glyph dimming. */
+    fun fg(alpha: Float): Color = fg.copy(alpha = alpha)
 
-val LocalAgendaExtra =
-    compositionLocalOf {
-        AgendaExtra(Color(0xFF03A14A), Color(0xFFE58212), Color(0xFFF3F2F4), Color(0xFFE2E1E4))
-    }
+    fun accent(alpha: Float): Color = accent.copy(alpha = alpha)
+}
 
-private val ExtraLight =
-    AgendaExtra(
-        success = Color(0xFF03A14A),
-        warn = Color(0xFFE58212),
-        sidebar = Color(0xFFF3F2F4),
+private val LightColors =
+    AgendaColors(
+        bg = Color(0xFFF8F7F9),
+        fg = Color(0xFF222027),
+        mutedFg = Color(0xFF615F67),
+        border = Color(0xFFDEDDE0),
+        accent = Color(0xFF7239CA),
+        accentFg = Color(0xFFF9F9FA),
+        accentDim = Color(0xFF986ED7),
+        secondary = Color(0xFFEBEBED),
+        card = Color(0xFFF3F2F4),
+        popover = Color(0xFFFAFAFB),
+        sidebarBg = Color(0xFFF3F2F4),
         sidebarDivider = Color(0xFFE2E1E4),
+        destructive = Color(0xFFCE222C),
+        warn = Color(0xFFE58212),
+        success = Color(0xFF03A14A),
+        qeChipBg = Color(0xFFD1C0EC),
+        qeChipFg = Color(0xFF5E33A1),
     )
 
-private val ExtraDark =
-    AgendaExtra(
-        success = Color(0xFF5BBD74),
-        warn = Color(0xFFF4A25C),
-        sidebar = Color(0xFF09080C),
+private val DarkColors =
+    AgendaColors(
+        bg = Color(0xFF0D0C10),
+        fg = Color(0xFFE7E5EA),
+        mutedFg = Color(0xFF8D8A94),
+        border = Color(0xFF27262A),
+        accent = Color(0xFFAF94F9),
+        accentFg = Color(0xFF0C0A0F),
+        accentDim = Color(0xFF826EB8),
+        secondary = Color(0xFF1C1B20),
+        card = Color(0xFF131216),
+        popover = Color(0xFF18161C),
+        sidebarBg = Color(0xFF09080C),
         sidebarDivider = Color(0xFF1B1A1E),
+        destructive = Color(0xFFFA686A),
+        warn = Color(0xFFF4A25C),
+        success = Color(0xFF5BBD74),
+        qeChipBg = Color(0xFF453C5E),
+        qeChipFg = Color(0xFFBDA8F5),
     )
+
+val LocalAgendaColors = compositionLocalOf { LightColors }
+
+/** Inter is a variable font — weights come through `fontVariationSettings`
+ * wght so SemiBold renders real SemiBold, not a synthetic bold. */
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+private fun inter(weight: Int, weightObj: FontWeight) =
+    Font(
+        R.font.inter,
+        weight = weightObj,
+        variationSettings =
+            FontVariation.Settings(FontVariation.weight(weight)),
+    )
+
+val InterFamily =
+    FontFamily(
+        inter(400, FontWeight.Normal),
+        inter(500, FontWeight.Medium),
+        inter(600, FontWeight.SemiBold),
+        inter(700, FontWeight.Bold),
+    )
+
+val PlexMonoFamily =
+    FontFamily(
+        Font(R.font.ibm_plex_mono_regular, FontWeight.Normal),
+        Font(R.font.ibm_plex_mono_medium, FontWeight.Medium),
+    )
+
+/** Desktop type scale (base 13px Inter, tight lh) mapped per
+ * docs/design-tokens.md. */
+object AgendaType {
+    val pageTitle =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 22.sp,
+            lineHeight = 26.sp,
+            letterSpacing = (-0.3).sp,
+        )
+    val barTitle =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 17.sp,
+            lineHeight = 22.sp,
+            letterSpacing = (-0.2).sp,
+        )
+    val section =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
+            letterSpacing = 0.2.sp,
+        )
+    val body =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 15.sp,
+            lineHeight = 20.sp,
+        )
+    val meta =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 12.5.sp,
+            lineHeight = 16.sp,
+        )
+    val label =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.5.sp,
+            lineHeight = 14.sp,
+        )
+    val input =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 19.sp,
+            lineHeight = 24.sp,
+            letterSpacing = (-0.2).sp,
+        )
+    val inputMeta =
+        TextStyle(
+            fontFamily = InterFamily,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 19.sp,
+        )
+}
+
+object AgendaTheme {
+    val colors: AgendaColors
+        @Composable get() = LocalAgendaColors.current
+}
 
 /** Desktop tag colors — imago-gpui `theme::tag_color` verbatim. */
 fun tagColor(name: String, fallback: Color): Color =
@@ -123,38 +203,50 @@ fun tagColor(name: String, fallback: Color): Color =
         else -> fallback
     }
 
-/** Desktop type scale and radii mapped onto M3: body rows are 13-14px,
- * page titles ~17px semibold, cards/rows use 6-10px radii. */
-private val AgendaTypography =
-    Typography(
-        titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
-        titleMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-        bodyLarge = TextStyle(fontSize = 14.sp),
-        bodyMedium = TextStyle(fontSize = 13.5.sp),
-        bodySmall = TextStyle(fontSize = 12.sp),
-        labelSmall = TextStyle(fontSize = 11.sp),
-        labelMedium = TextStyle(fontSize = 12.sp),
-    )
-
-private val AgendaShapes =
-    Shapes(
-        small = RoundedCornerShape(6.dp),
-        medium = RoundedCornerShape(10.dp),
-        large = RoundedCornerShape(14.dp),
-    )
-
-object AgendaTheme {
-    val extra: AgendaExtra
-        @Composable get() = LocalAgendaExtra.current
-}
-
 @Composable
 fun AgendaTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalAgendaExtra provides if (darkTheme) ExtraDark else ExtraLight) {
+    val c = if (darkTheme) DarkColors else LightColors
+    // M3 stays only as plumbing for the few framework surfaces we still
+    // use (ModalBottomSheet mechanics). Everything visual reads
+    // AgendaTheme.colors / AgendaType instead.
+    val scheme =
+        if (darkTheme)
+            darkColorScheme(
+                background = c.bg,
+                surface = c.bg,
+                surfaceVariant = c.popover,
+                onSurface = c.fg,
+                onSurfaceVariant = c.mutedFg,
+                primary = c.accent,
+                onPrimary = c.accentFg,
+                outline = c.border,
+                outlineVariant = c.sidebarDivider,
+                error = c.destructive,
+                scrim = Color(0x8009080C),
+            )
+        else
+            lightColorScheme(
+                background = c.bg,
+                surface = c.bg,
+                surfaceVariant = c.popover,
+                onSurface = c.fg,
+                onSurfaceVariant = c.mutedFg,
+                primary = c.accent,
+                onPrimary = c.accentFg,
+                outline = c.border,
+                outlineVariant = c.sidebarDivider,
+                error = c.destructive,
+                scrim = Color(0x80222027),
+            )
+    CompositionLocalProvider(LocalAgendaColors provides c) {
         MaterialTheme(
-            colorScheme = if (darkTheme) AgendaDark else AgendaLight,
-            typography = AgendaTypography,
-            shapes = AgendaShapes,
+            colorScheme = scheme,
+            shapes =
+                Shapes(
+                    small = RoundedCornerShape(6.dp),
+                    medium = RoundedCornerShape(8.dp),
+                    large = RoundedCornerShape(16.dp),
+                ),
             content = content,
         )
     }

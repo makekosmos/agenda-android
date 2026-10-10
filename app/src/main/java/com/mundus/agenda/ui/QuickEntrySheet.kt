@@ -1,6 +1,11 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,15 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,14 +28,55 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.QuickEntryPreview
 import com.mundus.agenda.Task
 import kotlinx.coroutines.delay
+
+/** Quiet sheet button — text-only, press dims to fg 8% like every other
+ * flat control. [primary] uses accent text (restrained, no fill). */
+@Composable
+private fun SheetButton(label: String, primary: Boolean = false, onClick: () -> Unit) {
+    val c = AgendaTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val bg by
+        animateColorAsState(
+            if (pressed) c.fg(0.08f) else Color.Transparent,
+            animationSpec = tween(120, easing = EaseStandard),
+            label = "sheet-btn",
+        )
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(bg)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                )
+                .padding(horizontal = 14.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style =
+                AgendaType.body.copy(
+                    fontWeight =
+                        if (primary) androidx.compose.ui.text.font.FontWeight.SemiBold
+                        else androidx.compose.ui.text.font.FontWeight.Normal
+                ),
+            color = if (primary) c.accent else c.mutedFg,
+        )
+    }
+}
 
 /** One task property row — the desktop qe_prop_row twin: label on the
  * left, current value (or a dropdown) on the right. */
@@ -46,49 +87,49 @@ private fun PropertyRow(
     hasValue: Boolean,
     menuContent: (@Composable () -> Unit)? = null,
 ) {
+    val c = AgendaTheme.colors
     var open by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
-    Surface(
-        onClick = { if (menuContent != null) open = true },
-        color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(96.dp),
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.bodyMedium,
-                color =
-                    if (hasValue) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-        if (menuContent != null) {
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                menuContent()
+        ARow(
+            onClick = { if (menuContent != null) open = true },
+            enabled = menuContent != null,
+            horizontalPadding = 16.dp,
+            verticalPadding = 11.dp,
+            minHeight = 44.dp,
+        ) { _ ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    style = AgendaType.body,
+                    color = c.mutedFg,
+                    modifier = Modifier.width(88.dp),
+                )
+                Text(
+                    value,
+                    style = AgendaType.body,
+                    color = if (hasValue) c.fg else c.mutedFg,
+                )
             }
+        }
+        if (menuContent != null) {
+            AMenu(open = open, onDismiss = { open = false }, content = menuContent)
         }
     }
 }
 
+/** Parsed-input preview chip — desktop `qe_chip` (qe_chip_bg/qe_chip_fg). */
 @Composable
 private fun PreviewChip(text: String) {
+    val c = AgendaTheme.colors
     Text(
         text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
+        style = AgendaType.label,
+        color = c.qeChipFg,
+        maxLines = 1,
         modifier =
-            Modifier.padding(horizontal = 4.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+            Modifier
+                .padding(horizontal = 4.dp)
+                .background(c.qeChipBg, RoundedCornerShape(6.dp))
                 .padding(horizontal = 8.dp, vertical = 3.dp),
     )
 }
@@ -111,6 +152,7 @@ fun QuickEntrySheet(
     run: (suspend () -> Unit) -> Unit,
     initialWeek: Boolean = false,
 ) {
+    val c = AgendaTheme.colors
     var title by remember { mutableStateOf(editing?.title ?: "") }
     var notes by remember { mutableStateOf(editing?.notes ?: "") }
 
@@ -183,22 +225,37 @@ fun QuickEntrySheet(
         onDismiss()
     }
 
-    ModalBottomSheet(onDismissRequest = { dismissWithSave() }) {
+    ModalBottomSheet(
+        onDismissRequest = { dismissWithSave() },
+        sheetState = rememberModalBottomSheetState(),
+        containerColor = c.popover,
+        contentColor = c.fg,
+        dragHandle = {
+            Box(
+                Modifier
+                    .padding(top = 10.dp, bottom = 2.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(c.border)
+            )
+        },
+    ) {
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
-            OutlinedTextField(
+            SheetField(
                 value = title,
                 onValueChange = { title = it },
-                placeholder = { Text(if (editing == null) "Новая задача" else "") },
-                textStyle = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                placeholder = if (editing == null) "Новая задача" else "",
+                style = AgendaType.input,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
+            Spacer(Modifier.height(6.dp))
+            SheetField(
                 value = notes,
                 onValueChange = { notes = it },
-                placeholder = { Text("Заметки") },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                placeholder = "Заметки",
+                style = AgendaType.inputMeta,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
 
             // Parsed chips — only in create mode, like the desktop draft.
@@ -218,7 +275,7 @@ fun QuickEntrySheet(
                 }
                 if (chips.isNotEmpty()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.Start,
                     ) {
                         chips.forEach { PreviewChip(it) }
@@ -227,95 +284,76 @@ fun QuickEntrySheet(
             }
 
             Spacer(Modifier.height(8.dp))
+            ADivider(modifier = Modifier.padding(horizontal = 12.dp))
             PropertyRow(
                 label = "Дата",
                 value = dateValue,
                 hasValue = weekFlag || somedayFlag || effectiveDate != null,
             ) {
                 // Desktop DropKind::Date (edit) / QeDate (create).
-                DropdownMenuItem(
-                    text = { Text("Эта неделя") },
-                    onClick = {
-                        if (editing != null) run { repository?.moveToWeek(editing) }
-                        weekFlag = true; somedayFlag = false; pickedDate = null
-                        dateTouched = true
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Следующая неделя") },
-                    onClick = {
-                        if (editing != null) run { repository?.setScheduled(editing, nextMonday) }
-                        weekFlag = false; somedayFlag = false; pickedDate = nextMonday
-                        dateTouched = true
-                    },
-                )
-                if (editing == null) {
-                    DropdownMenuItem(
-                        text = { Text("Потом") },
-                        onClick = {
-                            weekFlag = false; somedayFlag = true; pickedDate = null
-                            dateTouched = true
-                        },
-                    )
+                AMenuItem("Эта неделя") {
+                    if (editing != null) run { repository?.moveToWeek(editing) }
+                    weekFlag = true; somedayFlag = false; pickedDate = null
+                    dateTouched = true
                 }
-                DropdownMenuItem(
-                    text = { Text("Без даты") },
-                    onClick = {
-                        if (editing != null) run { repository?.setScheduled(editing, null) }
-                        weekFlag = false; somedayFlag = false; pickedDate = null
+                AMenuItem("Следующая неделя") {
+                    if (editing != null) run { repository?.setScheduled(editing, nextMonday) }
+                    weekFlag = false; somedayFlag = false; pickedDate = nextMonday
+                    dateTouched = true
+                }
+                if (editing == null) {
+                    AMenuItem("Потом") {
+                        weekFlag = false; somedayFlag = true; pickedDate = null
                         dateTouched = true
-                    },
-                )
+                    }
+                }
+                AMenuItem("Без даты") {
+                    if (editing != null) run { repository?.setScheduled(editing, null) }
+                    weekFlag = false; somedayFlag = false; pickedDate = null
+                    dateTouched = true
+                }
             }
             PropertyRow(
                 label = "Проект",
                 value = projectValue,
                 hasValue = projectId != null,
             ) {
-                DropdownMenuItem(
-                    text = { Text("Без проекта") },
-                    onClick = {
-                        if (editing != null) run { repository?.moveToProject(editing, null) }
-                        projectId = null; projectTouched = true
-                    },
-                )
+                AMenuItem("Без проекта") {
+                    if (editing != null) run { repository?.moveToProject(editing, null) }
+                    projectId = null; projectTouched = true
+                }
                 for (p in projectChoices) {
-                    DropdownMenuItem(
-                        text = { Text(p.title) },
-                        onClick = {
-                            if (editing != null) run { repository?.moveToProject(editing, p.id) }
-                            projectId = p.id; projectTouched = true
-                        },
-                    )
+                    AMenuItem(p.title) {
+                        if (editing != null) run { repository?.moveToProject(editing, p.id) }
+                        projectId = p.id; projectTouched = true
+                    }
                 }
             }
+            ADivider(modifier = Modifier.padding(horizontal = 12.dp))
 
             if (editing == null) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = { onDismiss() }) { Text("Отмена") }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(
-                        onClick = {
-                            if (title.isNotBlank()) {
-                                run {
-                                    repository?.quickEntry(
-                                        title,
-                                        notes.ifBlank { null },
-                                        pickedDate,
-                                        weekFlag,
-                                        somedayFlag,
-                                        projectId,
-                                        projectTouched,
-                                    )
-                                }
-                                onDismiss()
+                    SheetButton("Отмена") { onDismiss() }
+                    Spacer(Modifier.width(4.dp))
+                    SheetButton("Сохранить", primary = true) {
+                        if (title.isNotBlank()) {
+                            run {
+                                repository?.quickEntry(
+                                    title,
+                                    notes.ifBlank { null },
+                                    pickedDate,
+                                    weekFlag,
+                                    somedayFlag,
+                                    projectId,
+                                    projectTouched,
+                                )
                             }
-                        },
-                    ) {
-                        Text("Сохранить", fontWeight = FontWeight.SemiBold)
+                            onDismiss()
+                        }
                     }
                 }
             }

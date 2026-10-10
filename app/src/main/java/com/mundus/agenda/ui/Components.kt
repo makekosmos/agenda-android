@@ -1,0 +1,354 @@
+package com.mundus.agenda.ui
+
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import com.mundus.agenda.R
+import com.mundus.agenda.Task
+
+/** Desktop `ease_emphasized` cubic-bezier(0.22,1,0.36,1)
+ * (imago-gpui theme.rs:210). */
+val EaseEmphasized = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+
+/** Desktop `ease_standard` cubic-bezier(0.25,0.1,0.25,1) (theme.rs:215). */
+val EaseStandard = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
+
+private const val PRESS_MS = 120
+
+/** Tinted desktop SVG icon — 24-viewport VectorDrawables tinted like
+ * `icon(path, 16, rgba(FG, alpha))`. */
+@Composable
+fun AIcon(@DrawableRes res: Int, tint: Color, modifier: Modifier = Modifier, desc: String? = null) {
+    Icon(
+        painter = painterResource(res),
+        contentDescription = desc,
+        tint = tint,
+        modifier = modifier.size(20.dp),
+    )
+}
+
+/** One flat row in the desktop sidebar language: press fills `fg` 8%
+ * (desktop hover `rgba(FG,0.08)`), glyph alpha 0.6 → 1.0. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ARow(
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
+    horizontalPadding: Dp = 12.dp,
+    verticalPadding: Dp = 12.dp,
+    minHeight: Dp = 48.dp,
+    content: @Composable (glyph: Color) -> Unit,
+) {
+    val c = AgendaTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val bg by
+        animateColorAsState(
+            if (pressed && enabled) c.fg(0.08f) else Color.Transparent,
+            animationSpec = tween(PRESS_MS, easing = EaseStandard),
+            label = "row-press",
+        )
+    val glyph = if (enabled) c.fg else c.mutedFg.copy(alpha = 0.5f)
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = minHeight)
+                .clip(RoundedCornerShape(8.dp))
+                .background(bg)
+                .combinedClickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    enabled = enabled && onClick != null,
+                    role = Role.Button,
+                    onClick = { onClick?.invoke() },
+                    onLongClick = onLongClick,
+                )
+                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        content(glyph)
+    }
+}
+
+/** Section label («Проекты», «Другое») — desktop 12px medium at fg 0.6. */
+@Composable
+fun ASectionHeader(title: String, modifier: Modifier = Modifier) {
+    Text(
+        title,
+        style = AgendaType.section,
+        color = AgendaTheme.colors.fg(0.6f),
+        modifier = modifier.padding(start = 12.dp, top = 18.dp, bottom = 6.dp, end = 12.dp),
+    )
+}
+
+/** Hairline row separator in the palette border color. */
+@Composable
+fun ADivider(modifier: Modifier = Modifier, indent: Dp = 0.dp) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .padding(start = indent)
+            .height(0.5.dp)
+            .background(AgendaTheme.colors.border)
+    )
+}
+
+/** Flat icon button — press dims through the same fg-8% fill. */
+@Composable
+fun AIconButton(
+    @DrawableRes res: Int,
+    desc: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = AgendaTheme.colors.fg,
+) {
+    val c = AgendaTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val bg by
+        animateColorAsState(
+            if (pressed) c.fg(0.08f) else Color.Transparent,
+            animationSpec = tween(PRESS_MS, easing = EaseStandard),
+            label = "btn-press",
+        )
+    Box(
+        modifier =
+            modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(bg)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        AIcon(res, tint = tint, desc = desc)
+    }
+}
+
+/** Menu surface — the desktop popover look: `popover` bg, hairline
+ * `border`, 8dp radius, 40dp items. */
+@Composable
+fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+    if (!open) return
+    val c = AgendaTheme.colors
+    Popup(onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        Box(
+            Modifier
+                .widthIn(min = 200.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(c.popover)
+                .border(0.5.dp, c.border, RoundedCornerShape(8.dp))
+                .padding(vertical = 4.dp)
+        ) {
+            Column { content() }
+        }
+    }
+}
+
+@Composable
+fun AMenuItem(label: String, enabled: Boolean = true, onClick: () -> Unit) {
+    ARow(onClick = onClick, enabled = enabled, minHeight = 40.dp, verticalPadding = 9.dp) { glyph ->
+        Text(label, style = AgendaType.body, color = glyph, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * Desktop `status_ring` (widgets.rs): Done = accent fill + accent-fg
+ * check, Canceled = muted ring + ×, Started = warn ring + half fill,
+ * otherwise a plain muted ring. Ring sits in a 20dp grid cell so every
+ * row shares the desktop `CONTENT_GRID_X` left line.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun StatusRing(task: Task, onToggle: (Task) -> Unit = {}) {
+    val c = AgendaTheme.colors
+    val status =
+        when {
+            task.isCompleted -> "done"
+            task.isCancelled -> "canceled"
+            task.status == "started" -> "started"
+            else -> "open"
+        }
+    // Completion lands with a short emphasized fill-in.
+    val fill by
+        animateFloatAsState(
+            if (status == "done") 1f else 0f,
+            animationSpec = tween(200, easing = EaseEmphasized),
+            label = "ring-fill",
+        )
+    Box(
+        modifier =
+            Modifier.size(20.dp).combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = !task.isTrashed,
+                role = Role.Checkbox,
+                onClick = { onToggle(task) },
+                onLongClick = {},
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (status) {
+            "done" ->
+                Box(
+                    Modifier.size(18.dp).clip(CircleShape).background(c.accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AIcon(R.drawable.ic_check, tint = c.accentFg, modifier = Modifier.size(14.dp))
+                }
+            "canceled" ->
+                Box(
+                    Modifier.size(18.dp).border(1.5.dp, c.mutedFg, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AIcon(R.drawable.ic_status_x, tint = c.mutedFg, modifier = Modifier.size(13.dp))
+                }
+            "started" ->
+                Canvas(Modifier.size(18.dp)) {
+                    val r = size.minDimension / 2
+                    drawCircle(color = c.warn, style = Stroke(width = 1.5.dp.toPx()), radius = r - 0.75.dp.toPx())
+                    drawArc(
+                        color = c.warn,
+                        startAngle = -90f,
+                        sweepAngle = 180f,
+                        useCenter = true,
+                        topLeft = Offset(center.x - r * 0.77f, center.y - r * 0.77f),
+                        size = androidx.compose.ui.geometry.Size(r * 1.54f, r * 1.54f),
+                    )
+                }
+            else -> {
+                if (fill > 0f) {
+                    Box(Modifier.size(18.dp).clip(CircleShape).background(c.accent.copy(alpha = fill)))
+                }
+                Box(Modifier.size(18.dp).border(1.5.dp, c.mutedFg, CircleShape))
+            }
+        }
+    }
+}
+
+/** Compact bottom-right «+» quick-entry affordance — the one accent
+ * surface on screen (primary action). Linear-style rounded rect, not a
+ * circular M3 FAB. */
+@Composable
+fun QuickEntryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = AgendaTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val bg by
+        animateColorAsState(
+            if (pressed) c.accentDim else c.accent,
+            animationSpec = tween(PRESS_MS, easing = EaseStandard),
+            label = "qe-press",
+        )
+    Box(
+        modifier =
+            modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(bg)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        AIcon(R.drawable.ic_plus, tint = c.accentFg, desc = "Новая задача", modifier = Modifier.size(22.dp))
+    }
+}
+
+/** Quiet bottom toast — popover surface, hairline border, no M3 chrome. */
+@Composable
+fun AToast(message: String?, modifier: Modifier = Modifier) {
+    if (message == null) return
+    val c = AgendaTheme.colors
+    Row(
+        modifier =
+            modifier
+                .padding(horizontal = 16.dp)
+                .widthIn(max = 420.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.popover)
+                .border(0.5.dp, c.border, RoundedCornerShape(10.dp))
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(message, style = AgendaType.meta, color = c.fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Sheet text input — unstyled BasicTextField look (caret accent, no
+ * outline/underline). */
+@Composable
+fun SheetField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    val c = AgendaTheme.colors
+    androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = style.copy(color = c.fg),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(c.accent),
+        modifier = modifier.fillMaxWidth(),
+        decorationBox = { inner ->
+            Box {
+                if (value.isEmpty()) Text(placeholder, style = style, color = c.mutedFg)
+                inner()
+            }
+        },
+    )
+}

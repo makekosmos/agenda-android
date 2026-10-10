@@ -2,9 +2,9 @@ package com.mundus.agenda.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,18 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,8 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,32 +48,28 @@ private fun emptyHint(list: SmartList): Pair<String, String> =
 
 @Composable
 private fun EmptyState(list: SmartList) {
-    val (title, hint) = emptyHint(list)
+    val c = AgendaTheme.colors
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        Text(list.titleRu, style = AgendaType.barTitle, color = c.fg)
+        Spacer(Modifier.height(8.dp))
         Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            emptyHint(list).first,
+            style = AgendaType.body,
+            color = c.mutedFg,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
-            hint,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            emptyHint(list).second,
+            style = AgendaType.meta,
+            color = c.mutedFg.copy(alpha = 0.8f),
         )
     }
 }
 
-/**
- * Desktop `status_ring` (widgets.rs): Done = accent fill + check in
- * accent-fg, Canceled = muted ring + ×, Started = warn ring + half fill,
- * everything else a plain muted ring.
- */
 /** Write actions a task row exposes — no-ops by default so Roborazzi
  * boards render without a repository. */
 class TaskActions(
@@ -96,94 +80,30 @@ class TaskActions(
     val onMoveToWeek: (Task) -> Unit = {},
 )
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CheckRing(task: Task, onToggle: (Task) -> Unit = {}) {
-    val toggle = { if (!task.isTrashed) onToggle(task) }
-    val status =
-        when {
-            task.isCompleted -> "done"
-            task.isCancelled -> "canceled"
-            task.status == "started" -> "started"
-            else -> "open"
-        }
-    val warnColor = AgendaTheme.extra.warn
-    Box(modifier = Modifier.combinedClickable(onClick = { toggle() }, onLongClick = {})) {
-    when (status) {
-        "done" ->
-            Box(
-                modifier =
-                    Modifier.size(18.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(12.dp),
-                )
-            }
-        "canceled" ->
-            Box(
-                modifier =
-                    Modifier.size(18.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(12.dp),
-                )
-            }
-        "started" ->
-            Canvas(Modifier.size(18.dp)) {
-                val r = size.minDimension / 2
-                drawCircle(
-                    color = warnColor,
-                    style = Stroke(width = 1.5.dp.toPx()),
-                    radius = r - 0.75.dp.toPx(),
-                )
-                drawArc(
-                    color = warnColor,
-                    startAngle = -90f,
-                    sweepAngle = 180f,
-                    useCenter = true,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        center.x - r * 0.77f, center.y - r * 0.77f
-                    ),
-                    size = androidx.compose.ui.geometry.Size(r * 1.54f, r * 1.54f),
-                )
-            }
-        else ->
-            Box(
-                modifier =
-                    Modifier.size(18.dp)
-                        .clip(CircleShape)
-                        .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
-            )
-    }
-    }
-}
-
-@Composable
-private fun Chip(text: String, color: Color) {
+private fun DateChip(text: String, overdue: Boolean) {
+    val c = AgendaTheme.colors
+    val color = if (overdue) c.destructive else c.mutedFg
     Text(
         text,
-        style = MaterialTheme.typography.labelSmall,
+        style = AgendaType.label,
         color = color,
         maxLines = 1,
         modifier =
-            Modifier.clip(RoundedCornerShape(6.dp))
-                .background(color.copy(alpha = 0.12f))
-                .padding(horizontal = 6.dp, vertical = 2.dp),
+            Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(color.copy(alpha = 0.10f))
+                .padding(horizontal = 7.dp, vertical = 2.dp),
     )
 }
 
+/**
+ * Task row in the desktop language (rows/task.rs): status ring in a 20dp
+ * cell on the left grid line, one-line title, muted meta, hairline
+ * separator below. Long-press opens the same context menu as desktop
+ * right-click (Восстановить in trash, Удалить otherwise, «На неделю» on
+ * overdue).
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskRow(
@@ -193,33 +113,38 @@ fun TaskRow(
     hideProjectMeta: Boolean = false,
     actions: TaskActions = TaskActions(),
 ) {
+    val c = AgendaTheme.colors
     val dateView = board.dateView(task)
     var menuOpen by remember { mutableStateOf(false) }
-    Surface(color = Color.Transparent, modifier = modifier.fillMaxWidth()) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val done = task.isCompleted || task.isCancelled
+
     Box {
-    Row(modifier = Modifier.combinedClickable(
-        onClick = { actions.onOpen(task) },
-        onLongClick = { menuOpen = true },
-    )) {
         Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .background(if (pressed) c.fg(0.04f) else androidx.compose.ui.graphics.Color.Transparent)
+                    .combinedClickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        onClick = { actions.onOpen(task) },
+                        onLongClick = { menuOpen = true },
+                    )
+                    .padding(start = 16.dp, end = 16.dp, top = 9.dp, bottom = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CheckRing(task, actions.onToggle)
+            StatusRing(task, actions.onToggle)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     task.title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AgendaType.body,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    textDecoration =
-                        if (task.isCompleted || task.isCancelled) TextDecoration.LineThrough
-                        else null,
-                    color =
-                        if (task.isCompleted || task.isCancelled)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurface,
+                    textDecoration = if (done) TextDecoration.LineThrough else null,
+                    color = if (done) c.mutedFg else c.fg,
                 )
                 val meta = buildList {
                     val project = task.projectId?.let { board.project(it) }
@@ -229,8 +154,8 @@ fun TaskRow(
                 if (meta.isNotEmpty()) {
                     Text(
                         meta.joinToString(" · "),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AgendaType.meta,
+                        color = c.mutedFg,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -240,55 +165,35 @@ fun TaskRow(
                 val doneCount = task.checklist.count { it.isCompleted }
                 Text(
                     "$doneCount/${task.checklist.size}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = AgendaType.meta,
+                    color = c.mutedFg,
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
             dateView.dateKey?.let {
                 Spacer(Modifier.width(8.dp))
-                Chip(
-                    dateView.label,
-                    if (dateView.overdue) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                DateChip(dateView.label, dateView.overdue)
             }
         }
-    }
-        // Desktop right-click menu (rows/task.rs): trash rows offer
-        // Восстановить, live rows Удалить; «На неделю» on overdue.
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        // Desktop right-click menu (rows/task.rs).
+        AMenu(open = menuOpen, onDismiss = { menuOpen = false }) {
             if (task.isTrashed) {
-                DropdownMenuItem(
-                    text = { Text("Восстановить") },
-                    onClick = { menuOpen = false; actions.onRestore(task) },
-                )
+                AMenuItem("Восстановить") { menuOpen = false; actions.onRestore(task) }
             } else {
                 if (dateView.overdue) {
-                    DropdownMenuItem(
-                        text = { Text("На неделю") },
-                        onClick = { menuOpen = false; actions.onMoveToWeek(task) },
-                    )
+                    AMenuItem("На неделю") { menuOpen = false; actions.onMoveToWeek(task) }
                 }
-                DropdownMenuItem(
-                    text = { Text("Удалить") },
-                    onClick = { menuOpen = false; actions.onTrash(task) },
-                )
+                AMenuItem("Удалить") { menuOpen = false; actions.onTrash(task) }
             }
         }
-    }
     }
 }
 
+/** Row hairline — desktop `border_mix(0.55)` ≈ border at 55% under the
+ * title column (left of the ring cell, matching CONTENT_GRID_X). */
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        title,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-    )
+private fun RowDivider() {
+    ADivider(indent = 48.dp)
 }
 
 /**
@@ -298,6 +203,7 @@ private fun SectionHeader(title: String) {
  */
 @Composable
 fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskActions()) {
+    val c = AgendaTheme.colors
     val tasks = board.list(list)
     val archivedProjects =
         if (list == SmartList.LOGBOOK) board.projects.filter { it.status == 2 } else emptyList()
@@ -307,39 +213,33 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         if (list == SmartList.LOGBOOK && tasks.isNotEmpty()) {
-            item(key = "header-tasks") { SectionHeader("Задачи") }
+            item(key = "header-tasks") { ASectionHeader("Задачи") }
         }
         items(tasks, key = { it.id }) { task ->
-            TaskRow(board, task, actions = actions)
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(start = 50.dp),
-            )
+            TaskRow(board, task, modifier = Modifier.animateItem(), actions = actions)
+            RowDivider()
         }
         if (archivedProjects.isNotEmpty()) {
-            item(key = "header-projects") { SectionHeader("Проекты") }
+            item(key = "header-projects") { ASectionHeader("Проекты") }
             items(archivedProjects, key = { it.id }) { project ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 9.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier =
                             Modifier.size(8.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant),
+                                .background(c.mutedFg),
                     )
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(16.dp))
                     Text(
                         project.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AgendaType.body,
+                        color = c.mutedFg,
                     )
                 }
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(start = 50.dp),
-                )
+                RowDivider()
             }
         }
     }
@@ -352,24 +252,24 @@ fun ProjectScreen(
     hideProjectMeta: Boolean = false,
     actions: TaskActions = TaskActions(),
 ) {
+    val c = AgendaTheme.colors
     val tasks = board.projectTasks[projectId].orEmpty()
     if (tasks.isEmpty()) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            modifier = Modifier.fillMaxSize().padding(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 "Проект пуст",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AgendaType.body,
+                color = c.mutedFg,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
                 "Добавь задачу в этот проект",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                style = AgendaType.meta,
+                color = c.mutedFg.copy(alpha = 0.8f),
             )
         }
         return
@@ -378,27 +278,14 @@ fun ProjectScreen(
     val done = tasks.filter { it.isCompleted || it.isCancelled }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(active, key = { it.id }) { task ->
-            TaskRow(board, task, hideProjectMeta = hideProjectMeta, actions = actions)
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(start = 50.dp),
-            )
+            TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
+            RowDivider()
         }
         if (done.isNotEmpty()) {
-            item(key = "done-header") {
-                Text(
-                    "Завершённые",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                )
-            }
+            item(key = "done-header") { ASectionHeader("Завершённые") }
             items(done, key = { it.id }) { task ->
-                TaskRow(board, task, hideProjectMeta = hideProjectMeta, actions = actions)
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(start = 50.dp),
-                )
+                TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
+                RowDivider()
             }
         }
     }

@@ -2,9 +2,9 @@ package com.mundus.agenda
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,15 +17,18 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Gate B (KOS-370 Phase 1): Roborazzi records of every read screen in both
- * themes, rendered against [FakeRepository] (the native .so does not load
- * under Robolectric, and no date logic lives in these screens anyway).
+ * Gate B (KOS-370 Phase 3): Roborazzi records of the home page and every
+ * drill-in list in both themes, at a realistic phone size, rendered
+ * against [FakeRepository] (the native .so does not load under
+ * Robolectric, and no date logic lives in these screens anyway).
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class ScreenshotTest {
     @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -38,11 +41,11 @@ class ScreenshotTest {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = dark) { AgendaHome(board = board, initialRoute = route) }
         }
-        // Goldens live in app/roborazzi/ (the dir verifyRoborazziDebug
-        // compares against — paths resolve relative to the module dir).
         composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
     }
 
+    @Test fun homeLight() = shot("home-light", false, Route.Home)
+    @Test fun homeDark() = shot("home-dark", true, Route.Home)
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))
     @Test fun inboxDark() = shot("inbox-dark", true, Route.List(SmartList.INBOX))
     @Test fun weekLight() = shot("week-light", false, Route.List(SmartList.WEEK))
@@ -58,18 +61,6 @@ class ScreenshotTest {
     @Test fun nextWeekLight() = shot("nextweek-light", false, Route.List(SmartList.NEXT_WEEK))
     @Test fun nextWeekDark() = shot("nextweek-dark", true, Route.List(SmartList.NEXT_WEEK))
 
-    private fun drawerShot(name: String, dark: Boolean) {
-        composeTestRule.setContent {
-            AgendaTheme(darkTheme = dark) { AgendaHome(board = board) }
-        }
-        composeTestRule.onNodeWithContentDescription("Меню").performClick()
-        composeTestRule.waitForIdle()
-        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
-    }
-
-    @Test fun drawerLight() = drawerShot("drawer-light", false)
-    @Test fun drawerDark() = drawerShot("drawer-dark", true)
-
     @Test
     fun quickEntryLight() {
         composeTestRule.setContent {
@@ -77,8 +68,9 @@ class ScreenshotTest {
                 AgendaHome(board = board, repository = FakeRepository(), initialCreate = true)
             }
         }
-        composeTestRule.onNodeWithText("Новая задача").performTextInput("купить молоко завтра")
-        composeTestRule.mainClock.advanceTimeBy(600)
+        composeTestRule.onAllNodes(hasSetTextAction())[0].performTextInput("купить молоко завтра")
+        composeTestRule.waitForIdle()
+        Thread.sleep(400)
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-light.png")
     }
@@ -90,43 +82,58 @@ class ScreenshotTest {
                 AgendaHome(board = board, repository = FakeRepository(), initialCreate = true)
             }
         }
-        composeTestRule.onNodeWithText("Новая задача").performTextInput("купить молоко завтра")
-        composeTestRule.mainClock.advanceTimeBy(600)
+        composeTestRule.onAllNodes(hasSetTextAction())[0].performTextInput("купить молоко завтра")
+        composeTestRule.waitForIdle()
+        Thread.sleep(400)
         composeTestRule.waitForIdle()
         composeTestRule.onRoot().captureRoboImage("roborazzi/quickentry-dark.png")
     }
 
-    private fun editShot(name: String, dark: Boolean) {
+    @Test
+    fun editSheetLight() {
         composeTestRule.setContent {
-            AgendaTheme(darkTheme = dark) {
+            AgendaTheme(darkTheme = false) {
                 AgendaHome(
                     board = board,
                     repository = FakeRepository(),
-                    initialEditTaskId = "dev-checklist-1",
+                    initialEditTaskId = "dev-today-2",
                 )
             }
         }
         composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-light.png")
     }
 
     @Test
-    fun editLight() {
-        editShot("edit-light", false)
-        composeTestRule.onRoot().captureRoboImage("roborazzi/edit-light.png")
+    fun editSheetDark() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = true) {
+                AgendaHome(
+                    board = board,
+                    repository = FakeRepository(),
+                    initialEditTaskId = "dev-today-2",
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-dark.png")
     }
 
+    /** The date dropdown open on the edit sheet — DropKind::Date menu. */
     @Test
-    fun editDark() {
-        editShot("edit-dark", true)
-        composeTestRule.onRoot().captureRoboImage("roborazzi/edit-dark.png")
-    }
-
-    @Test
-    fun rescheduleLight() {
-        // The date property dropdown open — the desktop DropKind::Date rows.
-        editShot("reschedule-light", false)
+    fun dateDropdownLight() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = false) {
+                AgendaHome(
+                    board = board,
+                    repository = FakeRepository(),
+                    initialEditTaskId = "dev-today-2",
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Дата").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onRoot().captureRoboImage("roborazzi/reschedule-light.png")
+        composeTestRule.onRoot().captureRoboImage("roborazzi/datedropdown-light.png")
     }
 }

@@ -1,47 +1,33 @@
 package com.mundus.agenda.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,8 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -60,27 +45,27 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
+import com.mundus.agenda.BoardState
+import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.WriteConflict
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-private val NAV_LISTS =
-    listOf(SmartList.INBOX, SmartList.WEEK, SmartList.NEXT_WEEK, SmartList.SOMEDAY)
-private val MORE_LISTS = listOf(SmartList.LOGBOOK, SmartList.TRASH)
-
 sealed interface Route {
+    data object Home : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
 }
 
 class BoardViewModel(repository: BoardRepository) : ViewModel() {
-    val board: StateFlow<com.mundus.agenda.BoardState> =
+    val board: StateFlow<BoardState> =
         repository
             .boardFlow()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, com.mundus.agenda.BoardState.Loading)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, BoardState.Loading)
 }
 
 class BoardViewModelFactory(private val repository: BoardRepository) :
@@ -89,56 +74,83 @@ class BoardViewModelFactory(private val repository: BoardRepository) :
     override fun <T : ViewModel> create(modelClass: Class<T>): T = BoardViewModel(repository) as T
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaApp(repository: BoardRepository) {
     val viewModel: BoardViewModel = viewModel(factory = BoardViewModelFactory(repository))
     val state by viewModel.board.collectAsStateWithLifecycle()
+    val c = AgendaTheme.colors
     when (val s = state) {
-        is com.mundus.agenda.BoardState.Loading ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        is BoardState.Loading ->
+            Box(Modifier.fillMaxSize().background(c.bg), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = c.accent)
             }
-        is com.mundus.agenda.BoardState.Error ->
-            Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        is BoardState.Error ->
+            Box(Modifier.fillMaxSize().background(c.bg).padding(32.dp), contentAlignment = Alignment.Center) {
                 Text(
                     "Не удалось открыть локальные данные: ${s.message}",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    color = c.destructive,
+                    style = AgendaType.body,
                 )
             }
-        is com.mundus.agenda.BoardState.Ready -> AgendaHome(s.board, repository)
+        is BoardState.Ready -> AgendaHome(s.board, repository)
     }
 }
 
-/** Route-free content root: Roborazzi tests render this with a fixed board
- * and no repository — write actions stay inert. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Animations honoring the system "remove animations" setting
+ * (Animator duration scale = 0). */
+@Composable
+private fun animationsEnabled(): Boolean {
+    val context = LocalContext.current
+    return remember {
+        android.provider.Settings.Global.getFloat(
+            context.contentResolver,
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        ) != 0f
+    }
+}
+
+/**
+ * App shell: the home page is the root (Microsoft To Do style — no
+ * drawer anywhere). Routes push/pop on a small string stack; system back
+ * returns home.
+ */
 @Composable
 fun AgendaHome(
     board: Board,
     repository: BoardRepository? = null,
-    initialRoute: Route = Route.List(SmartList.INBOX),
+    initialRoute: Route = Route.Home,
     initialCreate: Boolean = false,
     initialEditTaskId: String? = null,
 ) {
     var route by rememberSaveable { mutableStateOf(routeKey(initialRoute)) }
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    // Direction of the last nav: 1 = drill in, -1 = back. Drives the
+    // shared-axis-ish slide in the AnimatedContent below.
+    var navDir by rememberSaveable { mutableIntStateOf(0) }
+    var toast by remember { mutableStateOf<String?>(null) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     var editingTaskId by rememberSaveable { mutableStateOf(initialEditTaskId) }
+    val scope = rememberCoroutineScope()
+    val c = AgendaTheme.colors
+
+    fun showToast(msg: String) {
+        scope.launch {
+            toast = msg
+            delay(2600)
+            if (toast == msg) toast = null
+        }
+    }
 
     // Every write goes through this boundary: the engine write itself is
-    // local (optimistic by construction), errors land as a quiet snackbar.
+    // local (optimistic by construction), errors land as a quiet toast.
     fun run(op: suspend () -> Unit) {
         scope.launch {
             try {
                 op()
             } catch (_: WriteConflict) {
-                snackbarHostState.showSnackbar("Задача изменилась на другом устройстве")
+                showToast("Задача изменилась на другом устройстве")
             } catch (_: Exception) {
-                snackbarHostState.showSnackbar("Не удалось сохранить")
+                showToast("Не удалось сохранить")
             }
         }
     }
@@ -151,98 +163,99 @@ fun AgendaHome(
             onMoveToWeek = { t -> run { repository?.moveToWeek(t) } },
         )
 
+    fun navigate(r: Route) {
+        navDir = 1
+        route = routeKey(r)
+    }
     fun back() {
-        route = routeKey(Route.List(SmartList.INBOX))
+        if (route != "home") {
+            navDir = -1
+            route = "home"
+        }
     }
-    BackHandler(enabled = route != routeKey(Route.List(SmartList.INBOX))) {
-        // Non-Inbox destination selected: fall back to Inbox instead of
-        // trapping the event. On Inbox the handler is disabled and the
-        // system finishes the activity.
-        back()
-    }
+    BackHandler(enabled = route != "home") { back() }
 
     val current = parseRoute(route)
-    val topTitle =
+    val title =
         when (val r = current) {
+            is Route.Home -> "Agenda"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
         }
-    val isTopLevel = current is Route.List
+    val animate = animationsEnabled()
+    val slideDur = if (animate) 240 else 0
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                drawerContainerColor = AgendaTheme.extra.sidebar,
-                modifier = Modifier.width(300.dp),
+    Box(Modifier.fillMaxSize().background(c.bg)) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            // Custom top bar: back affordance on drill-in, quiet otherwise.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                DrawerContent(
-                    board = board,
-                    current = current,
-                    onNavigate = {
-                        scope.launch { drawerState.close() }
-                        route = it
-                    },
+                if (current !is Route.Home) {
+                    AIconButton(R.drawable.ic_arrow_left, desc = "Назад", onClick = ::back)
+                } else {
+                    Spacer(Modifier.width(16.dp))
+                }
+                Text(
+                    title,
+                    style = if (current is Route.Home) AgendaType.pageTitle else AgendaType.barTitle,
+                    color = c.fg,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 10.dp),
                 )
             }
-        },
-    ) {
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { createOpen = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Новая задача")
-                }
-            },
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            topTitle,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    navigationIcon = {
-                        if (isTopLevel) {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Filled.Menu, contentDescription = "Меню")
-                            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                AnimatedContent(
+                    targetState = current,
+                    transitionSpec = {
+                        if (navDir >= 0) {
+                            (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 4 } +
+                                fadeIn(tween(slideDur))) togetherWith
+                                (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 6 } +
+                                    fadeOut(tween(slideDur)))
                         } else {
-                            IconButton(onClick = { back() }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Назад",
-                                )
-                            }
+                            (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 4 } +
+                                fadeIn(tween(slideDur))) togetherWith
+                                (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 6 } +
+                                    fadeOut(tween(slideDur)))
                         }
                     },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                )
-            },
-        ) { padding ->
-            Surface(modifier = Modifier.fillMaxSize().padding(padding)) {
-                when (val r = current) {
-                    is Route.List ->
-                        TaskListScreen(board = board, list = r.list, actions = actions)
-                    is Route.Project ->
-                        ProjectScreen(
-                            board = board,
-                            projectId = r.id,
-                            hideProjectMeta = true,
-                            actions = actions,
-                        )
+                    label = "nav",
+                ) { r ->
+                    when (r) {
+                        is Route.Home -> HomePage(board = board, onNavigate = ::navigate)
+                        is Route.List ->
+                            TaskListScreen(board = board, list = r.list, actions = actions)
+                        is Route.Project ->
+                            ProjectScreen(
+                                board = board,
+                                projectId = r.id,
+                                hideProjectMeta = true,
+                                actions = actions,
+                            )
+                    }
                 }
             }
         }
+
+        QuickEntryButton(
+            onClick = { createOpen = true },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(end = 20.dp, bottom = 20.dp),
+        )
+
+        AToast(
+            message = toast,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 20.dp),
+        )
     }
 
-    // Desktop quick-entry/panel: create from the FAB, edit on row tap.
+    // Desktop quick-entry/panel: create from the + button, edit on row tap.
     if (createOpen) {
         QuickEntrySheet(
             board = board,
@@ -268,99 +281,133 @@ fun AgendaHome(
 
 fun routeKey(route: Route): String =
     when (route) {
+        is Route.Home -> "home"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
     }
 
-fun parseRoute(key: String): Route {
-    val (kind, id) = key.split(":", limit = 2)
-    return when (kind) {
-        "project" -> Route.Project(id)
-        else ->
-            Route.List(runCatching { SmartList.valueOf(id) }.getOrDefault(SmartList.INBOX))
+fun parseRoute(key: String): Route =
+    when (key.substringBefore(':')) {
+        "project" -> Route.Project(key.substringAfter(':'))
+        "list" ->
+            Route.List(
+                runCatching { SmartList.valueOf(key.substringAfter(':')) }
+                    .getOrDefault(SmartList.INBOX)
+            )
+        else -> Route.Home
+    }
+
+/** One home section group — the desktop sidebar "card" (sidebar_bg
+ * surface, 8dp radius, hairline between rows). */
+@Composable
+private fun HomeGroup(content: @Composable () -> Unit) {
+    val c = AgendaTheme.colors
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                .background(c.sidebarBg)
+    ) {
+        content()
     }
 }
 
 @Composable
-private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> Unit) {
-    Column(
-        modifier = Modifier.padding(vertical = 8.dp).verticalScroll(rememberScrollState())
-    ) {
-        Text(
-            "Agenda",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-        )
-        // Desktop sidebar nav order (chrome.rs:375-383).
-        for (list in NAV_LISTS) {
-            NavigationDrawerItem(
-                label = { Text(list.titleRu) },
-                selected = current is Route.List && current.list == list,
-                onClick = { onNavigate(routeKey(Route.List(list))) },
-                colors =
-                    NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        unselectedContainerColor = Color.Transparent,
-                    ),
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-        }
-        // Desktop sidebar shows active (status 0) projects only —
-        // someday lives in «Потом», completed in the Logbook.
-        val drawerProjects = board.projects.filter { it.status == 0 }
-        if (drawerProjects.isNotEmpty()) {
-            DrawerHeader("Проекты")
-            for (p in drawerProjects) {
-                NavigationDrawerItem(
-                    label = { Text(p.title) },
-                    selected = current is Route.Project && current.id == p.id,
-                    icon = { ColorDot(MaterialTheme.colorScheme.primary) },
-                    onClick = { onNavigate(routeKey(Route.Project(p.id))) },
-                    colors =
-                        NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            unselectedContainerColor = Color.Transparent,
-                        ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+private fun HomeRow(
+    iconRes: Int?,
+    label: String,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)?,
+) {
+    ARow(onClick = onClick, enabled = enabled) { glyph ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (iconRes != null) {
+                AIcon(iconRes, tint = glyph.copy(alpha = if (enabled) 0.85f else 0.5f))
+            } else {
+                // Desktop project row: 8px muted dot (chrome.rs sb_item None icon).
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(AgendaTheme.colors.mutedFg.copy(alpha = if (enabled) 0.9f else 0.4f))
                 )
             }
-        }
-        // Desktop «Другое» footer menu (chrome.rs:1056-1067): only the
-        // entries with real screens exist here.
-        DrawerHeader("Другое")
-        for (list in MORE_LISTS) {
-            NavigationDrawerItem(
-                label = { Text(list.titleRu) },
-                selected = current is Route.List && current.list == list,
-                onClick = { onNavigate(routeKey(Route.List(list))) },
-                colors =
-                    NavigationDrawerItemDefaults.colors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        unselectedContainerColor = Color.Transparent,
-                    ),
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            Spacer(Modifier.width(12.dp))
+            Text(
+                label,
+                style = AgendaType.body,
+                color = glyph,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
+/**
+ * The home page — the desktop sidebar as a page, in its exact order:
+ * nav lists (chrome.rs:375-385), active projects under «Проекты»
+ * (chrome.rs:389-535), «Другое» popover items (chrome.rs:1054-1067).
+ * No counts: the desktop sidebar renders none.
+ */
 @Composable
-private fun ColorDot(color: Color) {
-    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
-}
+fun HomePage(board: Board, onNavigate: (Route) -> Unit) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 8.dp, bottom = 96.dp)
+    ) {
+        HomeGroup {
+            HomeRow(R.drawable.ic_inbox, SmartList.INBOX.titleRu) {
+                onNavigate(Route.List(SmartList.INBOX))
+            }
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_calendar_01, SmartList.WEEK.titleRu) {
+                onNavigate(Route.List(SmartList.WEEK))
+            }
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_calendar_02, SmartList.NEXT_WEEK.titleRu) {
+                onNavigate(Route.List(SmartList.NEXT_WEEK))
+            }
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu) {
+                onNavigate(Route.List(SmartList.SOMEDAY))
+            }
+        }
 
-@Composable
-private fun DrawerHeader(title: String) {
-    HorizontalDivider(
-        color = AgendaTheme.extra.sidebarDivider,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
-    Text(
-        title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp),
-    )
+        val projects = board.projects.filter { it.status == 0 }
+        if (projects.isNotEmpty()) {
+            ASectionHeader("Проекты")
+            HomeGroup {
+                projects.forEachIndexed { i, p ->
+                    if (i > 0) ADivider(indent = 44.dp)
+                    HomeRow(iconRes = null, label = p.title) {
+                        onNavigate(Route.Project(p.id))
+                    }
+                }
+            }
+        }
+
+        ASectionHeader("Другое")
+        HomeGroup {
+            HomeRow(R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu) {
+                onNavigate(Route.List(SmartList.LOGBOOK))
+            }
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_delete, SmartList.TRASH.titleRu) {
+                onNavigate(Route.List(SmartList.TRASH))
+            }
+            ADivider(indent = 44.dp)
+            // Desktop popover order kept; Android has no settings/about
+            // screens yet, so these two stay visible but disabled.
+            HomeRow(R.drawable.ic_settings, "Настройки", enabled = false, onClick = null)
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_help_circle, "О приложении", enabled = false, onClick = null)
+        }
+    }
 }
