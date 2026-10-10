@@ -63,6 +63,12 @@ android {
                     .split(' ', ',').filter { it.isNotBlank() }
             }
         }
+        // Release-equivalent build that keeps the 10.0.2.2 cleartext
+        // exception (src/e2e overlay) so the self-update e2e can use a
+        // local http.server feed. Production release stays clean.
+        create("e2e") {
+            initWith(getByName("release"))
+        }
     }
 
     testOptions {
