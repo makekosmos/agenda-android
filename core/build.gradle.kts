@@ -5,6 +5,15 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+/** Optional local checkouts used via rust/.cargo/config.toml [patch]. */
+fun localRustInputs(): List<File> = buildList {
+    System.getenv("AGENDA_GPUI_DIR")?.let { add(File(it, "crates/agenda-core/src")) }
+    System.getenv("AGENDA_CORTEX_DIR")?.let {
+        add(File(it, "runtime/crates/engine-mobile/src"))
+        add(File(it, "core/crates/ark-core/src"))
+    }
+}.filter { it.isDirectory }
+
 val rustDir = rootDir.resolve("rust")
 val generatedDir = layout.buildDirectory.dir("generated/uniffi")
 
@@ -14,10 +23,10 @@ val buildRustHost = tasks.register<Exec>("buildRustHost") {
     environment("CARGO_BUILD_JOBS", "4")
     inputs.dir(rustDir.resolve("src"))
     inputs.files(rustDir.resolve("Cargo.toml"), rustDir.resolve("Cargo.lock"))
-    // Path dependencies: agenda-core / engine-mobile / ark-core sources.
-    inputs.dir("/workspace/wt/agenda-gpui-android/crates/agenda-core/src")
-    inputs.dir("/workspace/wt/cortex-android/runtime/crates/engine-mobile/src")
-    inputs.dir("/workspace/wt/cortex-android/core/crates/ark-core/src")
+    // Rust deps are git deps pinned in Cargo.toml/Cargo.lock. With a local
+    // [patch] override, set AGENDA_CORTEX_DIR / AGENDA_GPUI_DIR so edits there
+    // re-trigger this task.
+    localRustInputs().forEach { inputs.dir(it) }
     outputs.file(rustDir.resolve("target/debug/libagenda_mobile.so"))
 }
 

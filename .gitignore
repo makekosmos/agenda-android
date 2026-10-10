@@ -7,3 +7,5 @@ local.properties
 .idea/
 rust/target/
 .kotlin/
+.devin-env.sh
+rust/.cargo/config.toml

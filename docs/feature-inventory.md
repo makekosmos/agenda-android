@@ -1,6 +1,6 @@
 # Desktop Agenda feature inventory (KOS-370, unit 1)
 
-Source: `makekosmos/agenda-gpui` worktree `/workspace/wt/agenda-gpui-android`,
+Source: `makekosmos/agenda-gpui` worktree `$AGENDA_GPUI_DIR`,
 branch `kos-370-android` (based on `origin/main`). Paths are relative to that
 repo; line numbers are post-extraction (agenda-core is now
 `crates/agenda-core/`). This is the parity checklist for the Android app.

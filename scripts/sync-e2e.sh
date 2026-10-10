@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # sync-e2e.sh — run the phone<->desktop sync E2E test.
 #
-# Builds (cached) the desktop Engine from /workspace/wt/cortex-android,
+# Builds (cached) the desktop Engine from $AGENDA_CORTEX_DIR (cortex checkout),
 # boots it with a fresh MUNDUS_DATA_DIR, then runs
 # :core:test --tests com.mundus.agenda.SyncE2eTest with
 # SYNC_E2E_DESKTOP_LOCK pointing at engine.lock.json.
@@ -17,10 +17,10 @@ LOG="$ROOT/build/sync-e2e.log"
 exec > >(tee -a "$LOG") 2>&1
 
 set -x
-source "$ROOT/.devin-env.sh"
+[ -f "$ROOT/.devin-env.sh" ] && source "$ROOT/.devin-env.sh"
 set +x
 
-CORTEX=/workspace/wt/cortex-android
+CORTEX="${AGENDA_CORTEX_DIR:?set AGENDA_CORTEX_DIR to a cortex checkout (branch kos-370-android)}"
 BINARY="$CORTEX/target/debug/mundus-engine"
 
 DESK=$(mktemp -d /tmp/sync-e2e-desk.XXXXXX)

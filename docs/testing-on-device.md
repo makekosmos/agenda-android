@@ -7,8 +7,8 @@ the "does it actually run" check.
 
 ## Device
 
-- Emulator + system images: `/home/box/android` (emulator 37.2.12).
-  `adb`: `/home/box/android-sdk/platform-tools/adb`.
+- Emulator + system images: `$ANDROID_SDK_ROOT_EMU` (emulator 37.2.12).
+  `adb`: `$ANDROID_HOME/platform-tools/adb`.
 - AVDs:
   - `agenda30` (default): `system-images;android-30;default;x86_64`, Pixel 6
     skin 1080x2400. **The only image on this box whose screenshots are not
@@ -48,7 +48,7 @@ scripts/device.sh install         # app/build/outputs/apk/release/app-release.ap
 ## Drive it: mobile-mcp (preferred)
 
 [mobile-mcp](https://github.com/mobile-next/mobile-mcp) 1.0.9 is installed at
-`/home/box/tools/mobile-mcp` and registered for Devin CLI at user scope
+`<mobile-mcp-dir>` and registered for Devin CLI at user scope
 (`devin mcp add mobile-mcp --scope user ...`), file
 `~/.config/devin/mcp_config.json`:
 
@@ -57,10 +57,10 @@ scripts/device.sh install         # app/build/outputs/apk/release/app-release.ap
   "mcpServers": {
     "mobile-mcp": {
       "command": "/usr/bin/node",
-      "args": ["/home/box/tools/mobile-mcp/node_modules/@mobilenext/mobile-mcp/lib/index.js"],
+      "args": ["<mobile-mcp-dir>/node_modules/@mobilenext/mobile-mcp/lib/index.js"],
       "env": {
-        "ANDROID_HOME": "/home/box/android-sdk",
-        "PATH": "/home/box/android-sdk/platform-tools:/usr/local/bin:/usr/bin:/bin"
+        "ANDROID_HOME": "$ANDROID_HOME",
+        "PATH": "$ANDROID_HOME/platform-tools:/usr/local/bin:/usr/bin:/bin"
       },
       "transport": "stdio"
     }

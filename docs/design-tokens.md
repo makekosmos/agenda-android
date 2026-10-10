@@ -82,7 +82,7 @@ dot, divider).
 
 ## Icons (desktop SVG → VectorDrawable)
 
-All from `/workspace/wt/agenda-gpui-android/assets/icons/`:
+All from `$AGENDA_GPUI_DIR/assets/icons/`:
 
 | Android id | Source file | Used for |
 |---|---|---|

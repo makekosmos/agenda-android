@@ -29,9 +29,9 @@ database; refresh is event-driven via the change-subscription callback.
 
 ## Build
 
-Prereqs: JDK 21, Android SDK 35 + NDK 27 (`$ANDROID_HOME`,
+Prereqs: JDK 17, Android SDK 35 + NDK 27 (`$ANDROID_HOME`,
 `$ANDROID_NDK_HOME`), Rust 1.95 with `aarch64-linux-android` and
-`x86_64-linux-android` targets, `cargo-ndk`. Source `.devin-env.sh` for the
+`x86_64-linux-android` targets, `cargo-ndk`. Copy `.devin-env.example.sh` to `.devin-env.sh` and source it for the
 env this box uses.
 
 ```bash

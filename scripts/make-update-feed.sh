@@ -35,7 +35,7 @@ if [ -z "$APK" ] || [ -z "$BASE_URL" ]; then
     exit 1
 fi
 
-AAPT2="$(ls -d "${ANDROID_HOME:-/home/box/android-sdk}"/build-tools/*/aapt2 | tail -1)"
+AAPT2="$(ls -d "${ANDROID_HOME:?set ANDROID_HOME}"/build-tools/*/aapt2 | tail -1)"
 BADGING="$("$AAPT2" dump badging "$APK" | sed -n '/^package:/p;q' || true)"
 VERSION_NAME="$(echo "$BADGING" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")"
 VERSION_CODE="$(echo "$BADGING" | sed -n "s/.*versionCode='\([^']*\)'.*/\1/p")"

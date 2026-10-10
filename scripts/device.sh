@@ -21,8 +21,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SDK="${ANDROID_SDK_ROOT_EMU:-/home/box/android}"          # has emulator + system image
-ADB="${ADB:-/home/box/android-sdk/platform-tools/adb}"
+SDK="${ANDROID_SDK_ROOT_EMU:-${ANDROID_HOME:?set ANDROID_HOME}}"          # has emulator + system image
+ADB="${ADB:-${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb}"
 AVD="${AVD:-agenda30}"
 SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 PKG="com.mundus.agenda"
@@ -61,7 +61,7 @@ case "$cmd" in
   stop) a emu kill || true ;;
   build)
     variant="${1:-release}"
-    (cd "$ROOT" && source .devin-env.sh && ./gradlew ":app:assemble${variant^}" -PagendaAbis=x86_64 -q)
+    (cd "$ROOT" && { [ ! -f .devin-env.sh ] || source .devin-env.sh; } && ./gradlew ":app:assemble${variant^}" -PagendaAbis=x86_64 -q)
     ls -la "$ROOT/app/build/outputs/apk/$variant/"*.apk
     ;;
   install)

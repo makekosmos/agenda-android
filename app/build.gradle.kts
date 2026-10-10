@@ -8,6 +8,15 @@ plugins {
     alias(libs.plugins.roborazzi.plugin)
 }
 
+/** Optional local checkouts used via rust/.cargo/config.toml [patch]. */
+fun localRustInputs(): List<File> = buildList {
+    System.getenv("AGENDA_GPUI_DIR")?.let { add(File(it, "crates/agenda-core/src")) }
+    System.getenv("AGENDA_CORTEX_DIR")?.let {
+        add(File(it, "runtime/crates/engine-mobile/src"))
+        add(File(it, "core/crates/ark-core/src"))
+    }
+}.filter { it.isDirectory }
+
 val jniLibsDir = layout.buildDirectory.dir("rust-jnilibs")
 
 val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
@@ -18,10 +27,10 @@ val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
     inputs.property("agendaAbis", findProperty("agendaAbis") ?: "default")
     inputs.dir(rootDir.resolve("rust/src"))
     inputs.files(rootDir.resolve("rust/Cargo.toml"), rootDir.resolve("rust/Cargo.lock"))
-    // Path dependencies: agenda-core / engine-mobile / ark-core sources.
-    inputs.dir("/workspace/wt/agenda-gpui-android/crates/agenda-core/src")
-    inputs.dir("/workspace/wt/cortex-android/runtime/crates/engine-mobile/src")
-    inputs.dir("/workspace/wt/cortex-android/core/crates/ark-core/src")
+    // Rust deps are git deps pinned in Cargo.toml/Cargo.lock. With a local
+    // [patch] override, set AGENDA_CORTEX_DIR / AGENDA_GPUI_DIR so edits there
+    // re-trigger this task.
+    localRustInputs().forEach { inputs.dir(it) }
     outputs.dir(jniLibsDir)
 }
 
@@ -91,7 +100,7 @@ android {
         buildConfigField(
             "String",
             "UPDATE_FEED_BASE",
-            "\"${(findProperty("agendaUpdateFeedBase") as String?) ?: "https://github.com/makekosmos/cortex/releases/latest/download/android"}\"",
+            "\"${(findProperty("agendaUpdateFeedBase") as String?) ?: "https://github.com/makekosmos/agenda-android/releases/latest/download"}\"",
         )
     }
 

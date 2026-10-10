@@ -23,10 +23,11 @@ path = "src/bin/uniffi-bindgen.rs"
 required-features = ["cli"]
 
 [dependencies]
-# Path deps until the cortex and agenda-gpui PRs merge; then these become
-# git deps pinned to SHAs (see docs/decisions.tsv).
-engine-mobile = { path = "../../wt/cortex-android/runtime/crates/engine-mobile" }
-agenda-core = { path = "../../wt/agenda-gpui-android/crates/agenda-core" }
+# Git deps pinned by rev (branch kos-370-android in each repo). To build
+# against local checkouts instead, copy rust/.cargo/config.example.toml to
+# rust/.cargo/config.toml (gitignored) and point the [patch] paths at them.
+engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "dd9c6b30ac764fc905a1fe98c208af33f72d1c22" }
+agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "236dd1d209025bae91dde0c06a43359d52b5663f" }
 uniffi = "0.29"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }

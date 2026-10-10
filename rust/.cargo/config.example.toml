@@ -1,0 +1,9 @@
+# Copy to rust/.cargo/config.toml (gitignored) to build against local
+# checkouts of cortex / agenda-gpui instead of the pinned git revs.
+# Also export AGENDA_CORTEX_DIR / AGENDA_GPUI_DIR so Gradle tracks them.
+
+[patch."https://github.com/makekosmos/cortex"]
+engine-mobile = { path = "/path/to/cortex/runtime/crates/engine-mobile" }
+
+[patch."https://github.com/makekosmos/agenda-gpui"]
+agenda-core = { path = "/path/to/agenda-gpui/crates/agenda-core" }
