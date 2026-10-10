@@ -6,3 +6,5 @@ export CARGO_BUILD_JOBS=4
 export GRADLE_OPTS="-Xmx1536m -Dorg.gradle.daemon=false"
 # Desktop GPUI builds on this box need the fontconfig sysroot: run `agenda_desktop_env` first.
 agenda_desktop_env() { export PATH=/home/box/kos-sysroot/bin:$PATH PKG_CONFIG_PATH=/home/box/kos-sysroot/usr/lib/x86_64-linux-gnu/pkgconfig PKG_CONFIG_SYSROOT_DIR=/home/box/kos-sysroot; }
+export JAVA_HOME=/home/box/jdk17
+export PATH=$JAVA_HOME/bin:$PATH

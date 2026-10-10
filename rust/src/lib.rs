@@ -9,7 +9,7 @@
 
 use agenda_core::{LocalDay, SmartList, Todo};
 use chrono::{FixedOffset, NaiveDate};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 uniffi::setup_scaffolding!();
 // Force the linker to keep engine-mobile's scaffolding symbols and metadata
@@ -149,4 +149,137 @@ pub fn task_to_engine_object(
 pub fn new_task_json(id: String, title: String) -> Result<String, AgendaError> {
     serde_json::to_string(&agenda_core::new_todo(id, &title))
         .map_err(|e| AgendaError::Mapping(e.to_string()))
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1 read parity: projects, tags, per-task view fields, Today list.
+// Same rule as above — every date decision happens inside agenda-core.
+// ---------------------------------------------------------------------------
+
+/// «Сегодня» indices (agenda-core `today_idx`): the Week pipeline narrowed
+/// to overdue + due-today. A distinct UniFFI export rather than a new
+/// `SmartList` so the desktop enum stays the single source of truth.
+#[uniffi::export]
+pub fn today_list_indices(
+    todos_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<Vec<u32>, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let todos = parse_todos(&todos_json)?;
+    Ok(agenda_core::today_idx(&todos, &day)
+        .into_iter()
+        .map(|i| i as u32)
+        .collect())
+}
+
+/// Project page membership (desktop `project_page`): tasks in the project,
+/// not trashed, not archived — sorted by `sort_order` like the default
+/// board order.
+#[uniffi::export]
+pub fn project_task_indices(
+    project_id: String,
+    todos_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<Vec<u32>, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let todos = parse_todos(&todos_json)?;
+    let mut v: Vec<usize> = todos
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| {
+            t.project_id.as_deref() == Some(project_id.as_str())
+                && !t.is_trashed
+                && !agenda_core::is_archived(t, &day)
+        })
+        .map(|(i, _)| i)
+        .collect();
+    v.sort_by_key(|&i| todos[i].sort_order);
+    Ok(v.into_iter().map(|i| i as u32).collect())
+}
+
+/// Tag filter membership: live tasks carrying the tag (trash hidden), in
+/// `sort_order` board order.
+#[uniffi::export]
+pub fn tag_task_indices(tag_id: String, todos_json: String) -> Result<Vec<u32>, AgendaError> {
+    let todos = parse_todos(&todos_json)?;
+    let mut v: Vec<usize> = todos
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| !t.is_trashed && t.tag_ids.iter().any(|id| id == &tag_id))
+        .map(|(i, _)| i)
+        .collect();
+    v.sort_by_key(|&i| todos[i].sort_order);
+    Ok(v.into_iter().map(|i| i as u32).collect())
+}
+
+/// Per-row date fields the UI needs (desktop `date_group_label` + row
+/// chip): the canonical `task_date` key, a display label («Сегодня» or
+/// «18 сент»), and whether the task is overdue. Kotlin formats nothing.
+#[uniffi::export]
+pub fn task_date_view(
+    todo_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let todo: Todo =
+        serde_json::from_str(&todo_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let (date, conflict) = agenda_core::task_date(&todo, &day);
+    let label = match date.as_deref() {
+        None => "Без даты".to_string(),
+        Some(v) if v == day.today_key() => "Сегодня".to_string(),
+        Some(v) => agenda_core::fmt_day_month(v),
+    };
+    Ok(json!({
+        "dateKey": date,
+        "label": label,
+        "conflict": conflict,
+        "overdue": agenda_core::is_overdue(&todo, &day),
+    })
+    .to_string())
+}
+
+/// Convert a `com.kosmos.project` Engine object into the `Project` JSON
+/// shape (agenda-core `projects::read_project`); soft-deleted objects are
+/// filtered by the caller before this.
+#[uniffi::export]
+pub fn project_from_engine_object(object_json: String) -> Result<String, AgendaError> {
+    let object: Value =
+        serde_json::from_str(&object_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    serde_json::to_string(&agenda_core::projects::read_project(&object))
+        .map_err(|e| AgendaError::Mapping(e.to_string()))
+}
+
+/// Build the `com.kosmos.project` Engine object for a `Project` JSON
+/// (agenda-core `projects::project_object`).
+#[uniffi::export]
+pub fn project_to_engine_object(
+    project_json: String,
+    existing_object_json: Option<String>,
+    now: String,
+) -> Result<String, AgendaError> {
+    let project: agenda_core::Project =
+        serde_json::from_str(&project_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let existing: Value = match existing_object_json.as_deref() {
+        Some(j) => serde_json::from_str(j).map_err(|e| AgendaError::Invalid(e.to_string()))?,
+        None => Value::Null,
+    };
+    serde_json::to_string(&agenda_core::projects::project_object(
+        &existing, &project, &now,
+    ))
+    .map_err(|e| AgendaError::Mapping(e.to_string()))
+}
+
+/// Read a `com.kosmos.agenda.references` object: `(legacy_projects, tags)`
+/// as `[projects_json, tags_json]` (agenda-core `read_references`). The
+/// caller merges legacy projects against known canonical ids like desktop.
+#[uniffi::export]
+pub fn references_from_engine_object(object_json: String) -> Result<String, AgendaError> {
+    let object: Value =
+        serde_json::from_str(&object_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let (projects, tags) = agenda_core::projects::read_references(&object)
+        .map_err(AgendaError::Mapping)?;
+    Ok(json!([projects, tags]).to_string())
 }

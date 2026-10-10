@@ -1,0 +1,1957 @@
+{
+  "expected": {
+    "lists": {
+      "inbox": [
+        "dev-inbox-1",
+        "dev-inbox-2",
+        "dev-inbox-3"
+      ],
+      "logbook": [
+        "dev-done-yesterday"
+      ],
+      "nextWeek": [
+        "dev-next-week-1"
+      ],
+      "someday": [
+        "dev-someday-1"
+      ],
+      "today": [
+        "dev-overdue-1",
+        "dev-today-2",
+        "dev-recurring-1",
+        "dev-done-today"
+      ],
+      "trash": [
+        "dev-trash-1"
+      ],
+      "week": [
+        "dev-overdue-1",
+        "dev-today-1",
+        "dev-today-2",
+        "dev-today-evening",
+        "dev-checklist-1",
+        "dev-week-2",
+        "dev-week-3",
+        "dev-week-4",
+        "dev-recurring-1",
+        "dev-done-today"
+      ]
+    },
+    "projects": {
+      "dev-proj-home": [
+        "dev-week-3"
+      ],
+      "dev-proj-release": [
+        "dev-today-2",
+        "dev-checklist-1",
+        "dev-week-2"
+      ],
+      "dev-proj-someday": [
+        "dev-someday-1"
+      ]
+    },
+    "tags": {
+      "dev-tag-focus": [
+        "dev-today-1"
+      ],
+      "dev-tag-home": [
+        "dev-week-4"
+      ],
+      "dev-tag-urgent": [
+        "dev-today-1",
+        "dev-overdue-1"
+      ]
+    }
+  },
+  "objects": [
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "Обратить внимание на секцию про ценообразование.",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-inbox-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": "Обратить внимание на секцию про ценообразование.",
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 0,
+          "status": "inbox",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "inbox"
+      },
+      "title": "Перечитать бриф по лендингу",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-inbox-2",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 1,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 1,
+          "status": "inbox",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "low",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "inbox"
+      },
+      "title": "Записаться к стоматологу",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-inbox-3",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 2,
+          "status": "inbox",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "inbox"
+      },
+      "title": "Идея: виджет погоды в сайдбаре",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-today-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": 35.0,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": true,
+          "is_trashed": false,
+          "price": null,
+          "priority": 3,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 3,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": [
+            "dev-tag-urgent",
+            "dev-tag-focus"
+          ]
+        },
+        "priority": "high",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "todo"
+      },
+      "title": "Созвон по дизайну",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-today-2",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": "2026-10-12",
+        "extensions": {
+          "area_id": null,
+          "billable": true,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": "2026-10-12",
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": 15000.0,
+          "priority": 0,
+          "project_id": "dev-proj-release",
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-12",
+          "significance": null,
+          "sort_order": 4,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-12",
+        "status": "todo"
+      },
+      "title": "Отправить инвойс клиенту",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-today-evening",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": "dev-area-life",
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": true,
+          "is_someday": false,
+          "is_today": true,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 5,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "todo"
+      },
+      "title": "Почитать главу книги",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-overdue-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": 20.0,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 3,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-11",
+          "significance": null,
+          "sort_order": 6,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": [
+            "dev-tag-urgent"
+          ]
+        },
+        "priority": "high",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-11",
+        "status": "todo"
+      },
+      "title": "Вернуть правки по макетам",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-checklist-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": "dev-head-prep",
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": "dev-proj-release",
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-13",
+          "significance": null,
+          "sort_order": 7,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-13",
+        "status": "todo"
+      },
+      "title": "Подготовить демо для команды",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-week-2",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": 15.0,
+          "heading_id": "dev-head-polish",
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": "dev-proj-release",
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-14",
+          "significance": 7,
+          "sort_order": 8,
+          "status": "started",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-14",
+        "status": "inProgress"
+      },
+      "title": "Ревью PR по навигации",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-week-3",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": "2026-10-15",
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": "2026-10-15",
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": "dev-proj-home",
+          "recurrence_rule": null,
+          "reminder_date": "2026-10-15T09:00:00+03:00",
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 9,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": "2026-10-15T09:00:00+03:00",
+        "scheduledAt": null,
+        "status": "todo"
+      },
+      "title": "Оплатить интернет",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-week-4",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": "dev-area-life",
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-16",
+          "significance": null,
+          "sort_order": 10,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": [
+            "dev-tag-home"
+          ]
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-16",
+        "status": "todo"
+      },
+      "title": "Купить подарок Маше",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-recurring-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": "dev-area-life",
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": {
+            "dayOfMonth": null,
+            "daysOfWeek": [
+              1,
+              3,
+              5
+            ],
+            "endDate": null,
+            "frequency": 1,
+            "interval": 1,
+            "recurrenceType": 0
+          },
+          "reminder_date": null,
+          "scheduled_date": "2026-10-12",
+          "significance": null,
+          "sort_order": 11,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": {
+          "daysOfWeek": [
+            1,
+            3,
+            5
+          ],
+          "endDate": null,
+          "frequency": "weekly",
+          "interval": 1,
+          "recurrenceType": "fixed"
+        },
+        "reminderAt": null,
+        "scheduledAt": "2026-10-12",
+        "status": "todo"
+      },
+      "title": "Поливать цветы",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-next-week-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 2,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-20",
+          "significance": null,
+          "sort_order": 12,
+          "status": "todo",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "medium",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-20",
+        "status": "todo"
+      },
+      "title": "Запланировать отпуск",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-someday-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": true,
+          "is_today": false,
+          "is_trashed": false,
+          "kosmos": {
+            "taskBucket": "backlog"
+          },
+          "price": null,
+          "priority": 0,
+          "project_id": "dev-proj-someday",
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 13,
+          "status": "deferred",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "todo"
+      },
+      "title": "Собрать домашний кинотеатр",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-done-today",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": "2026-10-12T09:30:00+03:00",
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": "2026-10-12T09:30:00+03:00",
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": true,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-12",
+          "significance": null,
+          "sort_order": 14,
+          "status": "done",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-12",
+        "status": "done"
+      },
+      "title": "Утренняя планёрка",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-done-yesterday",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": "2026-10-11T14:00:00+03:00",
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": "2026-10-11T14:00:00+03:00",
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": true,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 15,
+          "status": "done",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "done"
+      },
+      "title": "Позвонить в банк",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": null,
+      "id": "dev-canceled-1",
+      "propsJson": {
+        "canceledAt": "2026-10-12T12:00:00+00:00",
+        "checklist": [],
+        "completedAt": "2026-10-12T11:00:00+03:00",
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": "2026-10-12T12:00:00+00:00",
+          "checklist_items": [],
+          "completed_at": "2026-10-12T11:00:00+03:00",
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": true,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": false,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": "2026-10-13",
+          "significance": null,
+          "sort_order": 16,
+          "status": "canceled",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": "2026-10-13",
+        "status": "canceled"
+      },
+      "title": "Встреча с брокером",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T09:00:00",
+      "deletedAt": "2026-10-12T12:00:00+00:00",
+      "id": "dev-trash-1",
+      "propsJson": {
+        "canceledAt": null,
+        "checklist": [],
+        "completedAt": null,
+        "dueAt": null,
+        "extensions": {
+          "area_id": null,
+          "billable": false,
+          "cancelled_at": null,
+          "checklist_items": [],
+          "completed_at": null,
+          "created_at": "2026-10-12T09:00:00",
+          "deadline": null,
+          "description": null,
+          "fuel_cost": null,
+          "heading_id": null,
+          "is_cancelled": false,
+          "is_completed": false,
+          "is_evening": false,
+          "is_someday": false,
+          "is_today": false,
+          "is_trashed": true,
+          "price": null,
+          "priority": 0,
+          "project_id": null,
+          "recurrence_rule": null,
+          "reminder_date": null,
+          "scheduled_date": null,
+          "significance": null,
+          "sort_order": 17,
+          "status": "inbox",
+          "system_kind": null,
+          "tag_ids": []
+        },
+        "priority": "none",
+        "recurrence": null,
+        "reminderAt": null,
+        "scheduledAt": null,
+        "status": "inbox"
+      },
+      "title": "Черновик: старый план переезда",
+      "typeId": "com.kosmos.task",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T12:00:00+00:00",
+      "deletedAt": null,
+      "id": "dev-proj-release",
+      "propsJson": {
+        "color": null,
+        "dueAt": "2026-10-22",
+        "extensions": {
+          "areaId": "dev-area-work",
+          "sortOrder": 0
+        },
+        "scheduledAt": null,
+        "status": "active"
+      },
+      "title": "Релиз Agenda 1.0",
+      "typeId": "com.kosmos.project",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T12:00:00+00:00",
+      "deletedAt": null,
+      "id": "dev-proj-home",
+      "propsJson": {
+        "color": null,
+        "dueAt": null,
+        "extensions": {
+          "areaId": "dev-area-life",
+          "sortOrder": 1
+        },
+        "scheduledAt": null,
+        "status": "active"
+      },
+      "title": "Дом и быт",
+      "typeId": "com.kosmos.project",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": {
+        "content": [
+          {
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "createdAt": "2026-10-12T12:00:00+00:00",
+      "deletedAt": null,
+      "id": "dev-proj-someday",
+      "propsJson": {
+        "color": null,
+        "dueAt": null,
+        "extensions": {
+          "areaId": "dev-area-life",
+          "sortOrder": 2
+        },
+        "scheduledAt": null,
+        "status": "someday"
+      },
+      "title": "Путешествие в Японию",
+      "typeId": "com.kosmos.project",
+      "typeVersion": "1.1.0",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    },
+    {
+      "contentJson": null,
+      "createdAt": "2026-10-12T12:00:00+00:00",
+      "deletedAt": null,
+      "id": "agenda:references",
+      "propsJson": {
+        "model_version": 1,
+        "projects": [],
+        "tags": [
+          {
+            "color": "red",
+            "id": "dev-tag-urgent",
+            "title": "срочно"
+          },
+          {
+            "color": "blue",
+            "id": "dev-tag-focus",
+            "title": "фокус"
+          },
+          {
+            "color": "green",
+            "id": "dev-tag-home",
+            "title": "дом"
+          }
+        ]
+      },
+      "title": "Agenda references",
+      "typeId": "com.kosmos.agenda.references",
+      "updatedAt": "2026-10-12T12:00:00+00:00"
+    }
+  ],
+  "projects": [
+    {
+      "areaId": "dev-area-work",
+      "deadline": "2026-10-22",
+      "id": "dev-proj-release",
+      "sortOrder": 0,
+      "status": 0,
+      "title": "Релиз Agenda 1.0"
+    },
+    {
+      "areaId": "dev-area-life",
+      "deadline": null,
+      "id": "dev-proj-home",
+      "sortOrder": 1,
+      "status": 0,
+      "title": "Дом и быт"
+    },
+    {
+      "areaId": "dev-area-life",
+      "deadline": null,
+      "id": "dev-proj-someday",
+      "sortOrder": 2,
+      "status": 1,
+      "title": "Путешествие в Японию"
+    }
+  ],
+  "tags": [
+    {
+      "color": "red",
+      "id": "dev-tag-urgent",
+      "title": "срочно"
+    },
+    {
+      "color": "blue",
+      "id": "dev-tag-focus",
+      "title": "фокус"
+    },
+    {
+      "color": "green",
+      "id": "dev-tag-home",
+      "title": "дом"
+    }
+  ],
+  "today": "2026-10-12",
+  "todos": [
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-inbox-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": "Обратить внимание на секцию про ценообразование.",
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 0,
+      "status": "inbox",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Перечитать бриф по лендингу"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-inbox-2",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 1,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 1,
+      "status": "inbox",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Записаться к стоматологу"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-inbox-3",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 2,
+      "status": "inbox",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Идея: виджет погоды в сайдбаре"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": 35.0,
+      "heading_id": null,
+      "id": "dev-today-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": true,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 3,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 3,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [
+        "dev-tag-urgent",
+        "dev-tag-focus"
+      ],
+      "title": "Созвон по дизайну"
+    },
+    {
+      "area_id": null,
+      "billable": true,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": "2026-10-12",
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-today-2",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": 15000.0,
+      "priority": 0,
+      "project_id": "dev-proj-release",
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-12",
+      "significance": null,
+      "sort_order": 4,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Отправить инвойс клиенту"
+    },
+    {
+      "area_id": "dev-area-life",
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-today-evening",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": true,
+      "is_someday": false,
+      "is_today": true,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 5,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Почитать главу книги"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": 20.0,
+      "heading_id": null,
+      "id": "dev-overdue-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 3,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-11",
+      "significance": null,
+      "sort_order": 6,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [
+        "dev-tag-urgent"
+      ],
+      "title": "Вернуть правки по макетам"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [
+        {
+          "is_completed": true
+        },
+        {
+          "is_completed": false
+        },
+        {
+          "is_completed": false
+        }
+      ],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": "dev-head-prep",
+      "id": "dev-checklist-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": "dev-proj-release",
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-13",
+      "significance": null,
+      "sort_order": 7,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Подготовить демо для команды"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": 15.0,
+      "heading_id": "dev-head-polish",
+      "id": "dev-week-2",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": "dev-proj-release",
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-14",
+      "significance": 7,
+      "sort_order": 8,
+      "status": "started",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Ревью PR по навигации"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": "2026-10-15",
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-week-3",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": "dev-proj-home",
+      "recurrence": null,
+      "reminder_date": "2026-10-15T09:00:00+03:00",
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 9,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Оплатить интернет"
+    },
+    {
+      "area_id": "dev-area-life",
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-week-4",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-16",
+      "significance": null,
+      "sort_order": 10,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [
+        "dev-tag-home"
+      ],
+      "title": "Купить подарок Маше"
+    },
+    {
+      "area_id": "dev-area-life",
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-recurring-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": {
+        "days_of_week": [
+          1,
+          3,
+          5
+        ],
+        "frequency": 1,
+        "interval": 1,
+        "recurrence_type": 0
+      },
+      "reminder_date": null,
+      "scheduled_date": "2026-10-12",
+      "significance": null,
+      "sort_order": 11,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Поливать цветы"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-next-week-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 2,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-20",
+      "significance": null,
+      "sort_order": 12,
+      "status": "todo",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Запланировать отпуск"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-someday-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": true,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": "dev-proj-someday",
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 13,
+      "status": "deferred",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Собрать домашний кинотеатр"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": "2026-10-12T09:30:00+03:00",
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-done-today",
+      "is_cancelled": false,
+      "is_completed": true,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-12",
+      "significance": null,
+      "sort_order": 14,
+      "status": "done",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Утренняя планёрка"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": "2026-10-11T14:00:00+03:00",
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-done-yesterday",
+      "is_cancelled": false,
+      "is_completed": true,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 15,
+      "status": "done",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Позвонить в банк"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": "2026-10-12T11:00:00+03:00",
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-canceled-1",
+      "is_cancelled": true,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": false,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": "2026-10-13",
+      "significance": null,
+      "sort_order": 16,
+      "status": "canceled",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Встреча с брокером"
+    },
+    {
+      "area_id": null,
+      "billable": false,
+      "checklist": [],
+      "completed_at": null,
+      "created_at": "2026-10-12T09:00:00",
+      "deadline": null,
+      "fuel_cost": null,
+      "heading_id": null,
+      "id": "dev-trash-1",
+      "is_cancelled": false,
+      "is_completed": false,
+      "is_evening": false,
+      "is_someday": false,
+      "is_today": false,
+      "is_trashed": true,
+      "notes": null,
+      "price": null,
+      "priority": 0,
+      "project_id": null,
+      "recurrence": null,
+      "reminder_date": null,
+      "scheduled_date": null,
+      "significance": null,
+      "sort_order": 17,
+      "status": "inbox",
+      "system_kind": null,
+      "tag_ids": [],
+      "title": "Черновик: старый план переезда"
+    }
+  ],
+  "utcOffsetSeconds": 10800
+}

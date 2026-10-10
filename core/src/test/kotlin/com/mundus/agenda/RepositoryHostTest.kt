@@ -6,6 +6,7 @@ import java.time.LocalDate
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -23,7 +24,7 @@ class RepositoryHostTest {
     fun createListEventReopen() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
 
-        var repository = AgendaRepository(dataDir)
+        var repository = EngineAgendaRepository(dataDir)
         try {
             val events = LinkedBlockingQueue<String>()
             val subscription =
@@ -51,7 +52,7 @@ class RepositoryHostTest {
                 assertEquals(1, tasks.size)
                 assertEquals("Call mom", tasks[0].title)
 
-                val emitted = withTimeout(10_000) { repository.tasksFlow().first() }
+                val emitted = withTimeout(10_000) { repository.boardFlow().map { it.list(SmartList.INBOX) }.first() }
                 assertTrue(emitted.any { it.title == "Call mom" })
             } finally {
                 subscription.close()
@@ -60,7 +61,7 @@ class RepositoryHostTest {
             repository.close()
         }
 
-        repository = AgendaRepository(dataDir)
+        repository = EngineAgendaRepository(dataDir)
         try {
             assertTrue(
                 "task must survive reopen",
@@ -74,7 +75,7 @@ class RepositoryHostTest {
     @Test
     fun quickEntrySchedulesDate() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
-        AgendaRepository(dataDir).use { repository ->
+        EngineAgendaRepository(dataDir).use { repository ->
             repository.addTask("позвонить маме завтра")
             val task = repository.tasks().single()
             assertEquals("позвонить маме", task.title)
