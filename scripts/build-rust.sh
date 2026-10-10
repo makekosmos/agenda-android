@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Build the Rust core and generate Kotlin bindings.
+#   scripts/build-rust.sh android   # .so per ABI into app/build/rust-jnilibs
+#   scripts/build-rust.sh host      # host .so for the :core JVM test
+#   scripts/build-rust.sh bindings  # Kotlin bindings into core/build/generated/uniffi
+#   scripts/build-rust.sh all       # all of the above
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RUST_DIR="$ROOT/rust"
+OUT_JNILIBS="$ROOT/app/build/rust-jnilibs"
+OUT_BINDINGS="$ROOT/core/build/generated/uniffi"
+
+# shellcheck disable=SC1091
+[ -f "$ROOT/.devin-env.sh" ] && source "$ROOT/.devin-env.sh"
+
+MODE="${1:-all}"
+
+build_host() {
+    (cd "$RUST_DIR" && cargo build --lib)
+}
+
+build_android() {
+    (cd "$RUST_DIR" && cargo ndk -t arm64-v8a -t x86_64 -o "$OUT_JNILIBS" build --release)
+    # cargo-ndk copies every cdylib in the dep tree; the app ships exactly
+    # one .so (agenda_mobile statically contains engine-mobile + ark-core).
+    find "$OUT_JNILIBS" -name '*.so' ! -name 'libagenda_mobile.so' -delete
+}
+
+build_bindings() {
+    build_host
+    mkdir -p "$OUT_BINDINGS"
+    (cd "$RUST_DIR" && cargo run --features cli --bin uniffi-bindgen -- \
+        generate --library "$RUST_DIR/target/debug/libagenda_mobile.so" \
+        --language kotlin --out-dir "$OUT_BINDINGS")
+}
+
+case "$MODE" in
+    android) build_android ;;
+    host) build_host ;;
+    bindings) build_bindings ;;
+    all) build_android && build_bindings ;;
+    *) echo "usage: $0 [android|host|bindings|all]" >&2; exit 2 ;;
+esac

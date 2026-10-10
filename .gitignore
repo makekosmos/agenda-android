@@ -1,1 +1,8 @@
 .devin-runs/
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+rust/target/
