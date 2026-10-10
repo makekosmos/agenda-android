@@ -19,8 +19,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** Download failure carrying a user-facing message. */
+internal class UpdateFailure(val userMessage: String) : Exception(userMessage)
 
 /** Mirrors Cortex `state.rs` update states. */
 sealed interface UpdateState {
@@ -82,7 +86,6 @@ class UpdateManager(
         state = UpdateState.Checking
         try {
             val feed = withContext(io) { resolveFeed(feedBase) }
-            prefs.edit().putLong("last_check", System.currentTimeMillis()).apply()
             state =
                 if (feed != null && isNewer(feed, BuildConfig.VERSION_CODE)) {
                     UpdateState.Available(feed)
@@ -90,7 +93,11 @@ class UpdateManager(
                     UpdateState.NotAvailable
                 }
         } catch (e: Exception) {
-            state = UpdateState.Error(e.message ?: "check failed")
+            state = UpdateState.Error("Не удалось проверить обновления")
+        } finally {
+            // Throttle failures too — otherwise every resume re-checks when
+            // the device is simply offline.
+            prefs.edit().putLong("last_check", System.currentTimeMillis()).apply()
         }
     }
 
@@ -115,10 +122,16 @@ class UpdateManager(
                         UpdateState.Error("Сертификат обновления не совпадает")
                     }
             } catch (e: Exception) {
-                state = UpdateState.Error(e.message ?: "download failed")
+                state =
+                    UpdateState.Error(
+                        (e as? UpdateFailure)?.userMessage
+                            ?: "Не удалось загрузить обновление"
+                    )
             }
         }
     }
+
+    fun close() = scope.cancel()
 
     fun snooze(version: String) {
         snoozedVersion = version
@@ -155,9 +168,7 @@ class UpdateManager(
             else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES.toLong()
         val apkInfo = pm.getPackageArchiveInfo(apk.absolutePath, flags.toInt()) ?: return false
         val mine = pm.getPackageInfo(context.packageName, flags.toInt()) ?: return false
-        val a = signatureBytes(apkInfo)
-        val b = signatureBytes(mine)
-        return a.isNotEmpty() && a == b
+        return sameSignatures(signatureBytes(mine), signatureBytes(apkInfo))
     }
 
     private fun signatureBytes(info: android.content.pm.PackageInfo): Set<String> {
@@ -173,6 +184,11 @@ class UpdateManager(
 
     companion object {
         const val STALE_MS = 4L * 60 * 60 * 1000
+
+        /** Pure signature comparison — the installed signers set must be
+         * non-empty and identical to the downloaded APK's. */
+        internal fun sameSignatures(mine: Set<String>, theirs: Set<String>): Boolean =
+            mine.isNotEmpty() && mine == theirs
 
         /** Cortex feed.rs:15,63-93 order: GET {base}/manifest.json first;
          * on fetch/parse failure fall back to the legacy yml channel. A
@@ -210,15 +226,18 @@ class UpdateManager(
             onProgress: (Int) -> Unit,
         ): File {
             dir.mkdirs()
-            // Sweep like Cortex cleanup.rs: only the pending file survives.
-            dir.listFiles()?.forEach { it.delete() }
+            // Sweep like Cortex cleanup.rs — but keep the file we are
+            // (re)downloading and any already-verified pending APK.
+            dir.listFiles()
+                ?.filter { it.name != feed.path && it.name != feed.path + ".part" }
+                ?.forEach { it.delete() }
             val part = File(dir, feed.path + ".part")
             val final = File(dir, feed.path)
             val conn = URL(feed.apkUrl(feedBase)).openConnection() as HttpURLConnection
             conn.connectTimeout = 30_000
             conn.readTimeout = 30_000
             try {
-                if (conn.responseCode != 200) error("HTTP ${conn.responseCode}")
+                if (conn.responseCode != 200) throw UpdateFailure("Сервер вернул HTTP ${conn.responseCode}")
                 conn.inputStream.use { input ->
                     part.outputStream().use { out ->
                         val buf = ByteArray(64 * 1024)
@@ -237,11 +256,11 @@ class UpdateManager(
             }
             if (part.length() != feed.size) {
                 part.delete()
-                error("size mismatch: ${part.length()} != ${feed.size}")
+                throw UpdateFailure("Размер загруженного файла не совпал")
             }
             if (sha256Hex(part) != feed.sha256) {
                 part.delete()
-                error("sha256 mismatch")
+                throw UpdateFailure("Хеш обновления не совпал")
             }
             part.renameTo(final)
             return final

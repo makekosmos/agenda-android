@@ -51,8 +51,12 @@ fun parseUpdateManifest(json: String): ManifestLookup {
     }
     val version = root.optString("version").takeIf { it.isNotBlank() }
         ?: return ManifestLookup.Invalid
-    val android = root.optJSONObject("platforms")?.optJSONObject("android")
-        ?: return ManifestLookup.NoAndroid
+    // Cortex treats a manifest with no `platforms` object as malformed
+    // (release_manifest.rs:60-64) → the caller falls back to the yml
+    // channel. `platforms` present but without `android` is a valid
+    // manifest for other platforms → not-available (:67-68).
+    val platforms = root.optJSONObject("platforms") ?: return ManifestLookup.Invalid
+    val android = platforms.optJSONObject("android") ?: return ManifestLookup.NoAndroid
     val file = android.optString("file")
     val sha = android.optString("sha256").lowercase()
     val size = android.optLong("size", 0)

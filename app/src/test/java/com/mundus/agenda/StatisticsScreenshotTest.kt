@@ -32,10 +32,10 @@ class StatisticsScreenshotTest {
             (FakeRepository().boardFlow().first() as BoardState.Ready).board
         }
 
-    private fun shot(name: String, dark: Boolean) {
+    private fun shot(name: String, dark: Boolean, b: Board = board) {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = dark) {
-                StatisticsScreen(board = board, today = LocalDate.of(2026, 10, 12))
+                StatisticsScreen(board = b, today = LocalDate.of(2026, 10, 12))
             }
         }
         composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
@@ -43,4 +43,6 @@ class StatisticsScreenshotTest {
 
     @Test fun statisticsLight() = shot("statistics-light", false)
     @Test fun statisticsDark() = shot("statistics-dark", true)
+    @Test fun statisticsEmptyLight() = shot("statistics-empty-light", false, Board())
+    @Test fun statisticsEmptyDark() = shot("statistics-empty-dark", true, Board())
 }

@@ -1,6 +1,7 @@
 package com.mundus.agenda.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.content.FileProvider
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,6 +45,7 @@ import com.mundus.agenda.stats.Heatmap
 import com.mundus.agenda.stats.MONTH_LONG
 import com.mundus.agenda.stats.heatmap
 import com.mundus.agenda.stats.statistics
+import java.io.File
 import java.time.LocalDate
 
 /**
@@ -50,8 +54,9 @@ import java.time.LocalDate
  * captions. `weeks` is fixed at 53 with horizontal scroll (mobile has no
  * viewport to adapt to; same data as desktop).
  *
- * Share uses `ACTION_SEND` with the desktop copy-text string (the allowed
- * fallback from the phase study — the PNG card capture is desktop-specific).
+ * Share renders the desktop share card to a PNG ([renderShareCard]) and
+ * sends it via `ACTION_SEND` with the desktop copy-text string as
+ * EXTRA_TEXT fallback (share.rs:128-130).
  */
 private const val HEAT_WEEKS = 53
 
@@ -76,8 +81,36 @@ fun StatisticsScreen(
         }
         val send =
             Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
                 putExtra(Intent.EXTRA_TEXT, stats.shareText)
+                try {
+                    val file =
+                        File(context.cacheDir, "share/card.png").also { f ->
+                            f.parentFile?.mkdirs()
+                            renderShareCard(
+                                    stats,
+                                    today,
+                                    ShareCardColors(
+                                        cardBg = c.sidebarBg.toArgb(),
+                                        border = c.border.toArgb(),
+                                        fg = c.fg.toArgb(),
+                                        muted = c.mutedFg.toArgb(),
+                                        accent = c.accent.toArgb(),
+                                    ),
+                                )
+                                .compress(Bitmap.CompressFormat.PNG, 100, f.outputStream())
+                        }
+                    val uri =
+                        FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.updates",
+                            file,
+                        )
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {
+                    type = "text/plain" // image render failed — text-only fallback
+                }
             }
         context.startActivity(Intent.createChooser(send, "Поделиться"))
     }

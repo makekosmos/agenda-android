@@ -170,7 +170,10 @@ fun AgendaHome(
                 if (event == Lifecycle.Event.ON_RESUME) updateManager.checkIfStale()
             }
         lifecycleOwner.lifecycle.addObserver(obs)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(obs)
+            updateManager.close()
+        }
     }
 
     fun showToast(msg: String) {

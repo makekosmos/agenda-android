@@ -23,7 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 private const val YML = """
-version: 0.1.2
+version: "0.1.2"
 versionCode: 3
 files:
   - url: agenda-android-0.1.2-arm64-release.apk
@@ -158,6 +158,19 @@ class UpdateFeedTest {
         assertEquals(ManifestLookup.NoAndroid, parseUpdateManifest(noAndroid))
         assertEquals(ManifestLookup.Invalid, parseUpdateManifest("not json"))
         assertEquals(ManifestLookup.Invalid, parseUpdateManifest("{\"version\":\"1\"}"))
+        // A manifest without `platforms` is malformed → Invalid → yml
+        // fallback (release_manifest.rs:60-64), not NoAndroid.
+        val noPlatforms =
+            """{"schema":"mundus-release-manifest","version":"0.1.2"}"""
+        assertEquals(ManifestLookup.Invalid, parseUpdateManifest(noPlatforms))
+    }
+
+    @Test
+    fun `cert equality requires same non-empty signer set`() {
+        assertTrue(UpdateManager.sameSignatures(setOf("AAA"), setOf("AAA")))
+        assertFalse(UpdateManager.sameSignatures(setOf("AAA"), setOf("BBB")))
+        assertFalse(UpdateManager.sameSignatures(emptySet(), emptySet()))
+        assertFalse(UpdateManager.sameSignatures(setOf("AAA"), setOf("AAA", "BBB")))
     }
 
     @Test
@@ -187,7 +200,7 @@ class UpdateFeedTest {
         val payload = "fake-apk-bytes".toByteArray()
         val sha = sha256Hex(File.createTempFile("tmp", ".bin").also { it.writeBytes(payload) })
         val good = UpdateFeed("0.1.2", 3, "good.apk", sha, payload.size.toLong())
-        val dir = createTempDir()
+        val dir = java.nio.file.Files.createTempDirectory("upd").toFile()
 
         server.serve("/good.apk", payload)
         val file = UpdateManager.downloadApk(good, server.base, dir) {}

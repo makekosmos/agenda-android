@@ -111,7 +111,7 @@ with open(out_dir + "/release-bom-android.json", "w") as f:
 PYEOF
 
 cat > "$OUT_DIR/latest-android.yml" <<EOF
-version: $VERSION_NAME
+version: "$VERSION_NAME"
 versionCode: $VERSION_CODE
 files:
   - url: $FILE
