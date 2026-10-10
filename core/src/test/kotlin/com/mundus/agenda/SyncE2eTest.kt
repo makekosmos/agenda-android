@@ -404,6 +404,113 @@ class SyncE2eTest {
             pollUntil("desktop sees 'Купить сыр' after phone restart", 45_000) {
                 desktopTaskObjects().any { todoTitleOf(it.toString()) == "Купить сыр" }
             }
+
+            // --- (e) concurrent write conflict ---------------------------
+            // Phone goes offline, edits the milk title while the desktop
+            // completes it; on reconnect ARK's HLC ordering picks one
+            // object — the loser is superseded, never duplicated.
+            phone.stopSync()
+            log("phone offline; editing milk title")
+
+            val milkAfterRestart =
+                phoneTaskObjects(phone).firstOrNull {
+                    it.jsonObject["id"]?.jsonPrimitive?.content == milkId
+                }
+            assertNotNull("phone lost the milk object after restart", milkAfterRestart)
+            val renamedTodo = buildJsonObject {
+                json.parseToJsonElement(taskFromEngineObject(milkAfterRestart!!.toString()))
+                    .jsonObject
+                    .forEach { (k, v) -> put(k, v) }
+                put("title", JsonPrimitive("Купить молоко (телефон)"))
+            }
+            val renamedObject =
+                taskToEngineObject(
+                    renamedTodo.toString(),
+                    milkAfterRestart.toString(),
+                    null,
+                    Instant.now().toString(),
+                    LocalDate.now(ZoneId.systemDefault()).toString(),
+                    ZoneId.systemDefault().rules.getOffset(Instant.now()).totalSeconds,
+                )
+            phoneCall(
+                phone,
+                "upsert_object",
+                buildJsonObject { put("object", json.parseToJsonElement(renamedObject)) },
+            )
+
+            val desktopMilk =
+                desktopTaskObjects().firstOrNull {
+                    it.jsonObject["id"]?.jsonPrimitive?.content == milkId
+                }
+            assertNotNull("desktop lost the milk object", desktopMilk)
+            val desktopTodoJson = taskFromEngineObject(desktopMilk!!.toString())
+            val completedTodo = buildJsonObject {
+                json.parseToJsonElement(desktopTodoJson).jsonObject.forEach { (k, v) ->
+                    put(k, v)
+                }
+                put("is_completed", JsonPrimitive(true))
+                put("status", JsonPrimitive("done"))
+            }
+            val completedObject =
+                taskToEngineObject(
+                    completedTodo.toString(),
+                    desktopMilk.toString(),
+                    desktopTodoJson,
+                    Instant.now().toString(),
+                    LocalDate.now(ZoneId.systemDefault()).toString(),
+                    ZoneId.systemDefault().rules.getOffset(Instant.now()).totalSeconds,
+                )
+            desktopRpc(
+                "upsert_object",
+                buildJsonObject { put("object", json.parseToJsonElement(completedObject)) },
+            )
+            log("desktop completed milk while phone edited offline")
+
+            val conflictPort = freeTcpPort()
+            phone.startSync(
+                """{"device_name":"e2e-phone","bind":"loopback",""" +
+                    """"discovery_enabled":false,"port":$conflictPort}"""
+            )
+            phone.connectWithPairingCode(ticket!!)
+            log("phone reconnected; waiting for convergence")
+
+            pollUntil("milk object converged on both sides", 45_000) {
+                val phoneVer =
+                    phoneTaskObjects(phone)
+                        .firstOrNull { it.jsonObject["id"]?.jsonPrimitive?.content == milkId }
+                        ?.toString()
+                val deskVer =
+                    desktopTaskObjects()
+                        .firstOrNull { it.jsonObject["id"]?.jsonPrimitive?.content == milkId }
+                        ?.toString()
+                phoneVer != null && deskVer != null &&
+                    taskFromEngineObject(phoneVer) == taskFromEngineObject(deskVer)
+            }
+            val finalTodo =
+                json.parseToJsonElement(
+                        taskFromEngineObject(
+                            phoneTaskObjects(phone)
+                                .first { it.jsonObject["id"]?.jsonPrimitive?.content == milkId }
+                                .toString()
+                        )
+                    )
+                    .jsonObject
+            log(
+                "converged milk: title=${finalTodo["title"]} " +
+                    "done=${finalTodo["is_completed"]}"
+            )
+            // LWW means exactly one version survives — whichever it is, both
+            // sides hold it and there is no duplicate milk task anywhere.
+            assertEquals(
+                1,
+                phoneTaskObjects(phone)
+                    .count { it.jsonObject["id"]?.jsonPrimitive?.content == milkId },
+            )
+            assertEquals(
+                1,
+                desktopTaskObjects()
+                    .count { it.jsonObject["id"]?.jsonPrimitive?.content == milkId },
+            )
             log("E2E PASS")
         } finally {
             try {
