@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -208,6 +210,43 @@ fun AgendaTopBar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(vertical = 10.dp),
             )
+        }
+    }
+}
+
+/**
+ * Predictive-back preview, driven by gesture [progress]: the page being
+ * left slides right and fades like the committed back transition's exit
+ * (+it/4, fadeOut), home slides in from the left like its enter (-it/4→0,
+ * fadeIn — the same pair mirrored).
+ */
+@Composable
+fun BackGesturePreview(
+    progress: Float,
+    behind: @Composable () -> Unit,
+    front: @Composable () -> Unit,
+) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = constraints.maxWidth.toFloat()
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = -w / 6f * (1f - progress)
+                    alpha = progress
+                }
+        ) {
+            behind()
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = w / 4f * progress
+                    alpha = 1f - progress
+                }
+        ) {
+            front()
         }
     }
 }

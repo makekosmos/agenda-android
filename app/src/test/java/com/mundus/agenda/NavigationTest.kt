@@ -106,6 +106,24 @@ class NavigationTest {
     }
 
     @Test
+    fun backGesturePreviewLayersBothPages() {
+        // The predictive-back progress path: mid-gesture, the page being
+        // left and home are both composed (slide+fade driven by progress).
+        composeTestRule.setContent {
+            AgendaTheme {
+                com.mundus.agenda.ui.BackGesturePreview(
+                    progress = 0.5f,
+                    behind = { androidx.compose.material3.Text("HOME_PAGE") },
+                    front = { androidx.compose.material3.Text("INNER_PAGE") },
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("HOME_PAGE").assertIsDisplayed()
+        composeTestRule.onNodeWithText("INNER_PAGE").assertIsDisplayed()
+    }
+
+    @Test
     fun tapDrillsInAndBackReturnsHome() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()

@@ -1,6 +1,6 @@
 package com.mundus.agenda.ui
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,6 +27,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -177,7 +178,26 @@ fun AgendaHome(
             route = "home"
         }
     }
-    BackHandler(enabled = route != "home") { back() }
+    // Predictive back: gesture progress drives the same slide+fade pair the
+    // committed transition runs (forward = +it/4 in, -it/6 out; back
+    // reverses them). A bare KEYCODE_BACK delivers no progress events, so
+    // the flow completes empty and the committed back transition runs.
+    var backPreview by remember { mutableFloatStateOf(0f) }
+    PredictiveBackHandler(enabled = route != "home") { events ->
+        var maxProgress = 0f
+        try {
+            events.collect { ev ->
+                maxProgress = maxOf(maxProgress, ev.progress)
+                backPreview = ev.progress
+            }
+            backPreview = 0f
+            android.util.Log.d("AgendaNav", "back committed (maxProgress=$maxProgress)")
+            back()
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
+            backPreview = 0f
+        }
+    }
 
     val current = parseRoute(route)
     val title =
@@ -193,36 +213,47 @@ fun AgendaHome(
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             // Shared top bar: identical title geometry on every page.
             AgendaTopBar(title = title, onBack = if (current !is Route.Home) ::back else null)
+            @Composable
+            fun PageContent(r: Route) {
+                when (r) {
+                    is Route.Home -> HomePage(board = board, onNavigate = ::navigate)
+                    is Route.List ->
+                        TaskListScreen(board = board, list = r.list, actions = actions)
+                    is Route.Project ->
+                        ProjectScreen(
+                            board = board,
+                            projectId = r.id,
+                            hideProjectMeta = true,
+                            actions = actions,
+                        )
+                }
+            }
+
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                AnimatedContent(
-                    targetState = current,
-                    transitionSpec = {
-                        if (navDir >= 0) {
-                            (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 4 } +
-                                fadeIn(tween(slideDur))) togetherWith
-                                (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 6 } +
-                                    fadeOut(tween(slideDur)))
-                        } else {
-                            (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 4 } +
-                                fadeIn(tween(slideDur))) togetherWith
-                                (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 6 } +
-                                    fadeOut(tween(slideDur)))
-                        }
-                    },
-                    label = "nav",
-                ) { r ->
-                    when (r) {
-                        is Route.Home -> HomePage(board = board, onNavigate = ::navigate)
-                        is Route.List ->
-                            TaskListScreen(board = board, list = r.list, actions = actions)
-                        is Route.Project ->
-                            ProjectScreen(
-                                board = board,
-                                projectId = r.id,
-                                hideProjectMeta = true,
-                                actions = actions,
-                            )
-                    }
+                if (backPreview > 0f) {
+                    BackGesturePreview(
+                        progress = backPreview,
+                        behind = { PageContent(Route.Home) },
+                        front = { PageContent(current) },
+                    )
+                } else {
+                    AnimatedContent(
+                        targetState = current,
+                        transitionSpec = {
+                            if (navDir >= 0) {
+                                (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 4 } +
+                                    fadeIn(tween(slideDur))) togetherWith
+                                    (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 6 } +
+                                        fadeOut(tween(slideDur)))
+                            } else {
+                                (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 4 } +
+                                    fadeIn(tween(slideDur))) togetherWith
+                                    (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 6 } +
+                                        fadeOut(tween(slideDur)))
+                            }
+                        },
+                        label = "nav",
+                    ) { r -> PageContent(r) }
                 }
             }
         }

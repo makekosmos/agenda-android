@@ -6,6 +6,7 @@
         android:name=".AgendaApplication"
         android:label="Agenda"
         android:theme="@style/Theme.Agenda"
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="false">
         <activity
             android:name=".MainActivity"
