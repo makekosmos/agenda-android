@@ -26,6 +26,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,12 +46,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.BoardState
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.WriteConflict
+import com.mundus.agenda.updater.UpdateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
@@ -62,6 +68,7 @@ sealed interface Route {
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
     data object Settings : Route
+    data object Statistics : Route
     data object About : Route
 }
 
@@ -150,6 +157,21 @@ fun AgendaHome(
     var renameDraft by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val c = AgendaTheme.colors
+
+    // Self-update: one check ~5 s after start (cortex service.rs:275-283)
+    // plus a >4h-stale re-check on resume.
+    val appContext = LocalContext.current.applicationContext
+    val updateManager = remember { UpdateManager(appContext) }
+    LaunchedEffect(Unit) { updateManager.checkOnStart() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) updateManager.checkIfStale()
+            }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     fun showToast(msg: String) {
         scope.launch {
@@ -252,6 +274,7 @@ fun AgendaHome(
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
             is Route.Settings -> "Настройки"
+            is Route.Statistics -> "Статистика"
             is Route.About -> "О приложении"
         }
     val animate = animationsEnabled()
@@ -288,6 +311,7 @@ fun AgendaHome(
                             onNavigate = ::navigate,
                             actions = actions,
                             onCreateProject = ::onCreateProject,
+                            updateManager = updateManager,
                         )
                     is Route.List ->
                         TaskListScreen(board = board, list = r.list, actions = actions)
@@ -297,8 +321,10 @@ fun AgendaHome(
                             themeMode = themeMode,
                             onThemeMode = onThemeMode,
                             onAbout = { navigate(Route.About) },
+                            onStatistics = { navigate(Route.Statistics) },
                         )
-                    is Route.About -> AboutScreen()
+                    is Route.Statistics -> StatisticsScreen(board = board)
+                    is Route.About -> AboutScreen(updateManager)
                     is Route.Project ->
                         ProjectScreen(
                             board = board,
@@ -383,12 +409,14 @@ fun routeKey(route: Route): String =
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
         is Route.Settings -> "settings"
+        is Route.Statistics -> "statistics"
         is Route.About -> "about"
     }
 
 fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
         "settings" -> Route.Settings
+        "statistics" -> Route.Statistics
         "about" -> Route.About
         "project" -> Route.Project(key.substringAfter(':'))
         "list" ->
@@ -462,6 +490,7 @@ fun HomePage(
     onNavigate: (Route) -> Unit,
     actions: TaskActions = TaskActions(),
     onCreateProject: () -> Unit = {},
+    updateManager: UpdateManager? = null,
 ) {
     Column(
         modifier =
@@ -470,6 +499,9 @@ fun HomePage(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = 96.dp)
     ) {
+        updateManager?.let {
+            UpdateBanner(it, Modifier.padding(bottom = 8.dp))
+        }
         HomeGroup {
             HomeRow(R.drawable.ic_inbox, SmartList.INBOX.titleRu) {
                 onNavigate(Route.List(SmartList.INBOX))

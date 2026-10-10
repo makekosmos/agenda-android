@@ -38,6 +38,8 @@ import com.mundus.agenda.Board
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
+import com.mundus.agenda.updater.UpdateManager
+import com.mundus.agenda.updater.UpdateState
 
 private fun emptyHint(list: SmartList): Pair<String, String> =
     when (list) {
@@ -269,53 +271,6 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
 }
 
 /**
- * Completion counters — the desktop statistics page numbers
- * (pages/statistics.rs:59-63) computed from `completedAt` dates.
- * Total / last 7 / last 30 days, current and best day-streak.
- */
-data class CompletionStats(
-    val total: Int,
-    val last7: Int,
-    val last30: Int,
-    val streak: Int,
-    val bestStreak: Int,
-)
-
-fun completionStats(todos: List<Task>, today: java.time.LocalDate): CompletionStats {
-    val days =
-        todos
-            .mapNotNull { it.completedAt?.take(10) }
-            .mapNotNull { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
-    val byDay = days.groupingBy { it }.eachCount()
-    val total = days.size
-    val last7 = days.count { it >= today.minusDays(6) }
-    val last30 = days.count { it >= today.minusDays(29) }
-    fun streakFrom(start: java.time.LocalDate): Int {
-        var d = start
-        var n = 0
-        while ((byDay[d] ?: 0) > 0) {
-            n++
-            d = d.minusDays(1)
-        }
-        return n
-    }
-    // A day with no completions yet still continues today's streak, like
-    // the desktop counter (streak counts back from the last done day).
-    val streak =
-        streakFrom(if ((byDay[today] ?: 0) > 0) today else today.minusDays(1))
-    var best = 0
-    var run = 0
-    val sorted = byDay.keys.sorted()
-    var prev: java.time.LocalDate? = null
-    for (d in sorted) {
-        run = if (prev != null && d == prev!!.plusDays(1)) run + 1 else 1
-        best = maxOf(best, run)
-        prev = d
-    }
-    return CompletionStats(total, last7, last30, streak, best)
-}
-
-/**
  * Settings — only what desktop has AND a phone can back
  * (chrome.rs:295-372 settings sidebar):
  * «Отображение» theme tiles (settings.rs:100-103), «Статистика» counters
@@ -328,6 +283,7 @@ fun SettingsScreen(
     themeMode: String,
     onThemeMode: (String) -> Unit,
     onAbout: () -> Unit,
+    onStatistics: () -> Unit = {},
 ) {
     val c = AgendaTheme.colors
     Column(
@@ -356,31 +312,18 @@ fun SettingsScreen(
                 }
             }
         }
-        ASectionHeader("Статистика")
-        val stats =
-            completionStats(board.todos, java.time.LocalDate.now())
-        SettingsGroup {
-            val rows =
-                listOf(
-                    "Всего выполнено" to stats.total,
-                    "За 7 дней" to stats.last7,
-                    "За 30 дней" to stats.last30,
-                    "Текущая серия" to stats.streak,
-                    "Лучшая серия" to stats.bestStreak,
-                )
-            rows.forEachIndexed { i, (label, value) ->
-                if (i > 0) ADivider(indent = 16.dp)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(label, style = AgendaType.body, color = c.fg, modifier = Modifier.weight(1f))
-                    Text("$value", style = AgendaType.body, color = c.mutedFg)
-                }
-            }
-        }
+        // Statistics is its own page like desktop (settings sidebar →
+        // Route::Statistics, chrome.rs:335-346) — no counters here.
         ASectionHeader("Другое")
         SettingsGroup {
+            ARow(onClick = onStatistics) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AIcon(R.drawable.ic_chart, tint = glyph.copy(alpha = 0.85f))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Статистика", style = AgendaType.body, color = glyph)
+                }
+            }
+            ADivider(indent = 44.dp)
             ARow(onClick = onAbout) { glyph ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AIcon(R.drawable.ic_help_circle, tint = glyph.copy(alpha = 0.85f))
@@ -408,12 +351,95 @@ private fun SettingsGroup(content: @Composable () -> Unit) {
 }
 
 /**
- * About — the desktop About page (pages/settings.rs:127-191): hero +
- * the one real diagnostics check (Engine data access; the screen only
- * renders when the board loaded, so it is Ok).
+ * Slim home banner — the Android mirror of the desktop update overlay
+ * offer (update_overlay.rs:45-56): non-blocking, dismissible (session
+ * snooze = «Позже»), never takes over the page.
  */
 @Composable
-fun AboutScreen() {
+fun UpdateBanner(mgr: UpdateManager, modifier: Modifier = Modifier) {
+    val c = AgendaTheme.colors
+    val state = mgr.state
+    val (text, action) =
+        when (val s = state) {
+            is UpdateState.Available ->
+                if (s.feed.version == mgr.snoozedVersion) return
+                else "Доступно обновление ${s.feed.version}" to "Обновить"
+            is UpdateState.Downloading -> "Загрузка обновления… ${s.percent}%" to null
+            is UpdateState.ReadyToInstall -> "Обновление готово" to "Установить"
+            else -> return
+        }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.sidebarBg)
+    ) {
+        ARow(
+            onClick = {
+                when (val s = mgr.state) {
+                    is UpdateState.Available -> mgr.download(s.feed)
+                    is UpdateState.ReadyToInstall -> installUpdate(context, mgr, s)
+                    else -> {}
+                }
+            }
+        ) { glyph ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text,
+                    style = AgendaType.body,
+                    color = glyph,
+                    modifier = Modifier.weight(1f),
+                )
+                if (action != null) Text(action, style = AgendaType.body, color = c.accent)
+            }
+        }
+        if (state is UpdateState.Available) {
+            ADivider(indent = 16.dp)
+            ARow(onClick = { mgr.snooze(state.feed.version) }) { glyph ->
+                Text("Позже", style = AgendaType.body, color = glyph)
+            }
+        }
+    }
+}
+
+/** Hands the verified APK to the system installer; routes through the
+ * unknown-sources permission screen first when needed (API 26+). */
+private fun installUpdate(
+    context: android.content.Context,
+    mgr: UpdateManager,
+    state: UpdateState.ReadyToInstall,
+) {
+    if (mgr.canRequestInstalls()) {
+        context.startActivity(mgr.installIntent(state.file))
+    } else {
+        mgr.openInstallPermissionSettings()
+    }
+}
+
+/** One-line status for the About card — mirrors the status JSON states
+ * (state.rs:56-76). */
+private fun updateStatusLine(state: UpdateState): String =
+    when (val s = state) {
+        is UpdateState.Idle -> "Не проверялось"
+        is UpdateState.Checking -> "Проверка…"
+        is UpdateState.Available -> "Доступно обновление ${s.feed.version}"
+        is UpdateState.Downloading -> "Загрузка… ${s.percent}%"
+        is UpdateState.ReadyToInstall -> "Готово к установке"
+        is UpdateState.NotAvailable -> "Актуальная версия"
+        is UpdateState.Error -> s.message
+    }
+
+/**
+ * About — the desktop About page (pages/settings.rs:127-191): hero +
+ * the one real diagnostics check (Engine data access; the screen only
+ * renders when the board loaded, so it is Ok) + the update card
+ * (views/updates.rs:8-55).
+ */
+@Composable
+fun AboutScreen(updateManager: UpdateManager? = null) {
     val c = AgendaTheme.colors
     Column(
         modifier =
@@ -441,6 +467,43 @@ fun AboutScreen() {
                     modifier = Modifier.weight(1f),
                 )
                 Text("Ok", style = AgendaType.body, color = c.success)
+            }
+        }
+        updateManager?.let { mgr ->
+            val context = androidx.compose.ui.platform.LocalContext.current
+            Spacer(Modifier.height(12.dp))
+            SettingsGroup {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        updateStatusLine(mgr.state),
+                        style = AgendaType.body,
+                        color = c.fg,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                ADivider(indent = 16.dp)
+                ARow(
+                    onClick = {
+                        when (val s = mgr.state) {
+                            is UpdateState.Available -> mgr.download(s.feed)
+                            is UpdateState.ReadyToInstall -> installUpdate(context, mgr, s)
+                            else -> mgr.check()
+                        }
+                    }
+                ) { glyph ->
+                    Text(
+                        when (mgr.state) {
+                            is UpdateState.Available -> "Скачать"
+                            is UpdateState.ReadyToInstall -> "Установить"
+                            else -> "Проверить обновления"
+                        },
+                        style = AgendaType.body,
+                        color = glyph,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(24.dp))
