@@ -2,6 +2,7 @@ package com.mundus.agenda.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -369,40 +371,73 @@ fun UpdateBanner(mgr: UpdateManager, modifier: Modifier = Modifier) {
             else -> return
         }
     val context = androidx.compose.ui.platform.LocalContext.current
-    Column(
+    UpdateBannerRow(
+        text = text,
+        action = action,
+        snooze = (state as? UpdateState.Available)?.let { { mgr.snooze(it.feed.version) } },
+        onAction = {
+            when (val s = mgr.state) {
+                is UpdateState.Available -> mgr.download(s.feed)
+                is UpdateState.ReadyToInstall -> installUpdate(context, mgr, s)
+                else -> {}
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+/** Stateless single-row banner body — title left, compact actions right. */
+@Composable
+fun UpdateBannerRow(
+    text: String,
+    action: String?,
+    snooze: (() -> Unit)?,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = AgendaTheme.colors
+    Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(c.sidebarBg)
+                .clickable(onClick = onAction)
+                .padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        ARow(
-            onClick = {
-                when (val s = mgr.state) {
-                    is UpdateState.Available -> mgr.download(s.feed)
-                    is UpdateState.ReadyToInstall -> installUpdate(context, mgr, s)
-                    else -> {}
-                }
-            }
-        ) { glyph ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text,
-                    style = AgendaType.body,
-                    color = glyph,
-                    modifier = Modifier.weight(1f),
-                )
-                if (action != null) Text(action, style = AgendaType.body, color = c.accent)
-            }
+        Text(
+            text,
+            style = AgendaType.body,
+            color = c.fg,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (snooze != null) {
+            BannerAction("Позже", c.mutedFg, snooze)
         }
-        if (state is UpdateState.Available) {
-            ADivider(indent = 16.dp)
-            ARow(onClick = { mgr.snooze(state.feed.version) }) { glyph ->
-                Text("Позже", style = AgendaType.body, color = glyph)
-            }
+        if (action != null) {
+            BannerAction(action, c.accent, onAction)
         }
     }
+}
+
+/** Compact banner text button — one row next to the title, never wraps. */
+@Composable
+private fun BannerAction(label: String, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    Text(
+        label,
+        style = AgendaType.body.copy(fontWeight = FontWeight.Medium),
+        color = color,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+    )
 }
 
 /** Hands the verified APK to the system installer; routes through the
@@ -457,7 +492,7 @@ fun AboutScreen(updateManager: UpdateManager? = null) {
         Spacer(Modifier.height(24.dp))
         SettingsGroup {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -474,7 +509,7 @@ fun AboutScreen(updateManager: UpdateManager? = null) {
             Spacer(Modifier.height(12.dp))
             SettingsGroup {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -484,7 +519,7 @@ fun AboutScreen(updateManager: UpdateManager? = null) {
                         modifier = Modifier.weight(1f),
                     )
                 }
-                ADivider(indent = 16.dp)
+                ADivider(indent = 12.dp)
                 ARow(
                     onClick = {
                         when (val s = mgr.state) {

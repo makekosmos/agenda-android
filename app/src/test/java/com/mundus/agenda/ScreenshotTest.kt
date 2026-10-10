@@ -1,6 +1,12 @@
 package com.mundus.agenda
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
@@ -12,6 +18,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.mundus.agenda.ui.AgendaHome
 import com.mundus.agenda.ui.AgendaTheme
 import com.mundus.agenda.ui.Route
+import com.mundus.agenda.ui.UpdateBannerRow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -60,6 +67,29 @@ class ScreenshotTest {
     @Test fun projectDark() = shot("project-dark", true, Route.Project("dev-proj-release"))
     @Test fun nextWeekLight() = shot("nextweek-light", false, Route.List(SmartList.NEXT_WEEK))
     @Test fun nextWeekDark() = shot("nextweek-dark", true, Route.List(SmartList.NEXT_WEEK))
+
+    private fun bannerShot(name: String, dark: Boolean) {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = dark) {
+                Box(
+                    Modifier.fillMaxWidth()
+                        .background(AgendaTheme.colors.bg)
+                        .padding(8.dp)
+                ) {
+                    UpdateBannerRow(
+                        text = "Доступно обновление 0.1.2",
+                        action = "Обновить",
+                        snooze = {},
+                        onAction = {},
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
+    }
+
+    @Test fun updateBannerLight() = bannerShot("update-banner-light", false)
+    @Test fun updateBannerDark() = bannerShot("update-banner-dark", true)
 
     @Test
     fun quickEntryLight() {
