@@ -121,10 +121,13 @@ class EngineAgendaRepository(dataDir: String) : BoardRepository {
                 tag.id to tagTaskIndices(tag.id, todosJson).map { todos[it.toInt()] }
             }
         val dateViews =
-            todos.zip(todoJsons).associate { (task, taskJson) ->
-                task.id to
-                    json.decodeFromString<TaskDateView>(taskDateView(taskJson, today, offset))
-            }
+            todos
+                .zip(
+                    json.decodeFromString<List<TaskDateView>>(
+                        taskDateViews(todosJson, today, offset)
+                    )
+                )
+                .associate { (task, view) -> task.id to view }
         return Board(
             todos = todos.sortedBy { it.sortOrder },
             projects = projects,
@@ -155,11 +158,17 @@ class EngineAgendaRepository(dataDir: String) : BoardRepository {
                 awaitClose { subscription.close() }
             }
             .conflate()
-            .map { board() }
+            .map {
+                // An engine rejection must not kill the subscription: keep
+                // emitting the last good board until the next change event.
+                runCatching { board().also { lastBoard = it } }.getOrElse { lastBoard }
+            }
             .flowOn(Dispatchers.IO)
 
+    @Volatile private var lastBoard: Board = Board()
+
     /** Tasks the Inbox smart list shows, in display order. */
-    suspend fun tasks(): List<Task> = withContext(Dispatchers.IO) {
+    internal suspend fun tasks(): List<Task> = withContext(Dispatchers.IO) {
         board().list(SmartList.INBOX)
     }
 

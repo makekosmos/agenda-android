@@ -8,19 +8,10 @@ import com.mundus.agenda.ui.AgendaApp
 import com.mundus.agenda.ui.AgendaTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var repository: EngineAgendaRepository
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        repository = EngineAgendaRepository(filesDir.absolutePath)
+        val repository = (application as AgendaApplication).repository
         setContent { AgendaTheme { AgendaApp(repository) } }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (isFinishing) {
-            repository.close()
-        }
     }
 }

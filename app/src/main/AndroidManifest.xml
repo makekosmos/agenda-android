@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
+        android:name=".AgendaApplication"
         android:label="Agenda"
         android:theme="@style/Theme.Agenda"
         android:allowBackup="false">

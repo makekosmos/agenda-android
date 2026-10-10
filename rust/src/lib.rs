@@ -185,18 +185,10 @@ pub fn project_task_indices(
 ) -> Result<Vec<u32>, AgendaError> {
     let day = local_day(&today, utc_offset_seconds)?;
     let todos = parse_todos(&todos_json)?;
-    let mut v: Vec<usize> = todos
-        .iter()
-        .enumerate()
-        .filter(|(_, t)| {
-            t.project_id.as_deref() == Some(project_id.as_str())
-                && !t.is_trashed
-                && !agenda_core::is_archived(t, &day)
-        })
-        .map(|(i, _)| i)
-        .collect();
-    v.sort_by_key(|&i| todos[i].sort_order);
-    Ok(v.into_iter().map(|i| i as u32).collect())
+    Ok(agenda_core::project_page_idx(&project_id, &todos, &day)
+        .into_iter()
+        .map(|i| i as u32)
+        .collect())
 }
 
 /// Tag filter membership: live tasks carrying the tag (trash hidden), in
@@ -204,14 +196,10 @@ pub fn project_task_indices(
 #[uniffi::export]
 pub fn tag_task_indices(tag_id: String, todos_json: String) -> Result<Vec<u32>, AgendaError> {
     let todos = parse_todos(&todos_json)?;
-    let mut v: Vec<usize> = todos
-        .iter()
-        .enumerate()
-        .filter(|(_, t)| !t.is_trashed && t.tag_ids.iter().any(|id| id == &tag_id))
-        .map(|(i, _)| i)
-        .collect();
-    v.sort_by_key(|&i| todos[i].sort_order);
-    Ok(v.into_iter().map(|i| i as u32).collect())
+    Ok(agenda_core::tag_page_idx(&tag_id, &todos)
+        .into_iter()
+        .map(|i| i as u32)
+        .collect())
 }
 
 /// Per-row date fields the UI needs (desktop `date_group_label` + row
@@ -226,19 +214,58 @@ pub fn task_date_view(
     let day = local_day(&today, utc_offset_seconds)?;
     let todo: Todo =
         serde_json::from_str(&todo_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
-    let (date, conflict) = agenda_core::task_date(&todo, &day);
+    Ok(json!(date_view_json(&todo, &day)).to_string())
+}
+
+/// Instant fields rendered as local time (date-time strings carry an
+/// offset; bare dates are shown via `fmt_day_month`). Returns null when the
+/// field is unset.
+fn instant_label(value: &Option<String>, day: &LocalDay) -> Value {
+    let Some(v) = value.as_deref() else {
+        return Value::Null;
+    };
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(v) {
+        let local = dt.with_timezone(&day.offset);
+        return json!(local.format("%Y-%m-%d %H:%M").to_string());
+    }
+    match agenda_core::date_only(&Some(v.to_string()), day) {
+        Some(key) => json!(agenda_core::fmt_day_month(&key)),
+        None => json!(v),
+    }
+}
+
+/// The JSON `task_date_view`/`task_date_views` return for one task.
+fn date_view_json(todo: &Todo, day: &LocalDay) -> Value {
+    let (date, conflict) = agenda_core::task_date(todo, day);
     let label = match date.as_deref() {
         None => "Без даты".to_string(),
         Some(v) if v == day.today_key() => "Сегодня".to_string(),
         Some(v) => agenda_core::fmt_day_month(v),
     };
-    Ok(json!({
+    json!({
         "dateKey": date,
         "label": label,
         "conflict": conflict,
-        "overdue": agenda_core::is_overdue(&todo, &day),
+        "overdue": agenda_core::is_overdue(todo, day),
+        "deadlineLabel": instant_label(&todo.deadline, day),
+        "reminderLabel": instant_label(&todo.reminder_date, day),
+        "completedLabel": instant_label(&todo.completed_at, day),
+        "createdLabel": instant_label(&Some(todo.created_at.clone()), day),
     })
-    .to_string())
+}
+
+/// Batch twin of `task_date_view`: one JSON array aligned with `todos_json`,
+/// so a board refresh costs one FFI call instead of N.
+#[uniffi::export]
+pub fn task_date_views(
+    todos_json: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let todos = parse_todos(&todos_json)?;
+    let views: Vec<Value> = todos.iter().map(|t| date_view_json(t, &day)).collect();
+    serde_json::to_string(&views).map_err(|e| AgendaError::Invalid(e.to_string()))
 }
 
 /// Convert a `com.kosmos.project` Engine object into the `Project` JSON
@@ -279,7 +306,7 @@ pub fn project_to_engine_object(
 pub fn references_from_engine_object(object_json: String) -> Result<String, AgendaError> {
     let object: Value =
         serde_json::from_str(&object_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
-    let (projects, tags) = agenda_core::projects::read_references(&object)
-        .map_err(AgendaError::Mapping)?;
+    let (projects, tags) =
+        agenda_core::projects::read_references(&object).map_err(AgendaError::Mapping)?;
     Ok(json!([projects, tags]).to_string())
 }

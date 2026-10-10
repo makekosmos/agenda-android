@@ -190,6 +190,18 @@ class FakeRepository : BoardRepository {
                             overdue =
                                 key != null && key < day && !t.isCompleted && !t.isCancelled &&
                                     t.status != "inbox" && !t.isSomeday,
+                            deadlineLabel =
+                                t.deadline?.let {
+                                    java.time.LocalDate.parse(it.take(10)).let { d ->
+                                        "${d.dayOfMonth} окт"
+                                    }
+                                },
+                            reminderLabel =
+                                t.reminderDate?.take(16)?.replace('T', ' '),
+                            completedLabel =
+                                t.completedAt?.take(16)?.replace('T', ' '),
+                            createdLabel =
+                                t.createdAt.take(16).replace('T', ' '),
                         )
                 },
         )

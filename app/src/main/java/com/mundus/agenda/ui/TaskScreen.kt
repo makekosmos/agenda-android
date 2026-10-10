@@ -141,8 +141,8 @@ fun TaskScreen(board: Board, taskId: String) {
                 if (dateView.overdue) MaterialTheme.colorScheme.error else null,
             )
         }
-        task.deadline?.let { FieldRow("Дедлайн", it) }
-        task.reminderDate?.let { FieldRow("Напоминание", it.take(16).replace('T', ' ')) }
+        dateView.deadlineLabel?.let { FieldRow("Дедлайн", it) }
+        dateView.reminderLabel?.let { FieldRow("Напоминание", it) }
         task.projectId?.let { pid -> board.project(pid)?.let { FieldRow("Проект", it.title) } }
         task.areaId?.let { FieldRow("Область", it.removePrefix("dev-area-")) }
         priorityLabel(task.priority)?.let { FieldRow("Приоритет", it) }
@@ -152,8 +152,8 @@ fun TaskScreen(board: Board, taskId: String) {
         task.significance?.let { FieldRow("Значимость", "$it/10") }
         task.fuelCost?.let { FieldRow("Мыслетопливо", "${it.toInt()}") }
         if (task.billable) task.price?.let { FieldRow("Оплата", "${it.toInt()}") }
-        task.completedAt?.let { FieldRow("Завершена", it.take(16).replace('T', ' ')) }
-        FieldRow("Создана", task.createdAt.take(16).replace('T', ' '))
+        dateView.completedLabel?.let { FieldRow("Завершена", it) }
+        dateView.createdLabel?.let { FieldRow("Создана", it) }
 
         val tags = task.tagIds.mapNotNull { board.tag(it) }
         if (tags.isNotEmpty()) {

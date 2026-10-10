@@ -117,7 +117,10 @@ fun AgendaHome(
         }
     }
     BackHandler(enabled = back.isNotEmpty() || route != routeKey(Route.List(SmartList.INBOX))) {
-        back()
+        // No pushed routes left but a non-Inbox list selected: fall back to
+        // Inbox instead of trapping the event. On Inbox the handler is
+        // disabled and the system finishes the activity.
+        if (back.isNotEmpty()) back() else route = routeKey(Route.List(SmartList.INBOX))
     }
 
     val current = parseRoute(route)
@@ -224,7 +227,8 @@ fun parseRoute(key: String): Route {
         "task" -> Route.Task(id)
         "project" -> Route.Project(id)
         "tag" -> Route.Tag(id)
-        else -> Route.List(SmartList.valueOf(id))
+        else ->
+            Route.List(runCatching { SmartList.valueOf(id) }.getOrDefault(SmartList.INBOX))
     }
 }
 

@@ -31,7 +31,9 @@ class ScreenshotTest {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = dark) { AgendaHome(board = board, initialRoute = route) }
         }
-        composeTestRule.onRoot().captureRoboImage("$name.png")
+        // Goldens live in app/roborazzi/ (the dir verifyRoborazziDebug
+        // compares against — paths resolve relative to the module dir).
+        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
     }
 
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))

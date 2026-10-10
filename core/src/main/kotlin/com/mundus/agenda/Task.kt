@@ -71,6 +71,10 @@ data class TaskDateView(
     val label: String = "",
     val conflict: Boolean = false,
     val overdue: Boolean = false,
+    val deadlineLabel: String? = null,
+    val reminderLabel: String? = null,
+    val completedLabel: String? = null,
+    val createdLabel: String? = null,
 )
 
 /** Smart lists, in desktop order. TODAY has no desktop `SmartList` twin; it
