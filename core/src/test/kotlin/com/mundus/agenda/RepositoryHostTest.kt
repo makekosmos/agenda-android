@@ -111,8 +111,10 @@ class RepositoryHostTest {
                     false,
                 )
                 val board = (repository.boardFlow().first() as BoardState.Ready).board
+                // «завтра» lands in NEXT_WEEK when run on a Sunday.
                 assertTrue(
-                    board.list(SmartList.WEEK).any { it.title == "купить молоко" }
+                    (board.list(SmartList.WEEK) + board.list(SmartList.NEXT_WEEK))
+                        .any { it.title == "купить молоко" }
                 )
             }
         } finally {
@@ -181,8 +183,10 @@ class RepositoryHostTest {
                 val board =
                     (repository.boardFlow().first() as BoardState.Ready).board
                 // Desktop quick_entry_save: a parsed date is a commitment,
-                // so the task is status Todo — in «Эта неделя», not Inbox.
-                val task = board.list(SmartList.WEEK).single()
+                // so the task is status Todo — in a week list, not Inbox
+                // (WEEK or NEXT_WEEK — «завтра» is next week on Sundays).
+                val task =
+                    (board.list(SmartList.WEEK) + board.list(SmartList.NEXT_WEEK)).single()
                 assertEquals("позвонить маме", task.title)
                 assertEquals(LocalDate.now().plusDays(1).toString(), task.scheduledDate)
             }
