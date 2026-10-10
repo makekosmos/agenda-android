@@ -140,10 +140,6 @@ class FakeRepository : BoardRepository {
                 mapOf(
                     SmartList.INBOX to
                         listOf("dev-inbox-1", "dev-inbox-2", "dev-inbox-3"),
-                    // Golden order from today_idx: overdue first, dated-today
-                    // tasks, then this-week completions dated today.
-                    SmartList.TODAY to
-                        listOf("dev-overdue-1", "dev-today-2", "dev-recurring-1", "dev-done-today"),
                     SmartList.WEEK to
                         listOf(
                             "dev-overdue-1",
@@ -168,12 +164,6 @@ class FakeRepository : BoardRepository {
                         listOf("dev-today-2", "dev-checklist-1", "dev-week-2"),
                     "dev-proj-home" to listOf("dev-week-3"),
                     "dev-proj-someday" to listOf("dev-someday-1"),
-                ).mapValues { (_, ids) -> ids.map { id -> tasks.first { it.id == id } } },
-            tagTasks =
-                mapOf(
-                    "dev-tag-urgent" to listOf("dev-today-1", "dev-overdue-1"),
-                    "dev-tag-focus" to listOf("dev-today-1"),
-                    "dev-tag-home" to listOf("dev-week-4"),
                 ).mapValues { (_, ids) -> ids.map { id -> tasks.first { it.id == id } } },
             dateViews =
                 tasks.associate { t ->

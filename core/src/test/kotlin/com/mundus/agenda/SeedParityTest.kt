@@ -83,7 +83,6 @@ class SeedParityTest {
                 fun ids(tasks: List<Task>) = tasks.map { it.id }
 
                 assertEquals(expectList("inbox"), ids(board.list(SmartList.INBOX)))
-                assertEquals(expectList("today"), ids(board.list(SmartList.TODAY)))
                 assertEquals(expectList("week"), ids(board.list(SmartList.WEEK)))
                 assertEquals(expectList("nextWeek"), ids(board.list(SmartList.NEXT_WEEK)))
                 assertEquals(expectList("someday"), ids(board.list(SmartList.SOMEDAY)))
@@ -97,14 +96,6 @@ class SeedParityTest {
                         ids(board.projectTasks[projectId].orEmpty()),
                     )
                 }
-                for ((tagId, want) in expected["tags"]!!.jsonObject) {
-                    assertEquals(
-                        "tag $tagId",
-                        want.jsonArray.map { it.jsonPrimitive.content },
-                        ids(board.tagTasks[tagId].orEmpty()),
-                    )
-                }
-
                 // Project/tag metadata the UI renders: live projects in
                 // sort order, archived (status 2) projects for the Logbook
                 // «Проекты» section, and the shared tag list.

@@ -77,11 +77,10 @@ data class TaskDateView(
     val createdLabel: String? = null,
 )
 
-/** Smart lists, in desktop order. TODAY has no desktop `SmartList` twin; it
- * is the Week pipeline narrowed by agenda-core `today_idx`. */
+/** Smart lists, in desktop sidebar order (chrome.rs:375-383). Архив and
+ * Корзина live under the desktop «Другое» footer menu (chrome.rs:1056-1067). */
 enum class SmartList(val titleRu: String) {
     INBOX("Входящие"),
-    TODAY("Сегодня"),
     WEEK("Эта неделя"),
     NEXT_WEEK("Следующая неделя"),
     SOMEDAY("Потом"),
@@ -106,7 +105,6 @@ data class Board(
     val tags: List<Tag> = emptyList(),
     val lists: Map<SmartList, List<Task>> = emptyMap(),
     val projectTasks: Map<String, List<Task>> = emptyMap(),
-    val tagTasks: Map<String, List<Task>> = emptyMap(),
     val dateViews: Map<String, TaskDateView> = emptyMap(),
 ) {
     fun list(smartList: SmartList): List<Task> = lists[smartList].orEmpty()

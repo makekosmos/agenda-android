@@ -62,11 +62,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+private val NAV_LISTS =
+    listOf(SmartList.INBOX, SmartList.WEEK, SmartList.NEXT_WEEK, SmartList.SOMEDAY)
+private val MORE_LISTS = listOf(SmartList.LOGBOOK, SmartList.TRASH)
+
 sealed interface Route {
     data class List(val list: SmartList) : Route
-    data class Task(val id: String) : Route
     data class Project(val id: String) : Route
-    data class Tag(val id: String) : Route
 }
 
 class BoardViewModel(repository: BoardRepository) : ViewModel() {
@@ -112,35 +114,24 @@ fun AgendaHome(
     initialRoute: Route = Route.List(SmartList.INBOX),
 ) {
     var route by rememberSaveable { mutableStateOf(routeKey(initialRoute)) }
-    var backKey by rememberSaveable { mutableStateOf("") }
-    val back = backKey.split("|").filter { it.isNotEmpty() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    fun go(r: String) {
-        backKey = (back + route).joinToString("|")
-        route = r
-    }
     fun back() {
-        if (back.isNotEmpty()) {
-            route = back.last()
-            backKey = back.dropLast(1).joinToString("|")
-        }
+        route = routeKey(Route.List(SmartList.INBOX))
     }
-    BackHandler(enabled = back.isNotEmpty() || route != routeKey(Route.List(SmartList.INBOX))) {
-        // No pushed routes left but a non-Inbox list selected: fall back to
-        // Inbox instead of trapping the event. On Inbox the handler is
-        // disabled and the system finishes the activity.
-        if (back.isNotEmpty()) back() else route = routeKey(Route.List(SmartList.INBOX))
+    BackHandler(enabled = route != routeKey(Route.List(SmartList.INBOX))) {
+        // Non-Inbox destination selected: fall back to Inbox instead of
+        // trapping the event. On Inbox the handler is disabled and the
+        // system finishes the activity.
+        back()
     }
 
     val current = parseRoute(route)
     val topTitle =
         when (val r = current) {
             is Route.List -> r.list.titleRu
-            is Route.Task -> board.task(r.id)?.title ?: ""
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
-            is Route.Tag -> board.tag(r.id)?.title ?: "Тег"
         }
     val isTopLevel = current is Route.List
 
@@ -156,7 +147,6 @@ fun AgendaHome(
                     current = current,
                     onNavigate = {
                         scope.launch { drawerState.close() }
-                        backKey = ""
                         route = it
                     },
                 )
@@ -198,25 +188,12 @@ fun AgendaHome(
         ) { padding ->
             Surface(modifier = Modifier.fillMaxSize().padding(padding)) {
                 when (val r = current) {
-                    is Route.List ->
-                        TaskListScreen(
-                            board = board,
-                            list = r.list,
-                            onTaskClick = { go(routeKey(Route.Task(it))) },
-                        )
-                    is Route.Task -> TaskScreen(board = board, taskId = r.id)
+                    is Route.List -> TaskListScreen(board = board, list = r.list)
                     is Route.Project ->
                         ProjectScreen(
                             board = board,
                             projectId = r.id,
                             hideProjectMeta = true,
-                            onTaskClick = { go(routeKey(Route.Task(it))) },
-                        )
-                    is Route.Tag ->
-                        TagScreen(
-                            board = board,
-                            tagId = r.id,
-                            onTaskClick = { go(routeKey(Route.Task(it))) },
                         )
                 }
             }
@@ -227,17 +204,13 @@ fun AgendaHome(
 fun routeKey(route: Route): String =
     when (route) {
         is Route.List -> "list:${route.list.name}"
-        is Route.Task -> "task:${route.id}"
         is Route.Project -> "project:${route.id}"
-        is Route.Tag -> "tag:${route.id}"
     }
 
 fun parseRoute(key: String): Route {
     val (kind, id) = key.split(":", limit = 2)
     return when (kind) {
-        "task" -> Route.Task(id)
         "project" -> Route.Project(id)
-        "tag" -> Route.Tag(id)
         else ->
             Route.List(runCatching { SmartList.valueOf(id) }.getOrDefault(SmartList.INBOX))
     }
@@ -255,16 +228,11 @@ private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> 
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
         )
-        for (list in SmartList.entries) {
-            val count = board.count(list)
+        // Desktop sidebar nav order (chrome.rs:375-383).
+        for (list in NAV_LISTS) {
             NavigationDrawerItem(
                 label = { Text(list.titleRu) },
                 selected = current is Route.List && current.list == list,
-                badge = {
-                    if (count > 0) {
-                        Text("$count", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
                 onClick = { onNavigate(routeKey(Route.List(list))) },
                 colors =
                     NavigationDrawerItemDefaults.colors(
@@ -294,24 +262,21 @@ private fun DrawerContent(board: Board, current: Route, onNavigate: (String) -> 
                 )
             }
         }
-        if (board.tags.isNotEmpty()) {
-            DrawerHeader("Теги")
-            for (t in board.tags) {
-                NavigationDrawerItem(
-                    label = { Text(t.title) },
-                    selected = current is Route.Tag && current.id == t.id,
-                    icon = {
-                        ColorDot(tagColor(t.color, MaterialTheme.colorScheme.onSurfaceVariant))
-                    },
-                    onClick = { onNavigate(routeKey(Route.Tag(t.id))) },
-                    colors =
-                        NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            unselectedContainerColor = Color.Transparent,
-                        ),
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                )
-            }
+        // Desktop «Другое» footer menu (chrome.rs:1056-1067): only the
+        // entries with real screens exist here.
+        DrawerHeader("Другое")
+        for (list in MORE_LISTS) {
+            NavigationDrawerItem(
+                label = { Text(list.titleRu) },
+                selected = current is Route.List && current.list == list,
+                onClick = { onNavigate(routeKey(Route.List(list))) },
+                colors =
+                    NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        unselectedContainerColor = Color.Transparent,
+                    ),
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
         }
     }
 }

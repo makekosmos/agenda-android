@@ -84,7 +84,11 @@ class RepositoryHostTest {
         try {
             EngineAgendaRepository(dataDir).use { repository ->
                 repository.addTask("позвонить маме завтра")
-                val task = repository.tasks().single()
+                val board =
+                    (repository.boardFlow().first() as BoardState.Ready).board
+                // Desktop quick_entry_save: a parsed date is a commitment,
+                // so the task is status Todo — in «Эта неделя», not Inbox.
+                val task = board.list(SmartList.WEEK).single()
                 assertEquals("позвонить маме", task.title)
                 assertEquals(LocalDate.now().plusDays(1).toString(), task.scheduledDate)
             }

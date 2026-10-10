@@ -43,7 +43,6 @@ import com.mundus.agenda.Task
 private fun emptyHint(list: SmartList): Pair<String, String> =
     when (list) {
         SmartList.INBOX -> "Входящие пустые" to "Создай любую задачу и она появится здесь"
-        SmartList.TODAY -> "Сегодня пусто" to "Назначь задачу на сегодня"
         SmartList.WEEK -> "На этой неделе пусто" to "Назначь задачу на эту неделю"
         SmartList.NEXT_WEEK -> "На следующей неделе пусто" to "Поставь задаче дату следующей недели"
         SmartList.SOMEDAY -> "Потом пуст" to "Отложенные задачи появятся здесь"
@@ -167,12 +166,11 @@ private fun Chip(text: String, color: Color) {
 fun TaskRow(
     board: Board,
     task: Task,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     hideProjectMeta: Boolean = false,
 ) {
     val dateView = board.dateView(task)
-    Surface(onClick = onClick, color = Color.Transparent, modifier = modifier.fillMaxWidth()) {
+    Surface(color = Color.Transparent, modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -246,7 +244,7 @@ private fun SectionHeader(title: String) {
  * archived tasks (pages/logbook.rs).
  */
 @Composable
-fun TaskListScreen(board: Board, list: SmartList, onTaskClick: (String) -> Unit) {
+fun TaskListScreen(board: Board, list: SmartList) {
     val tasks = board.list(list)
     val archivedProjects =
         if (list == SmartList.LOGBOOK) board.projects.filter { it.status == 2 } else emptyList()
@@ -259,7 +257,7 @@ fun TaskListScreen(board: Board, list: SmartList, onTaskClick: (String) -> Unit)
             item(key = "header-tasks") { SectionHeader("Задачи") }
         }
         items(tasks, key = { it.id }) { task ->
-            TaskRow(board, task, onClick = { onTaskClick(task.id) })
+            TaskRow(board, task)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(start = 50.dp),
@@ -299,7 +297,6 @@ fun ProjectScreen(
     board: Board,
     projectId: String,
     hideProjectMeta: Boolean = false,
-    onTaskClick: (String) -> Unit,
 ) {
     val tasks = board.projectTasks[projectId].orEmpty()
     if (tasks.isEmpty()) {
@@ -327,7 +324,7 @@ fun ProjectScreen(
     val done = tasks.filter { it.isCompleted || it.isCancelled }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(active, key = { it.id }) { task ->
-            TaskRow(board, task, onClick = { onTaskClick(task.id) }, hideProjectMeta = hideProjectMeta)
+            TaskRow(board, task, hideProjectMeta = hideProjectMeta)
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.padding(start = 50.dp),
@@ -343,26 +340,12 @@ fun ProjectScreen(
                 )
             }
             items(done, key = { it.id }) { task ->
-                TaskRow(board, task, onClick = { onTaskClick(task.id) }, hideProjectMeta = hideProjectMeta)
+                TaskRow(board, task, hideProjectMeta = hideProjectMeta)
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant,
                     modifier = Modifier.padding(start = 50.dp),
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun TagScreen(board: Board, tagId: String, onTaskClick: (String) -> Unit) {
-    val tasks = board.tagTasks[tagId].orEmpty()
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(tasks, key = { it.id }) { task ->
-            TaskRow(board, task, onClick = { onTaskClick(task.id) })
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(start = 50.dp),
-            )
         }
     }
 }

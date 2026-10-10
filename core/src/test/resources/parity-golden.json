@@ -15,12 +15,6 @@
       "someday": [
         "dev-someday-1"
       ],
-      "today": [
-        "dev-overdue-1",
-        "dev-today-2",
-        "dev-recurring-1",
-        "dev-done-today"
-      ],
       "trash": [
         "dev-trash-1"
       ],
@@ -52,18 +46,6 @@
       ],
       "dev-proj-someday": [
         "dev-someday-1"
-      ]
-    },
-    "tags": {
-      "dev-tag-focus": [
-        "dev-today-1"
-      ],
-      "dev-tag-home": [
-        "dev-week-4"
-      ],
-      "dev-tag-urgent": [
-        "dev-today-1",
-        "dev-overdue-1"
       ]
     }
   },

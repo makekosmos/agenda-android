@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -127,7 +128,6 @@ class EngineAgendaRepository(
                     boardLists(
                         todosJson,
                         "[${projects.joinToString(",") { "\"${it.id}\"" }}]",
-                        "[${tags.joinToString(",") { "\"${it.id}\"" }}]",
                         today,
                         offset,
                     )
@@ -138,10 +138,6 @@ class EngineAgendaRepository(
             lists[key]!!.jsonArray.map { todos[it.jsonPrimitive.content.toInt()] }
         val projectTasks =
             view["projectTasks"]!!.jsonObject.mapValues { (_, ids) ->
-                ids.jsonArray.map { todos[it.jsonPrimitive.content.toInt()] }
-            }
-        val tagTasks =
-            view["tagTasks"]!!.jsonObject.mapValues { (_, ids) ->
                 ids.jsonArray.map { todos[it.jsonPrimitive.content.toInt()] }
             }
         val dateViews =
@@ -155,7 +151,6 @@ class EngineAgendaRepository(
             lists =
                 mapOf(
                     SmartList.INBOX to listIndices("inbox"),
-                    SmartList.TODAY to listIndices("today"),
                     SmartList.WEEK to listIndices("week"),
                     SmartList.NEXT_WEEK to listIndices("nextWeek"),
                     SmartList.SOMEDAY to listIndices("someday"),
@@ -163,7 +158,6 @@ class EngineAgendaRepository(
                     SmartList.TRASH to listIndices("trash"),
                 ),
             projectTasks = projectTasks,
-            tagTasks = tagTasks,
             dateViews = dateViews,
         )
     }
@@ -209,26 +203,34 @@ class EngineAgendaRepository(
         board().list(SmartList.INBOX)
     }
 
-    /** Quick-entry add: runs the title through the agenda-core parser so
-     * "завтра" and friends become `scheduled_date`, then writes the same
-     * `com.kosmos.task` object shape agenda-gpui produces. */
+    /** Quick-entry add: desktop `quick_entry_save` end to end — the
+     * agenda-core decision (date words, @project mention, status rule)
+     * produces the full Todo, written as the same `com.kosmos.task` object
+     * shape agenda-gpui produces. */
     override suspend fun addTask(rawTitle: String): Unit = withContext(Dispatchers.IO) {
         val (today, offset) = localDay()
         val now = Instant.now().toString()
-        val parsed = parseQuickEntry(rawTitle, null, today, offset)
+        val (projects, _) = projectsAndTags()
         val id = "task-${UUID.randomUUID()}"
         val todo =
-            buildJsonObject {
-                json.parseToJsonElement(newTaskJson(id, parsed.title)).jsonObject.forEach {
-                    (key, value) ->
-                    put(key, value)
-                }
-                parsed.scheduledDate?.let { put("scheduled_date", JsonPrimitive(it)) }
-                // Desktop stamps created_at with the current instant and
-                // appends the task at the end of the board ordering.
-                put("created_at", JsonPrimitive(now))
-                put("sort_order", JsonPrimitive(todoJsons().size))
-            }
+            json.parseToJsonElement(
+                    quickEntryNewTask(
+                        id = id,
+                        rawTitle = rawTitle,
+                        notes = null,
+                        selectedDate = null,
+                        week = false,
+                        someday = false,
+                        projectId = null,
+                        projectTouched = false,
+                        projectsJson = json.encodeToString(projects),
+                        sortOrder = todoJsons().size,
+                        createdAt = now,
+                        today = today,
+                        utcOffsetSeconds = offset,
+                    )
+                )
+                .jsonObject
         val objectJson =
             taskToEngineObject(
                 todo.toString(),

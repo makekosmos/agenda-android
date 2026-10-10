@@ -156,23 +156,6 @@ pub fn new_task_json(id: String, title: String) -> Result<String, AgendaError> {
 // Same rule as above — every date decision happens inside agenda-core.
 // ---------------------------------------------------------------------------
 
-/// «Сегодня» indices (agenda-core `today_idx`): the Week pipeline narrowed
-/// to overdue + due-today. A distinct UniFFI export rather than a new
-/// `SmartList` so the desktop enum stays the single source of truth.
-#[uniffi::export]
-pub fn today_list_indices(
-    todos_json: String,
-    today: String,
-    utc_offset_seconds: i32,
-) -> Result<Vec<u32>, AgendaError> {
-    let day = local_day(&today, utc_offset_seconds)?;
-    let todos = parse_todos(&todos_json)?;
-    Ok(agenda_core::today_idx(&todos, &day)
-        .into_iter()
-        .map(|i| i as u32)
-        .collect())
-}
-
 /// Project page membership (desktop `project_page`): tasks in the project,
 /// not trashed, not archived — sorted by `sort_order` like the default
 /// board order.
@@ -186,17 +169,6 @@ pub fn project_task_indices(
     let day = local_day(&today, utc_offset_seconds)?;
     let todos = parse_todos(&todos_json)?;
     Ok(agenda_core::project_page_idx(&project_id, &todos, &day)
-        .into_iter()
-        .map(|i| i as u32)
-        .collect())
-}
-
-/// Tag filter membership: live tasks carrying the tag (trash hidden), in
-/// `sort_order` board order.
-#[uniffi::export]
-pub fn tag_task_indices(tag_id: String, todos_json: String) -> Result<Vec<u32>, AgendaError> {
-    let todos = parse_todos(&todos_json)?;
-    Ok(agenda_core::tag_page_idx(&tag_id, &todos)
         .into_iter()
         .map(|i| i as u32)
         .collect())
@@ -329,13 +301,12 @@ pub fn tasks_from_engine_objects(objects_json: String) -> Result<String, AgendaE
 }
 
 /// The whole read board in one FFI call: per-list index arrays, per-project
-/// and per-tag membership, and per-task date views — every rule evaluated
-/// inside agenda-core on a single `todos_json` parse.
+/// membership, and per-task date views — every rule evaluated inside
+/// agenda-core on a single `todos_json` parse.
 #[uniffi::export]
 pub fn board_lists(
     todos_json: String,
     project_ids_json: String,
-    tag_ids_json: String,
     today: String,
     utc_offset_seconds: i32,
 ) -> Result<String, AgendaError> {
@@ -343,12 +314,9 @@ pub fn board_lists(
     let todos = parse_todos(&todos_json)?;
     let project_ids: Vec<String> =
         serde_json::from_str(&project_ids_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
-    let tag_ids: Vec<String> =
-        serde_json::from_str(&tag_ids_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
     let idx = |v: Vec<usize>| v.into_iter().map(|i| i as u32).collect::<Vec<_>>();
     let lists = json!({
         "inbox": idx(agenda_core::filter_idx(SmartList::Inbox, &todos, &day)),
-        "today": idx(agenda_core::today_idx(&todos, &day)),
         "week": idx(agenda_core::filter_idx(SmartList::Week, &todos, &day)),
         "nextWeek": idx(agenda_core::filter_idx(SmartList::NextWeek, &todos, &day)),
         "someday": idx(agenda_core::filter_idx(SmartList::Someday, &todos, &day)),
@@ -364,21 +332,171 @@ pub fn board_lists(
             )
         })
         .collect();
-    let tag_tasks: serde_json::Map<String, Value> = tag_ids
-        .iter()
-        .map(|id| {
-            (
-                id.clone(),
-                json!(idx(agenda_core::tag_page_idx(id, &todos))),
-            )
-        })
-        .collect();
     let date_views: Vec<Value> = todos.iter().map(|t| date_view_json(t, &day)).collect();
     Ok(json!({
         "lists": lists,
         "projectTasks": project_tasks,
-        "tagTasks": tag_tasks,
         "dateViews": date_views,
     })
     .to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 write parity: every mutation below calls the same agenda-core
+// action the desktop `app.rs` calls — Kotlin only shuttles JSON and clocks.
+// ---------------------------------------------------------------------------
+
+fn parse_todo(todo_json: &str) -> Result<Todo, AgendaError> {
+    serde_json::from_str(todo_json).map_err(|e| AgendaError::Invalid(e.to_string()))
+}
+
+fn todo_to_json(todo: &Todo) -> Result<String, AgendaError> {
+    serde_json::to_string(todo).map_err(|e| AgendaError::Mapping(e.to_string()))
+}
+
+fn parse_status(status: &str) -> Result<agenda_core::Status, AgendaError> {
+    serde_json::from_str(&format!("\"{status}\""))
+        .map_err(|e| AgendaError::Invalid(format!("bad status {status}: {e}")))
+}
+
+/// Quick-entry save (desktop `quick_entry_save`): the agenda-core decision
+/// applied to a fresh `new_todo`, with notes, board-append `sort_order` and
+/// the host `created_at` stamp. Returns the full Todo JSON ready for
+/// `task_to_engine_object`.
+#[uniffi::export]
+#[allow(clippy::too_many_arguments)]
+pub fn quick_entry_new_task(
+    id: String,
+    raw_title: String,
+    notes: Option<String>,
+    selected_date: Option<String>,
+    week: bool,
+    someday: bool,
+    project_id: Option<String>,
+    project_touched: bool,
+    projects_json: String,
+    sort_order: i32,
+    created_at: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<String, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let projects: Vec<agenda_core::Project> =
+        serde_json::from_str(&projects_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let d = agenda_core::quick_entry_decision(
+        raw_title.trim(),
+        selected_date,
+        week,
+        someday,
+        project_id,
+        project_touched,
+        &projects,
+        &day,
+    );
+    let mut t = agenda_core::new_todo(id, &d.title);
+    t.notes = notes.and_then(|n| {
+        let n = n.trim().to_string();
+        (!n.is_empty()).then_some(n)
+    });
+    t.scheduled_date = d.scheduled_date;
+    t.project_id = d.project_id;
+    t.status = d.status;
+    t.is_today = d.is_today;
+    t.is_someday = d.is_someday;
+    t.sort_order = sort_order;
+    t.created_at = created_at;
+    todo_to_json(&t)
+}
+
+/// Checkbox toggle, done arm (desktop `complete_todo`): Done fields only —
+/// recurrence spawning is `task_next_recurrence`, mirroring save_completion.
+#[uniffi::export]
+pub fn task_complete(todo_json: String, now: String) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::complete_fields(&mut t, &now);
+    todo_to_json(&t)
+}
+
+/// Checkbox toggle, un-complete arm + status transitions (desktop
+/// `set_todo_status` non-Done branch).
+#[uniffi::export]
+pub fn task_set_status(
+    todo_json: String,
+    status: String,
+    now: String,
+) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::set_status(&mut t, parse_status(&status)?, &now);
+    todo_to_json(&t)
+}
+
+/// The next instance `complete_todo` writes beside the completed task —
+/// None when the recurrence rule yields no date.
+#[uniffi::export]
+pub fn task_next_recurrence(
+    before_todo_json: String,
+    completed_todo_json: String,
+    new_id: String,
+    sort_order: i32,
+    now: String,
+    today: String,
+    utc_offset_seconds: i32,
+) -> Result<Option<String>, AgendaError> {
+    let day = local_day(&today, utc_offset_seconds)?;
+    let before = parse_todo(&before_todo_json)?;
+    let completed = parse_todo(&completed_todo_json)?;
+    agenda_core::next_recurrence_todo(&before, &completed, &day, new_id, sort_order, &now)
+        .map(|t| todo_to_json(&t))
+        .transpose()
+}
+
+/// «На неделю» (desktop `move_to_week`).
+#[uniffi::export]
+pub fn task_move_to_week(todo_json: String) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::move_to_week(&mut t);
+    todo_to_json(&t)
+}
+
+/// Project dropdown (desktop `move_to_project` / `SetProject`).
+#[uniffi::export]
+pub fn task_move_to_project(
+    todo_json: String,
+    project_id: Option<String>,
+) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::move_to_project(&mut t, project_id);
+    todo_to_json(&t)
+}
+
+/// Date dropdown (desktop `SetDate`): pick or clear the scheduled date.
+#[uniffi::export]
+pub fn task_set_scheduled(todo_json: String, date: Option<String>) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::set_scheduled_date(&mut t, date);
+    todo_to_json(&t)
+}
+
+/// Trash / restore (desktop `TrashTodo` / `RestoreTodo`).
+#[uniffi::export]
+pub fn task_set_trashed(todo_json: String, trashed: bool) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    agenda_core::set_trashed(&mut t, trashed);
+    todo_to_json(&t)
+}
+
+/// Panel title/notes edit (desktop `panel_persist`).
+#[uniffi::export]
+pub fn task_edit_title_notes(
+    todo_json: String,
+    title: String,
+    notes: Option<String>,
+) -> Result<String, AgendaError> {
+    let mut t = parse_todo(&todo_json)?;
+    let notes = notes.and_then(|n| {
+        let n = n.trim().to_string();
+        (!n.is_empty()).then_some(n)
+    });
+    agenda_core::edit_title_notes(&mut t, &title, notes);
+    todo_to_json(&t)
 }
