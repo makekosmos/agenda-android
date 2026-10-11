@@ -27,6 +27,11 @@ build_android() {
     for abi in $abis; do targets+=(-t "$abi"); done
     # Drop stale ABI dirs so a narrowed build doesn't ship old .so files.
     rm -rf "$OUT_JNILIBS"
+    # Bundled sqlite: drop modules the schema never uses (size audit p10 —
+    # FTS3/4 ~157 KB, RTREE ~31 KB). libsqlite3-sys hard-codes the -D
+    # enables; a later -U on the same command line wins. FTS5 and JSON1
+    # stay — the ark-core schema uses both.
+    export LIBSQLITE3_FLAGS="-USQLITE_ENABLE_FTS3 -USQLITE_ENABLE_FTS3_PARENTHESIS -USQLITE_ENABLE_RTREE"
     (cd "$RUST_DIR" && cargo ndk "${targets[@]}" -o "$OUT_JNILIBS" build --release)
     # cargo-ndk copies every cdylib in the dep tree; the app ships exactly
     # one .so (agenda_mobile statically contains engine-mobile + ark-core).

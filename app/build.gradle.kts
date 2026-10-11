@@ -43,6 +43,11 @@ fun releaseSecret(name: String): String? =
 android {
     namespace = "com.mundus.agenda"
     compileSdk = 35
+    // Pinned so AGP strips the Rust cdylib during packaging — without a
+    // matching ndkVersion AGP silently keeps the unstripped .so (size
+    // audit, p10). The unstripped copy stays in
+    // app/build/rust-jnilibs/<abi>/ for crash symbolication.
+    ndkVersion = "27.2.12479018"
 
     signingConfigs {
         val storeFile = releaseSecret("AGENDA_RELEASE_STORE_FILE")
@@ -92,8 +97,8 @@ android {
         targetSdk = 35
         // -PagendaVersionCode / -PagendaVersionName override for scratch
         // builds (e.g. an older "installed" build in the updater e2e).
-        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "6").toInt()
-        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.5"
+        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "7").toInt()
+        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.6"
         // Self-update feed BASE (manifest.json first, latest-android.yml
         // fallback — cortex feed.rs:15,63-93). Override with
         // -PagendaUpdateFeedBase=… for tests.

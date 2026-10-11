@@ -3,6 +3,7 @@ package com.mundus.agenda
 import android.app.Application
 import android.os.Build
 import com.mundus.agenda.sync.SyncWorker
+import com.mundus.agenda.updater.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +41,9 @@ class AgendaApplication : Application() {
         // enough for the keepalive worker to re-assert when stopped.
         SyncWorker.schedule(this)
         scope.launch {
+            // No install can be pending on a cold start: a downloaded APK
+            // in cache/updates is only a footprint doubling (KOS-370).
+            runCatching { UpdateManager.sweepUpdateCache(this@AgendaApplication) }
             runCatching {
                 if (!repository.syncSnapshot().running) repository.startSync(Build.MODEL)
             }

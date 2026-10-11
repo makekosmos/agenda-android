@@ -21,11 +21,15 @@ doctest = false
 # (extractNativeLibs=false), so every .so byte lands in both the APK
 # and the installed footprint. panic stays "unwind" — uniffi's FFI
 # boundary catches panics and turns them into Kotlin exceptions.
+# p10: no cargo strip — the build output keeps its symbol table as the
+# release symbolication artifact (app/build/rust-jnilibs/<abi>/), and
+# AGP strips the copy it packs into the APK (ndkVersion is pinned in
+# app/build.gradle.kts).
 [profile.release]
 lto = "fat"
 codegen-units = 1
-opt-level = "z"
-strip = true
+opt-level = "s"
+strip = "debuginfo"
 
 [[bin]]
 name = "uniffi-bindgen"

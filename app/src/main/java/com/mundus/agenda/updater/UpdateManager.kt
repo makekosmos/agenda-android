@@ -185,6 +185,14 @@ class UpdateManager(
     companion object {
         const val STALE_MS = 4L * 60 * 60 * 1000
 
+        /** The installer copies the APK when the user confirms the system
+         * dialog, so a leftover APK under cache/updates serves no pending
+         * install — it only doubles the installed footprint (~APK size).
+         * Called on app start and on MY_PACKAGE_REPLACED. */
+        fun sweepUpdateCache(context: Context) {
+            File(context.cacheDir, "updates").deleteRecursively()
+        }
+
         /** Pure signature comparison — the installed signers set must be
          * non-empty and identical to the downloaded APK's. */
         internal fun sameSignatures(mine: Set<String>, theirs: Set<String>): Boolean =
