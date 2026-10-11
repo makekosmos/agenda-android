@@ -245,38 +245,7 @@ fun QuickEntrySheet(
             )
         },
     ) {
-        Column(modifier = Modifier.imePadding().padding(bottom = 24.dp)) {
-            SheetField(
-                value = title,
-                onValueChange = { title = it },
-                placeholder = if (editing == null) "Новая задача" else "",
-                style = AgendaType.input,
-                modifier = Modifier.padding(horizontal = 16.dp),
-                singleLine = true,
-                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
-                keyboardActions =
-                    androidx.compose.foundation.text.KeyboardActions(
-                        onDone = {
-                            if (editing == null) createAndContinue()
-                            else dismissWithSave()
-                        }
-                    ),
-                focusRequester = titleFocus,
-            )
-            // After the field exists: focus it and show the keyboard.
-            LaunchedEffect(Unit) {
-                titleFocus.requestFocus()
-                keyboard?.show()
-            }
-            Spacer(Modifier.height(6.dp))
-            SheetField(
-                value = notes,
-                onValueChange = { notes = it },
-                placeholder = "Заметки",
-                style = AgendaType.inputMeta,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-
+        Column(modifier = Modifier.imePadding().padding(bottom = 8.dp)) {
             // Parsed chips — only in create mode, like the desktop draft.
             if (editing == null) {
                 val chips = buildList {
@@ -302,7 +271,6 @@ fun QuickEntrySheet(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
             ADivider(modifier = Modifier.padding(horizontal = 12.dp))
             PropertyRow(
                 label = "Проект",
@@ -322,9 +290,43 @@ fun QuickEntrySheet(
             }
             ADivider(modifier = Modifier.padding(horizontal = 12.dp))
 
+            Spacer(Modifier.height(6.dp))
+            SheetField(
+                value = notes,
+                onValueChange = { notes = it },
+                placeholder = "Заметки",
+                style = AgendaType.inputMeta,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+
+            // Title input pinned at the bottom, right above the keyboard
+            // (Todoist-style quick add).
+            SheetField(
+                value = title,
+                onValueChange = { title = it },
+                placeholder = if (editing == null) "Новая задача" else "",
+                style = AgendaType.input,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                singleLine = true,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                keyboardActions =
+                    androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            if (editing == null) createAndContinue()
+                            else dismissWithSave()
+                        }
+                    ),
+                focusRequester = titleFocus,
+            )
+            // After the field exists: focus it and show the keyboard.
+            LaunchedEffect(Unit) {
+                titleFocus.requestFocus()
+                keyboard?.show()
+            }
+
             if (editing == null) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -332,6 +334,8 @@ fun QuickEntrySheet(
                     Spacer(Modifier.width(4.dp))
                     SheetButton("Сохранить", primary = true) { createAndContinue() }
                 }
+            } else {
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

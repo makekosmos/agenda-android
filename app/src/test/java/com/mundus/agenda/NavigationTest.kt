@@ -2,6 +2,7 @@ package com.mundus.agenda
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasImeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -187,7 +188,13 @@ class NavigationTest {
             }
         }
         composeTestRule.waitForIdle()
-        val field = { composeTestRule.onAllNodes(hasSetTextAction())[0] }
+        // The title field is the one with ImeAction.Done (notes is plain).
+        val field = {
+            composeTestRule.onNode(
+                hasSetTextAction() and
+                    hasImeAction(androidx.compose.ui.text.input.ImeAction.Done)
+            )
+        }
         field().performTextInput("первая задача")
         field().performImeAction()
         composeTestRule.waitForIdle()
