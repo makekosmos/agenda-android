@@ -152,13 +152,14 @@ fun AIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = AgendaTheme.colors.fg,
+    enabled: Boolean = true,
 ) {
     val c = AgendaTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val bg by
         animateColorAsState(
-            if (pressed) c.fg(0.08f) else Color.Transparent,
+            if (pressed && enabled) c.fg(0.08f) else Color.Transparent,
             animationSpec = tween(PRESS_MS, easing = EaseStandard),
             label = "btn-press",
         )
@@ -171,12 +172,52 @@ fun AIconButton(
                 .clickable(
                     interactionSource = interaction,
                     indication = null,
+                    enabled = enabled,
                     role = Role.Button,
                     onClick = onClick,
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        AIcon(res, tint = tint, desc = desc)
+        AIcon(res, tint = if (enabled) tint else c.mutedFg.copy(alpha = 0.4f), desc = desc)
+    }
+}
+
+/** One task property row — the desktop qe_prop_row twin: label on the
+ * left, current value (or a dropdown) on the right. */
+@Composable
+fun PropertyRow(
+    label: String,
+    value: String,
+    hasValue: Boolean,
+    menuContent: (@Composable () -> Unit)? = null,
+) {
+    val c = AgendaTheme.colors
+    var open by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        ARow(
+            onClick = { if (menuContent != null) open = true },
+            enabled = menuContent != null,
+            horizontalPadding = 16.dp,
+            verticalPadding = 11.dp,
+            minHeight = 44.dp,
+        ) { _ ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    style = AgendaType.body,
+                    color = c.mutedFg,
+                    modifier = Modifier.width(88.dp),
+                )
+                Text(
+                    value,
+                    style = AgendaType.body,
+                    color = if (hasValue) c.fg else c.mutedFg,
+                )
+            }
+        }
+        if (menuContent != null) {
+            AMenu(open = open, onDismiss = { open = false }, content = menuContent)
+        }
     }
 }
 

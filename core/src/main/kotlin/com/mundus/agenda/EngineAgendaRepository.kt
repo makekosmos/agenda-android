@@ -221,7 +221,7 @@ class EngineAgendaRepository(
         someday: Boolean,
         projectId: String?,
         projectTouched: Boolean,
-    ): Unit = withContext(Dispatchers.IO) {
+    ): Task = withContext(Dispatchers.IO) {
         val (today, offset) = localDay()
         val now = Instant.now().toString()
         val (projects, _) = projectsAndTags()
@@ -242,7 +242,9 @@ class EngineAgendaRepository(
                 today = today,
                 utcOffsetSeconds = offset,
             )
-        save(null, json.decodeFromString(todo))
+        val task = json.decodeFromString<Task>(todo)
+        save(null, task)
+        task
     }
 
     override suspend fun toggleComplete(task: Task): Unit = withContext(Dispatchers.IO) {

@@ -202,6 +202,7 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
     override fun boardFlow(): Flow<BoardState> = flowOf(BoardState.Ready(board))
 
     var quickEntryCalls = mutableListOf<String>()
+    var createdTasks = mutableListOf<Task>()
 
     override suspend fun quickEntry(
         rawTitle: String,
@@ -211,8 +212,12 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
         someday: Boolean,
         projectId: String?,
         projectTouched: Boolean,
-    ) {
+    ): Task {
         quickEntryCalls += rawTitle
+        return task("dev-created-${createdTasks.size + 1}", rawTitle)
+            .copy(notes = notes, scheduledDate = selectedDate, isToday = week,
+                isSomeday = someday, projectId = projectId)
+            .also { createdTasks += it }
     }
 
     override suspend fun toggleComplete(task: Task) {}

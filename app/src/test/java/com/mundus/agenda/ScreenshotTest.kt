@@ -140,7 +140,7 @@ class ScreenshotTest {
     }
 
     @Test
-    fun editSheetLight() {
+    fun taskScreenLight() {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = false) {
                 AgendaHome(
@@ -151,11 +151,11 @@ class ScreenshotTest {
             }
         }
         composeTestRule.waitForIdle()
-        composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-light.png")
+        composeTestRule.onRoot().captureRoboImage("roborazzi/taskscreen-light.png")
     }
 
     @Test
-    fun editSheetDark() {
+    fun taskScreenDark() {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = true) {
                 AgendaHome(
@@ -166,7 +166,7 @@ class ScreenshotTest {
             }
         }
         composeTestRule.waitForIdle()
-        composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-dark.png")
+        composeTestRule.onRoot().captureRoboImage("roborazzi/taskscreen-dark.png")
     }
 
     private val feed013 =

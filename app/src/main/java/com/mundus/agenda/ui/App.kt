@@ -54,6 +54,7 @@ import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.BoardState
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
+import com.mundus.agenda.Task
 import com.mundus.agenda.WriteConflict
 import com.mundus.agenda.updater.UpdateManager
 import kotlinx.coroutines.delay
@@ -67,6 +68,7 @@ sealed interface Route {
     data object Home : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
+    data class Task(val id: String) : Route
     data object Settings : Route
     data object Sync : Route
     data object Statistics : Route
@@ -145,13 +147,18 @@ fun AgendaHome(
     themeMode: String = "system",
     onThemeMode: (String) -> Unit = {},
 ) {
-    var route by rememberSaveable { mutableStateOf(routeKey(initialRoute)) }
+    var route by rememberSaveable {
+        mutableStateOf(routeKey(initialEditTaskId?.let { Route.Task(it) } ?: initialRoute))
+    }
     // Direction of the last nav: 1 = drill in, -1 = back. Drives the
     // shared-axis-ish slide in the AnimatedContent below.
     var navDir by rememberSaveable { mutableIntStateOf(0) }
     var toast by remember { mutableStateOf<String?>(null) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
-    var editingTaskId by rememberSaveable { mutableStateOf(initialEditTaskId) }
+    // The just-created task a sheet «maximize» navigates to — the board
+    // flow may lag one emission behind, so the page renders this
+    // snapshot until the id shows up in `board`.
+    var createdTaskFallback by remember { mutableStateOf<Task?>(null) }
     // Project rename: the project page title becomes an editable heading,
     // like desktop edit_project_title (app/projects.rs:111-114).
     var renamingProjectId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -231,7 +238,7 @@ fun AgendaHome(
 
     val actions =
         TaskActions(
-            onOpen = { editingTaskId = it.id },
+            onOpen = { navigate(Route.Task(it.id)) },
             onToggle = { t -> run { repository?.toggleComplete(t) } },
             onTrash = { t -> run { repository?.setTrashed(t, true) } },
             onRestore = { t -> run { repository?.setTrashed(t, false) } },
@@ -277,6 +284,7 @@ fun AgendaHome(
             is Route.Home -> "Agenda"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
+            is Route.Task -> "Задача"
             is Route.Sync -> "Синхронизация"
             is Route.Settings -> "Настройки"
             is Route.Statistics -> "Статистика"
@@ -341,6 +349,15 @@ fun AgendaHome(
                             hideProjectMeta = true,
                             actions = actions,
                         )
+                    is Route.Task ->
+                        TaskScreen(
+                            board = board,
+                            taskId = r.id,
+                            repository = repository,
+                            run = ::run,
+                            fallback =
+                                createdTaskFallback?.takeIf { it.id == r.id },
+                        )
                 }
             }
 
@@ -374,8 +391,8 @@ fun AgendaHome(
         }
 
         // Desktop only offers task creation on task pages (not
-        // Settings/Statistics/About).
-        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About && current !is Route.Sync) {
+        // Settings/Statistics/About) — and the open task page has no «+».
+        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About && current !is Route.Sync && current !is Route.Task) {
             QuickEntryButton(
                 onClick = { createOpen = true },
             modifier =
@@ -392,27 +409,20 @@ fun AgendaHome(
         )
     }
 
-    // Desktop quick-entry/panel: create from the + button, edit on row tap.
+    // Desktop quick-entry panel: create from the + button; a task-row tap
+    // drills into the full-screen task page.
     if (createOpen) {
         QuickEntrySheet(
             board = board,
             repository = repository,
-            editing = null,
             onDismiss = { createOpen = false },
             run = ::run,
+            onExpand = { task ->
+                createdTaskFallback = task
+                navigate(Route.Task(task.id))
+            },
             initialWeek = current == Route.List(SmartList.WEEK),
         )
-    }
-    editingTaskId?.let { id ->
-        board.task(id)?.let { task ->
-            QuickEntrySheet(
-                board = board,
-                repository = repository,
-                editing = task,
-                onDismiss = { editingTaskId = null },
-                run = ::run,
-            )
-        }
     }
 }
 
@@ -421,6 +431,7 @@ fun routeKey(route: Route): String =
         is Route.Home -> "home"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
+        is Route.Task -> "task:${route.id}"
         is Route.Sync -> "sync"
         is Route.Settings -> "settings"
         is Route.Statistics -> "statistics"
@@ -434,6 +445,7 @@ fun parseRoute(key: String): Route =
         "statistics" -> Route.Statistics
         "about" -> Route.About
         "project" -> Route.Project(key.substringAfter(':'))
+        "task" -> Route.Task(key.substringAfter(':'))
         "list" ->
             Route.List(
                 runCatching { SmartList.valueOf(key.substringAfter(':')) }

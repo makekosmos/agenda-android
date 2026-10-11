@@ -214,6 +214,52 @@ class NavigationTest {
     }
 
     @Test
+    fun taskTapOpensFullScreenTaskPage() {
+        // KOS-381 rework: a task-row tap drills into the full-screen task
+        // page (large title + property rows), not a bottom sheet.
+        composeTestRule.setContent {
+            AgendaTheme { AgendaHome(board = board, repository = FakeRepository()) }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Эта неделя").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Созвон по дизайну").performClick()
+        composeTestRule.waitForIdle()
+        // Task page: the title is an editable field, rows Дата/Проект exist.
+        assert(
+            composeTestRule.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty()
+        ) { "task page has no editable fields" }
+        composeTestRule.onNodeWithText("Дата").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Проект").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Задача").assertIsDisplayed()
+    }
+
+    @Test
+    fun quickEntryMaximizeCreatesAndOpensTask() {
+        val repo = FakeRepository()
+        composeTestRule.setContent {
+            AgendaTheme { AgendaHome(board = board, repository = repo, initialCreate = true) }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule
+            .onNode(
+                hasSetTextAction() and
+                    hasImeAction(androidx.compose.ui.text.input.ImeAction.Done)
+            )
+            .performTextInput("развернуть меня")
+        composeTestRule
+            .onNodeWithContentDescription("Открыть полностью")
+            .performClick()
+        composeTestRule.waitForIdle()
+        assert(repo.quickEntryCalls == listOf("развернуть меня")) {
+            "quickEntry calls: ${repo.quickEntryCalls}"
+        }
+        // Landed on the task page; sheet is gone (no ImeAction.Done field).
+        composeTestRule.onNodeWithText("Задача").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Дата").assertIsDisplayed()
+    }
+
+    @Test
     fun tapDrillsInAndBackReturnsHome() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()

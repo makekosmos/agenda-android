@@ -30,7 +30,9 @@ interface BoardRepository : AutoCloseable {
     fun boardFlow(): Flow<BoardState>
 
     /** Quick-entry save — desktop `quick_entry_save` semantics via
-     * agenda-core `quick_entry_decision`. */
+     * agenda-core `quick_entry_decision`. Returns the written task so the
+     * caller can open it (quick-entry «maximize» → full task screen)
+     * without waiting for the next board emission. */
     suspend fun quickEntry(
         rawTitle: String,
         notes: String?,
@@ -39,7 +41,7 @@ interface BoardRepository : AutoCloseable {
         someday: Boolean,
         projectId: String?,
         projectTouched: Boolean,
-    )
+    ): Task
 
     // Mutating ops take the UI's snapshot [Task] — it is the `before`
     // precondition of desktop `Store::save`, so a task changed elsewhere
