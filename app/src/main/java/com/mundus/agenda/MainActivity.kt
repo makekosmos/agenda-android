@@ -1,6 +1,7 @@
 package com.mundus.agenda
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,9 +13,29 @@ import com.mundus.agenda.ui.DebugPairing
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Some OEMs keep apps at 60 Hz unless the window asks for more, and
+     * 60 Hz motion reads as choppy on a 120 Hz panel. Pick the fastest
+     * mode at the current resolution.
+     */
+    private fun requestPeakRefreshRate() {
+        @Suppress("DEPRECATION")
+        val display = (if (Build.VERSION.SDK_INT >= 30) display else windowManager.defaultDisplay) ?: return
+        val current = display.mode
+        val peak =
+            display.supportedModes
+                .filter {
+                    it.physicalWidth == current.physicalWidth &&
+                        it.physicalHeight == current.physicalHeight
+                }
+                .maxByOrNull { it.refreshRate } ?: return
+        window.attributes = window.attributes.apply { preferredDisplayModeId = peak.modeId }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestPeakRefreshRate()
         readPairingExtra(intent)
         val app = application as AgendaApplication
         setContent {
