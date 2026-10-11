@@ -19,9 +19,16 @@ fun localRustInputs(): List<File> = buildList {
 
 val jniLibsDir = layout.buildDirectory.dir("rust-jnilibs")
 
+// Release APKs get the fat-LTO [profile.release]; anything else (debug, e2e,
+// unit tests) uses [profile.android-dev]. -PagendaRustProfile=… overrides.
+val rustProfile = (findProperty("agendaRustProfile") as String?)
+    ?: if (gradle.startParameter.taskNames.any { it.contains("Release") }) "release" else "android-dev"
+
 val buildRustAndroid = tasks.register<Exec>("buildRustAndroid") {
     workingDir = rootDir
     commandLine("${rootDir}/scripts/build-rust.sh", "android")
+    environment("AGENDA_RUST_PROFILE", rustProfile)
+    inputs.property("rustProfile", rustProfile)
     // -PagendaAbis=arm64-v8a narrows the Rust build (see build-rust.sh).
     (findProperty("agendaAbis") as String?)?.let { environment("AGENDA_ANDROID_ABIS", it) }
     inputs.property("agendaAbis", findProperty("agendaAbis") ?: "default")

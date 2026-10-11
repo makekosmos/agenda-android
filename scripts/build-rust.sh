@@ -20,6 +20,9 @@ build_host() {
     (cd "$RUST_DIR" && cargo build --lib)
 }
 
+# Host cdylib: .so on Linux, .dylib on macOS.
+HOST_LIB="$RUST_DIR/target/debug/libagenda_mobile.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)"
+
 build_android() {
     # AGENDA_ANDROID_ABIS="arm64-v8a" limits the build (release APK for
     # real phones); default keeps x86_64 for emulators.
@@ -32,7 +35,9 @@ build_android() {
     # enables; a later -U on the same command line wins. FTS5 and JSON1
     # stay — the ark-core schema uses both.
     export LIBSQLITE3_FLAGS="-USQLITE_ENABLE_FTS3 -USQLITE_ENABLE_FTS3_PARENTHESIS -USQLITE_ENABLE_RTREE"
-    (cd "$RUST_DIR" && cargo ndk "${targets[@]}" -o "$OUT_JNILIBS" build --release)
+    # AGENDA_RUST_PROFILE=android-dev (debug/e2e APKs, set by Gradle) skips
+    # fat LTO; release keeps the size-tuned [profile.release].
+    (cd "$RUST_DIR" && cargo ndk "${targets[@]}" -o "$OUT_JNILIBS" build --profile "${AGENDA_RUST_PROFILE:-release}")
     # cargo-ndk copies every cdylib in the dep tree; the app ships exactly
     # one .so (agenda_mobile statically contains engine-mobile + ark-core).
     find "$OUT_JNILIBS" -name '*.so' ! -name 'libagenda_mobile.so' -delete
@@ -42,7 +47,7 @@ build_bindings() {
     build_host
     mkdir -p "$OUT_BINDINGS"
     (cd "$RUST_DIR" && cargo run --features cli --bin uniffi-bindgen -- \
-        generate --library "$RUST_DIR/target/debug/libagenda_mobile.so" \
+        generate --library "$HOST_LIB" \
         --language kotlin --out-dir "$OUT_BINDINGS")
 }
 
