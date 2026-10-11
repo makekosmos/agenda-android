@@ -17,6 +17,16 @@ name = "agenda_mobile"
 crate-type = ["cdylib", "rlib"]
 doctest = false
 
+# p9 size work: the cdylib ships uncompressed in the APK
+# (extractNativeLibs=false), so every .so byte lands in both the APK
+# and the installed footprint. panic stays "unwind" — uniffi's FFI
+# boundary catches panics and turns them into Kotlin exceptions.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "z"
+strip = true
+
 [[bin]]
 name = "uniffi-bindgen"
 path = "src/bin/uniffi-bindgen.rs"

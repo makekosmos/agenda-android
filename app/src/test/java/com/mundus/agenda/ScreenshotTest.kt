@@ -73,8 +73,8 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/sync-dark.png")
     }
 
-    @Test fun homeLight() = shot("home-light", false, Route.Home)
-    @Test fun homeDark() = shot("home-dark", true, Route.Home)
+    @Test fun homeLight() = shot("home-light", false, Route.Other)
+    @Test fun homeDark() = shot("home-dark", true, Route.Other)
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))
     @Test fun inboxDark() = shot("inbox-dark", true, Route.List(SmartList.INBOX))
     @Test fun weekLight() = shot("week-light", false, Route.List(SmartList.WEEK))

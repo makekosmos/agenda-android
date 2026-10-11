@@ -1,7 +1,6 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +24,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsAnimationCompat
+import androidx.core.view.WindowInsetsCompat
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.QuickEntryPreview
@@ -33,26 +36,11 @@ import com.mundus.agenda.R
 import com.mundus.agenda.Task
 import kotlinx.coroutines.delay
 
-/** Parsed-input preview chip — desktop `qe_chip` (qe_chip_bg/qe_chip_fg). */
-@Composable
-private fun PreviewChip(text: String) {
-    val c = AgendaTheme.colors
-    Text(
-        text,
-        style = AgendaType.label,
-        color = c.qeChipFg,
-        maxLines = 1,
-        modifier =
-            Modifier
-                .padding(horizontal = 4.dp)
-                .background(c.qeChipBg, RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
-}
-
 /** Icon button on the sheet's bottom bar with its popup menu anchored on
  * it — Todoist's quick-add property strip. [active] tints the glyph when
- * the property already carries a value. */
+ * the property already carries a value. The popup opens above the button
+ * and keeps the keyboard up (non-focusable popup) so picking a date or
+ * project never dismisses the IME mid-entry. */
 @Composable
 private fun SheetIconMenu(
     icon: Int,
@@ -68,7 +56,13 @@ private fun SheetIconMenu(
             onClick = { open = true },
             tint = if (active) AgendaTheme.colors.accent else AgendaTheme.colors.fg(0.6f),
         )
-        AMenu(open = open, onDismiss = { open = false }, content = menuContent)
+        AMenu(
+            open = open,
+            onDismiss = { open = false },
+            focusable = false,
+            anchorAbove = true,
+            content = menuContent,
+        )
     }
 }
 
@@ -91,7 +85,6 @@ fun QuickEntrySheet(
 ) {
     val c = AgendaTheme.colors
     var title by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
 
     // Draft values for the two properties. Desktop QeDate offers
     // Эта неделя / Следующая неделя / Потом / Без даты (dropdown.rs:76-113);
@@ -164,15 +157,13 @@ fun QuickEntrySheet(
         // Snapshot before run{}: the lambda executes on the next main-loop
         // turn, after the fields below are already cleared.
         val t = title
-        val n = notes.ifBlank { null }
         val d = pickedDate
         val w = weekFlag
         val s = somedayFlag
         val p = projectId
         val pt = projectTouched
-        run { repository?.quickEntry(t, n, d, w, s, p, pt) }
+        run { repository?.quickEntry(t, null, d, w, s, p, pt) }
         title = ""
-        notes = ""
         preview = null
         titleFocus.requestFocus()
     }
@@ -182,14 +173,13 @@ fun QuickEntrySheet(
     fun expand() {
         if (title.isBlank()) return
         val t = title
-        val n = notes.ifBlank { null }
         val d = pickedDate
         val w = weekFlag
         val s = somedayFlag
         val p = projectId
         val pt = projectTouched
         run {
-            repository?.quickEntry(t, n, d, w, s, p, pt)?.let(onExpand)
+            repository?.quickEntry(t, null, d, w, s, p, pt)?.let(onExpand)
         }
         onDismiss()
     }
@@ -210,6 +200,24 @@ fun QuickEntrySheet(
             )
         },
     ) {
+        // Snap the ime padding to its final value instead of animating it:
+        // DISPATCH_MODE_STOP makes this subtree receive the end-state IME
+        // insets immediately, so the input row is already in place when the
+        // keyboard slides up (Jack: the rise felt too slow).
+        val view = LocalView.current
+        androidx.compose.runtime.DisposableEffect(view) {
+            val cb =
+                object : WindowInsetsAnimationCompat.Callback(
+                    DISPATCH_MODE_STOP
+                ) {
+                    override fun onProgress(
+                        insets: WindowInsetsCompat,
+                        runningAnimations: List<WindowInsetsAnimationCompat>,
+                    ): WindowInsetsCompat = insets
+                }
+            ViewCompat.setWindowInsetsAnimationCallback(view, cb)
+            onDispose { ViewCompat.setWindowInsetsAnimationCallback(view, null) }
+        }
         Column(modifier = Modifier.imePadding().padding(bottom = 4.dp)) {
             // Title first — a large, comfortable input line at the top.
             SheetField(
@@ -220,6 +228,10 @@ fun QuickEntrySheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 singleLine = true,
                 imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                // No-suggestions input type: kills the IME candidate
+                // strip and the accent composing underline Jack flagged
+                // as a crooked autocomplete artifact (p9 item 3).
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii,
                 keyboardActions =
                     androidx.compose.foundation.text.KeyboardActions(
                         onDone = { createAndContinue() }
@@ -229,36 +241,6 @@ fun QuickEntrySheet(
             LaunchedEffect(Unit) {
                 titleFocus.requestFocus()
                 keyboard?.show()
-            }
-            SheetField(
-                value = notes,
-                onValueChange = { notes = it },
-                placeholder = "Заметки",
-                style = AgendaType.inputMeta,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
-            )
-
-            // Parsed chips, like the desktop draft preview.
-            val chips = buildList {
-                preview?.let { p ->
-                    if (p.title.isNotBlank() && p.title != title.trim()) {
-                        add("«${p.title}»")
-                    }
-                    if (p.isSomeday) add("Потом")
-                    else if (p.isToday && p.scheduledDate == null) add("Эта неделя")
-                    p.scheduledDate?.let { add(dateLabel ?: it) }
-                    p.projectId?.let { pid ->
-                        board.projects.firstOrNull { it.id == pid }?.let { add(it.title) }
-                    }
-                }
-            }
-            if (chips.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Start,
-                ) {
-                    chips.forEach { PreviewChip(it) }
-                }
             }
 
             ADivider(modifier = Modifier.padding(horizontal = 12.dp))
@@ -273,12 +255,12 @@ fun QuickEntrySheet(
                     desc = "Проект",
                     active = projectId != null,
                 ) {
-                    AMenuItem("Без проекта") {
+                    AMenuItem("Без проекта", leading = { NoneIcon() }) {
                         projectId = null; projectTouched = true
                     }
                     // Desktop dropdowns skip completed (status 2) projects.
                     for (p in board.projects.filter { it.status != 2 }) {
-                        AMenuItem(p.title) {
+                        AMenuItem(p.title, leading = { ProjectDot() }) {
                             projectId = p.id; projectTouched = true
                         }
                     }
@@ -288,19 +270,19 @@ fun QuickEntrySheet(
                     desc = "Дата",
                     active = dateSet,
                 ) {
-                    AMenuItem("Эта неделя") {
+                    AMenuItem("Эта неделя", leading = { AIcon(R.drawable.ic_calendar_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
                         weekFlag = true; somedayFlag = false; pickedDate = null
                         dateTouched = true
                     }
-                    AMenuItem("Следующая неделя") {
+                    AMenuItem("Следующая неделя", leading = { AIcon(R.drawable.ic_calendar_02, tint = AgendaTheme.colors.fg(0.6f)) }) {
                         weekFlag = false; somedayFlag = false; pickedDate = nextMonday
                         dateTouched = true
                     }
-                    AMenuItem("Потом") {
+                    AMenuItem("Потом", leading = { AIcon(R.drawable.ic_clock_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
                         weekFlag = false; somedayFlag = true; pickedDate = null
                         dateTouched = true
                     }
-                    AMenuItem("Без даты") {
+                    AMenuItem("Без даты", leading = { NoneIcon() }) {
                         weekFlag = false; somedayFlag = false; pickedDate = null
                         dateTouched = true
                     }

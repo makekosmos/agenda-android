@@ -340,14 +340,24 @@ fun InlineTitleEditor(
 }
 
 /** Menu surface — the desktop popover look: `popover` bg, hairline
- * `border`, 8dp radius, 40dp items. */
+ * `border`, 8dp radius, 40dp items. [focusable] keeps default true;
+ * pass false where the keyboard must stay up while the menu is shown
+ * (a focusable popup window would steal window focus and hide the IME).
+ * [anchorAbove] pins the menu above its anchor instead of the default
+ * below-or-flip. */
 @Composable
-fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun AMenu(
+    open: Boolean,
+    onDismiss: () -> Unit,
+    focusable: Boolean = true,
+    anchorAbove: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     if (!open) return
     val c = AgendaTheme.colors
     // Anchor below the row, flip above when the menu would leave the
     // window — the desktop popover grows from its button the same way.
-    val positioner = remember {
+    val positioner = remember(anchorAbove) {
         object : androidx.compose.ui.window.PopupPositionProvider {
             override fun calculatePosition(
                 anchorBounds: androidx.compose.ui.unit.IntRect,
@@ -361,10 +371,14 @@ fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit)
                         (windowSize.width - popupContentSize.width).coerceAtLeast(0),
                     )
                 val y =
-                    if (anchorBounds.bottom + popupContentSize.height <= windowSize.height)
-                        anchorBounds.bottom
-                    else
-                        (anchorBounds.top - popupContentSize.height).coerceAtLeast(0)
+                    when {
+                        anchorAbove ->
+                            (anchorBounds.top - popupContentSize.height).coerceAtLeast(0)
+                        anchorBounds.bottom + popupContentSize.height <= windowSize.height ->
+                            anchorBounds.bottom
+                        else ->
+                            (anchorBounds.top - popupContentSize.height).coerceAtLeast(0)
+                    }
                 return androidx.compose.ui.unit.IntOffset(x, y)
             }
         }
@@ -372,7 +386,7 @@ fun AMenu(open: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit)
     Popup(
         popupPositionProvider = positioner,
         onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true),
+        properties = PopupProperties(focusable = focusable, dismissOnBackPress = focusable),
     ) {
         Box(
             Modifier
@@ -392,17 +406,41 @@ fun AMenuItem(
     label: String,
     enabled: Boolean = true,
     destructive: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     ARow(onClick = onClick, enabled = enabled, minHeight = 40.dp, verticalPadding = 9.dp) { glyph ->
-        Text(
-            label,
-            style = AgendaType.body,
-            color = if (destructive) AgendaTheme.colors.destructive else glyph,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(12.dp))
+            }
+            Text(
+                label,
+                style = AgendaType.body,
+                color = if (destructive) AgendaTheme.colors.destructive else glyph,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
+}
+
+/** Empty-circle glyph for «Без даты» / «Без проекта» menu rows — the
+ * desktop dropdown's none icon in the same 20dp cell as real icons. */
+@Composable
+fun NoneIcon() {
+    Box(
+        Modifier.size(20.dp).border(1.5.dp, AgendaTheme.colors.fg(0.6f), CircleShape)
+    )
+}
+
+/** Muted project dot — the desktop sidebar's project-row icon. */
+@Composable
+fun ProjectDot() {
+    Box(
+        Modifier.size(20.dp).padding(6.dp).clip(CircleShape).background(AgendaTheme.colors.mutedFg)
+    )
 }
 
 /**
@@ -544,6 +582,8 @@ fun SheetField(
     singleLine: Boolean = false,
     imeAction: androidx.compose.ui.text.input.ImeAction =
         androidx.compose.ui.text.input.ImeAction.Default,
+    keyboardType: androidx.compose.ui.text.input.KeyboardType =
+        androidx.compose.ui.text.input.KeyboardType.Text,
     keyboardActions: androidx.compose.foundation.text.KeyboardActions =
         androidx.compose.foundation.text.KeyboardActions.Default,
     focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
@@ -560,6 +600,7 @@ fun SheetField(
                 capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
                 autoCorrectEnabled = false,
                 imeAction = imeAction,
+                keyboardType = keyboardType,
             ),
         keyboardActions = keyboardActions,
         modifier =

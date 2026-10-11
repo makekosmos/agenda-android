@@ -9,12 +9,14 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -65,7 +68,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface Route {
-    data object Home : Route
+    data object Other : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
     data class Task(val id: String) : Route
@@ -132,23 +135,40 @@ private fun animationsEnabled(): Boolean {
     }
 }
 
+/** Bottom-bar tabs in Jack's Linear-style order (p9): week, next week,
+ * inbox, «Другое». The tab bar carries a separate «+» create button. */
+private val TAB_WEEK = "list:WEEK"
+private val TAB_NEXT_WEEK = "list:NEXT_WEEK"
+private val TAB_INBOX = "list:INBOX"
+private val TAB_OTHER = "other"
+private val TAB_KEYS = listOf(TAB_WEEK, TAB_NEXT_WEEK, TAB_INBOX, TAB_OTHER)
+
+private fun isTabRoot(route: String, stack: List<String>) =
+    stack.isEmpty() && route in TAB_KEYS
+
 /**
- * App shell: the home page is the root (Microsoft To Do style — no
- * drawer anywhere). Routes push/pop on a small string stack; system back
- * returns home.
+ * App shell: a Linear-style bottom bar with 4 tabs + a separate create
+ * button is the root; «На этой неделе» opens by default. Drill-ins push
+ * on a small string stack; system back at a tab root exits the app.
  */
 @Composable
 fun AgendaHome(
     board: Board,
     repository: BoardRepository? = null,
-    initialRoute: Route = Route.Home,
+    initialRoute: Route = Route.List(SmartList.WEEK),
     initialCreate: Boolean = false,
     initialEditTaskId: String? = null,
     themeMode: String = "system",
     onThemeMode: (String) -> Unit = {},
 ) {
-    var route by rememberSaveable {
-        mutableStateOf(routeKey(initialEditTaskId?.let { Route.Task(it) } ?: initialRoute))
+    val initialKey = routeKey(initialEditTaskId?.let { Route.Task(it) } ?: initialRoute)
+    var route by rememberSaveable { mutableStateOf(initialKey) }
+    // Drill-in stack of route keys; tab switches replace `route` and
+    // clear it, so back at a tab root falls through to the system
+    // (exits the app). A non-tab initial route (deep link, tests) gets
+    // the week tab under it so back has somewhere to land.
+    var stack by rememberSaveable {
+        mutableStateOf(if (initialKey in TAB_KEYS) emptyList() else listOf(TAB_WEEK))
     }
     // Direction of the last nav: 1 = drill in, -1 = back. Drives the
     // shared-axis-ish slide in the AnimatedContent below.
@@ -207,7 +227,14 @@ fun AgendaHome(
     }
     fun navigate(r: Route) {
         navDir = 1
+        stack = stack + route
         route = routeKey(r)
+    }
+    fun selectTab(tabKey: String) {
+        if (route == tabKey && stack.isEmpty()) return
+        navDir = 0
+        stack = emptyList()
+        route = tabKey
     }
     fun commitRename(title: String) {
         val pid = renamingProjectId ?: return
@@ -218,9 +245,10 @@ fun AgendaHome(
         // Leaving the page commits a pending rename (desktop commits on
         // Enter/Blur — blur here is navigation away).
         if (renamingProjectId != null) commitRename(renameDraft)
-        if (route != "home") {
+        if (stack.isNotEmpty()) {
             navDir = -1
-            route = "home"
+            route = stack.last()
+            stack = stack.dropLast(1)
         }
     }
     fun onCreateProject() {
@@ -262,7 +290,7 @@ fun AgendaHome(
     // reverses them). A bare KEYCODE_BACK delivers no progress events, so
     // the flow completes empty and the committed back transition runs.
     var backPreview by remember { mutableFloatStateOf(0f) }
-    PredictiveBackHandler(enabled = route != "home") { events ->
+    PredictiveBackHandler(enabled = stack.isNotEmpty()) { events ->
         var maxProgress = 0f
         try {
             events.collect { ev ->
@@ -281,7 +309,7 @@ fun AgendaHome(
     val current = parseRoute(route)
     val title =
         when (val r = current) {
-            is Route.Home -> "Agenda"
+            is Route.Other -> "Другое"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
             is Route.Task -> "Задача"
@@ -303,7 +331,7 @@ fun AgendaHome(
                     ?.takeIf { renamingProjectId == it.id }
             AgendaTopBar(
                 title = title,
-                onBack = if (current !is Route.Home) ::back else null,
+                onBack = if (stack.isNotEmpty()) ::back else null,
                 titleContent =
                     renamingProject?.let { r ->
                         {
@@ -318,8 +346,8 @@ fun AgendaHome(
             @Composable
             fun PageContent(r: Route) {
                 when (r) {
-                    is Route.Home ->
-                        HomePage(
+                    is Route.Other ->
+                        OtherPage(
                             board = board,
                             onNavigate = ::navigate,
                             actions = actions,
@@ -365,7 +393,7 @@ fun AgendaHome(
                 if (backPreview > 0f) {
                     BackGesturePreview(
                         progress = backPreview,
-                        behind = { PageContent(Route.Home) },
+                        behind = { PageContent(stack.lastOrNull()?.let(::parseRoute) ?: current) },
                         front = { PageContent(current) },
                     )
                 } else {
@@ -390,9 +418,23 @@ fun AgendaHome(
             }
         }
 
-        // Desktop only offers task creation on task pages (not
-        // Settings/Statistics/About) — and the open task page has no «+».
-        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About && current !is Route.Sync && current !is Route.Task) {
+        // Linear-style bottom chrome (p9): a floating tab bar on the 4
+        // tab roots with a separate accent «+» button on the right. On
+        // list/project drill-ins just the «+» survives, like the old FAB
+        // (desktop offers creation on task pages only, not on
+        // Settings/Statistics/About — and the open task page has none).
+        if (isTabRoot(route, stack)) {
+            AgendaBottomBar(
+                selected = route,
+                onTab = ::selectTab,
+                onCreate = { createOpen = true },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 16.dp),
+            )
+        } else if (current is Route.List || current is Route.Project) {
             QuickEntryButton(
                 onClick = { createOpen = true },
             modifier =
@@ -428,7 +470,7 @@ fun AgendaHome(
 
 fun routeKey(route: Route): String =
     when (route) {
-        is Route.Home -> "home"
+        is Route.Other -> "other"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
         is Route.Task -> "task:${route.id}"
@@ -451,7 +493,7 @@ fun parseRoute(key: String): Route =
                 runCatching { SmartList.valueOf(key.substringAfter(':')) }
                     .getOrDefault(SmartList.INBOX)
             )
-        else -> Route.Home
+        else -> Route.Other
     }
 
 /** One home section group — the desktop sidebar "card" (sidebar_bg
@@ -506,13 +548,14 @@ private fun HomeRow(
 }
 
 /**
- * The home page — the desktop sidebar as a page, in its exact order:
- * nav lists (chrome.rs:375-385), active projects under «Проекты»
- * (chrome.rs:389-535), «Другое» popover items (chrome.rs:1054-1067).
- * No counts: the desktop sidebar renders none.
+ * The «Другое» tab — everything that used to be the home page, minus
+ * the nav lists now owned by the bottom bar: «Потом», all projects
+ * with create-project, then Архив / Корзина / Статистика / Настройки /
+ * О приложении (Jack's p9 list). No counts: the desktop sidebar renders
+ * none.
  */
 @Composable
-fun HomePage(
+fun OtherPage(
     board: Board,
     onNavigate: (Route) -> Unit,
     actions: TaskActions = TaskActions(),
@@ -530,18 +573,6 @@ fun HomePage(
             UpdateBanner(it, Modifier.padding(bottom = 8.dp))
         }
         HomeGroup {
-            HomeRow(R.drawable.ic_inbox, SmartList.INBOX.titleRu) {
-                onNavigate(Route.List(SmartList.INBOX))
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_calendar_01, SmartList.WEEK.titleRu) {
-                onNavigate(Route.List(SmartList.WEEK))
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_calendar_02, SmartList.NEXT_WEEK.titleRu) {
-                onNavigate(Route.List(SmartList.NEXT_WEEK))
-            }
-            ADivider(indent = 44.dp)
             HomeRow(R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu) {
                 onNavigate(Route.List(SmartList.SOMEDAY))
             }
@@ -595,7 +626,7 @@ fun HomePage(
             }
         }
 
-        ASectionHeader("Другое")
+        Spacer(Modifier.height(14.dp))
         HomeGroup {
             HomeRow(R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu) {
                 onNavigate(Route.List(SmartList.LOGBOOK))
@@ -603,6 +634,10 @@ fun HomePage(
             ADivider(indent = 44.dp)
             HomeRow(R.drawable.ic_delete, SmartList.TRASH.titleRu) {
                 onNavigate(Route.List(SmartList.TRASH))
+            }
+            ADivider(indent = 44.dp)
+            HomeRow(R.drawable.ic_chart, "Статистика") {
+                onNavigate(Route.Statistics)
             }
             ADivider(indent = 44.dp)
             HomeRow(R.drawable.ic_settings, "Настройки") {
@@ -613,5 +648,53 @@ fun HomePage(
                 onNavigate(Route.About)
             }
         }
+    }
+}
+
+/**
+ * The Linear-style floating bottom bar: one rounded bar with the four
+ * tab icons, then a separate accent «+» button on the right (see Jack's
+ * linear-list-bottom-nav.png). Tabs are icon-only; the selected tab's
+ * glyph goes full-fg, the rest stay muted.
+ */
+@Composable
+fun AgendaBottomBar(
+    selected: String,
+    onTab: (String) -> Unit,
+    onCreate: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = AgendaTheme.colors
+    Row(
+        modifier = modifier.padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(c.popover)
+                    .border(0.5.dp, c.border, RoundedCornerShape(28.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val tabs =
+                listOf(
+                    Triple(TAB_WEEK, R.drawable.ic_calendar_01, "На этой неделе"),
+                    Triple(TAB_NEXT_WEEK, R.drawable.ic_calendar_02, "На следующей неделе"),
+                    Triple(TAB_INBOX, R.drawable.ic_inbox, SmartList.INBOX.titleRu),
+                    Triple(TAB_OTHER, R.drawable.ic_more_h, "Другое"),
+                )
+            tabs.forEach { (key, icon, desc) ->
+                AIconButton(
+                    icon,
+                    desc = desc,
+                    onClick = { onTab(key) },
+                    tint = if (selected == key) c.fg else c.fg(0.45f),
+                )
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        QuickEntryButton(onClick = onCreate)
     }
 }
