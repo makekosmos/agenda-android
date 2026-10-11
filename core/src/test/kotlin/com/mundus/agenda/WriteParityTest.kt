@@ -119,13 +119,17 @@ class WriteParityTest {
 
     @Test
     fun completeMovesToLogbook() = runBlocking {
+        // Completed today stays visible in Week (completed_in_week); the
+        // Logbook view holds only tasks whose completion date is in the
+        // past, so cover it with the already-archived seed row.
         repository.toggleComplete(task("dev-week-4"))
         val b = board(repository)
-        assertFalse("dev-week-4" in b.ids(SmartList.WEEK))
-        assertTrue("dev-week-4" in b.ids(SmartList.LOGBOOK))
         val done = b.task("dev-week-4")!!
         assertTrue(done.isCompleted)
         assertTrue(done.completedAt != null)
+        assertTrue("dev-week-4" in b.ids(SmartList.WEEK))
+        assertFalse("dev-week-4" in b.ids(SmartList.LOGBOOK))
+        assertTrue("dev-done-yesterday" in b.ids(SmartList.LOGBOOK))
     }
 
     @Test

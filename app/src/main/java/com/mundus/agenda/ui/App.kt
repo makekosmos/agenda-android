@@ -5,11 +5,14 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,16 +36,20 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -58,6 +65,9 @@ import com.mundus.agenda.BoardState
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import com.mundus.agenda.WriteConflict
 import com.mundus.agenda.updater.UpdateManager
 import kotlinx.coroutines.delay
@@ -170,9 +180,6 @@ fun AgendaHome(
     var stack by rememberSaveable {
         mutableStateOf(if (initialKey in TAB_KEYS) emptyList() else listOf(TAB_WEEK))
     }
-    // Direction of the last nav: 1 = drill in, -1 = back. Drives the
-    // shared-axis-ish slide in the AnimatedContent below.
-    var navDir by rememberSaveable { mutableIntStateOf(0) }
     var toast by remember { mutableStateOf<String?>(null) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     // The just-created task a sheet «maximize» navigates to — the board
@@ -226,13 +233,11 @@ fun AgendaHome(
         }
     }
     fun navigate(r: Route) {
-        navDir = 1
         stack = stack + route
         route = routeKey(r)
     }
     fun selectTab(tabKey: String) {
         if (route == tabKey && stack.isEmpty()) return
-        navDir = 0
         stack = emptyList()
         route = tabKey
     }
@@ -246,7 +251,6 @@ fun AgendaHome(
         // Enter/Blur — blur here is navigation away).
         if (renamingProjectId != null) commitRename(renameDraft)
         if (stack.isNotEmpty()) {
-            navDir = -1
             route = stack.last()
             stack = stack.dropLast(1)
         }
@@ -319,9 +323,16 @@ fun AgendaHome(
             is Route.About -> "О приложении"
         }
     val animate = animationsEnabled()
-    val slideDur = if (animate) 240 else 0
+    val slideDur = if (animate) 180 else 0
 
-    Box(Modifier.fillMaxSize().background(c.bg)) {
+    val hazeState = rememberHazeState()
+    var glassLight by remember { mutableFloatStateOf(0.32f) }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(c.bg)
+            .glassLightDrag { glassLight = (glassLight + it * 0.0004f).coerceIn(0f, 1f) },
+    ) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             // Shared top bar: identical title geometry on every page. On a
             // project page in rename mode the title is the desktop editable
@@ -389,7 +400,7 @@ fun AgendaHome(
                 }
             }
 
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            Box(Modifier.weight(1f).fillMaxWidth().hazeSource(hazeState)) {
                 if (backPreview > 0f) {
                     BackGesturePreview(
                         progress = backPreview,
@@ -400,23 +411,25 @@ fun AgendaHome(
                     AnimatedContent(
                         targetState = current,
                         transitionSpec = {
-                            if (navDir >= 0) {
-                                (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 4 } +
-                                    fadeIn(tween(slideDur))) togetherWith
-                                    (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 6 } +
-                                        fadeOut(tween(slideDur)))
-                            } else {
-                                (slideInHorizontally(tween(slideDur, easing = EaseEmphasized)) { -it / 4 } +
-                                    fadeIn(tween(slideDur))) togetherWith
-                                    (slideOutHorizontally(tween(slideDur, easing = EaseEmphasized)) { it / 6 } +
-                                        fadeOut(tween(slideDur)))
-                            }
+                            fadeIn(tween(slideDur, easing = EaseEmphasized)) togetherWith
+                                fadeOut(tween(slideDur, easing = EaseEmphasized))
                         },
                         label = "nav",
                     ) { r -> PageContent(r) }
                 }
             }
         }
+
+        // Content fade-out where the list runs under the glass chrome.
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(110.dp)
+                .background(
+                    Brush.verticalGradient(listOf(Color.Transparent, c.bg.copy(alpha = 0.92f))),
+                ),
+        )
 
         // Linear-style bottom chrome (p9): a floating tab bar on the 4
         // tab roots with a separate accent «+» button on the right. On
@@ -428,15 +441,19 @@ fun AgendaHome(
                 selected = route,
                 onTab = ::selectTab,
                 onCreate = { createOpen = true },
+                hazeState = hazeState,
+                lightFraction = glassLight,
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
-                        .padding(bottom = 16.dp),
+                        .padding(bottom = 24.dp),
             )
         } else if (current is Route.List || current is Route.Project) {
             QuickEntryButton(
                 onClick = { createOpen = true },
+                hazeState = hazeState,
+                lightFraction = glassLight,
             modifier =
                 Modifier
                     .align(Alignment.BottomEnd)
@@ -662,21 +679,23 @@ fun AgendaBottomBar(
     selected: String,
     onTab: (String) -> Unit,
     onCreate: () -> Unit,
+    hazeState: HazeState,
+    lightFraction: Float,
     modifier: Modifier = Modifier,
 ) {
     val c = AgendaTheme.colors
     Row(
-        modifier = modifier.padding(horizontal = 16.dp),
+        modifier = modifier.padding(horizontal = 26.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier =
                 Modifier
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(c.popover)
-                    .border(0.5.dp, c.border, RoundedCornerShape(28.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .weight(1f)
+                    .glassChrome(hazeState, lightFraction, CircleShape)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             val tabs =
                 listOf(
@@ -686,15 +705,39 @@ fun AgendaBottomBar(
                     Triple(TAB_OTHER, R.drawable.ic_more_h, "Другое"),
                 )
             tabs.forEach { (key, icon, desc) ->
-                AIconButton(
-                    icon,
-                    desc = desc,
-                    onClick = { onTab(key) },
-                    tint = if (selected == key) c.fg else c.fg(0.45f),
-                )
+                val sel = selected == key
+                val interaction = remember { MutableInteractionSource() }
+                val pressed by interaction.collectIsPressedAsState()
+                val scale by
+                    animateFloatAsState(if (pressed) 1.08f else 1f, label = "tab-pulse")
+                Box(
+                    modifier =
+                        Modifier
+                            .size(width = 58.dp, height = 48.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale }
+                            .clip(RoundedCornerShape(23.dp))
+                            .then(if (sel) Modifier.background(c.secondary) else Modifier)
+                            .clickable(
+                                interactionSource = interaction,
+                                indication = null,
+                                role = Role.Button,
+                                onClick = { onTab(key) },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AIcon(
+                        icon,
+                        tint = if (sel) c.fg else c.fg(0.45f),
+                        desc = desc,
+                    )
+                }
             }
         }
-        Spacer(Modifier.weight(1f))
-        QuickEntryButton(onClick = onCreate)
+        Spacer(Modifier.width(10.dp))
+        QuickEntryButton(
+            onClick = onCreate,
+            hazeState = hazeState,
+            lightFraction = lightFraction,
+        )
     }
 }

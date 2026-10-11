@@ -517,26 +517,30 @@ fun StatusRing(task: Task, onToggle: (Task) -> Unit = {}) {
     }
 }
 
-/** Compact bottom-right «+» quick-entry affordance — the one accent
- * surface on screen (primary action). Linear-style rounded rect, not a
- * circular M3 FAB. */
+/** Circular glass create button — Linear's separate affordance to the
+ * right of the tab pill, same chrome and height. Press lifts it. */
 @Composable
-fun QuickEntryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun QuickEntryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    hazeState: dev.chrisbanes.haze.HazeState,
+    lightFraction: Float,
+) {
     val c = AgendaTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val bg by
-        animateColorAsState(
-            if (pressed) c.accentDim else c.accent,
+    val scale by
+        animateFloatAsState(
+            if (pressed) 1.08f else 1f,
             animationSpec = tween(PRESS_MS, easing = EaseStandard),
-            label = "qe-press",
+            label = "qe-pulse",
         )
     Box(
         modifier =
             modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(bg)
+                .size(56.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .glassChrome(hazeState, lightFraction, CircleShape)
                 .clickable(
                     interactionSource = interaction,
                     indication = null,
@@ -545,7 +549,7 @@ fun QuickEntryButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        AIcon(R.drawable.ic_plus, tint = c.accentFg, desc = "Новая задача", modifier = Modifier.size(22.dp))
+        AIcon(R.drawable.ic_compose, tint = c.fg, desc = "Новая задача")
     }
 }
 
