@@ -163,6 +163,7 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation("dev.chrisbanes.haze:haze:1.6.10")
+    implementation("dev.chrisbanes.haze:haze-materials:1.6.10")
     testImplementation(libs.junit)
     testImplementation(libs.jna)
     testImplementation(libs.robolectric)

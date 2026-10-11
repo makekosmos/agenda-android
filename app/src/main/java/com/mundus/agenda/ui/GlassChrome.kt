@@ -1,7 +1,6 @@
 package com.mundus.agenda.ui
 
 import android.os.Build
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,7 +17,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 
 /** Accessibility «high contrast text» — swap hairlines for solid outlines. */
 @Composable
@@ -93,9 +94,11 @@ fun Modifier.specularOverlay(shape: Shape, lightFraction: Float): Modifier =
         }
     }
 
-/** Linear-style floating chrome: blur of the content behind, dark
- * translucent surface with a faint vertical gradient for structure,
- * hairline (or solid) border, soft shadow, SDF-ish specular sheen. */
+/** Frosted floating chrome: Haze's thin material (blur + tint + noise of
+ * the content behind), hairline (or solid) border, soft shadow, specular
+ * sheen. The material tint stays translucent so the content shows
+ * through — an opaque fill on top would hide the blur. */
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun Modifier.glassChrome(
     hazeState: HazeState,
@@ -107,14 +110,9 @@ fun Modifier.glassChrome(
     val borderW = if (hc) 1.5.dp else 0.5.dp
     val borderCol = if (hc) c.mutedFg else c.border
     return this
-        .shadow(14.dp, shape, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
+        .shadow(10.dp, shape, clip = false, ambientColor = Color.Black, spotColor = Color.Black)
         .clip(shape)
-        .hazeChild(state = hazeState)
-        .background(
-            Brush.verticalGradient(
-                listOf(c.popover.copy(alpha = 0.94f), c.popover.copy(alpha = 0.78f)),
-            ),
-        )
+        .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(containerColor = c.popover)) { blurRadius = 8.dp }
         .border(borderW, borderCol, shape)
         .specularOverlay(shape, lightFraction)
 }
