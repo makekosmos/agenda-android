@@ -1,40 +1,66 @@
 package com.mundus.agenda.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeAnimationSource
+import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsAnimationCompat
-import androidx.core.view.WindowInsetsCompat
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.QuickEntryPreview
 import com.mundus.agenda.R
 import com.mundus.agenda.Task
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Icon button on the sheet's bottom bar with its popup menu anchored on
  * it — Todoist's quick-add property strip. [active] tints the glyph when
@@ -66,6 +92,26 @@ private fun SheetIconMenu(
     }
 }
 
+private enum class SheetPhase { Opening, Open, Closing }
+
+private const val SHEET_SLIDE_MS = 285
+private const val IME_START_TIMEOUT_MS = 200L
+private const val IME_HIDE_TIMEOUT_MS = 600L
+
+/** Fraction of the running (or settled) soft-keyboard inset, from the
+ * IME animation's own source/target; null while no keyboard is shown. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun imeProgress(): Float? {
+    val d = LocalDensity.current
+    val full =
+        maxOf(
+            WindowInsets.imeAnimationSource.getBottom(d),
+            WindowInsets.imeAnimationTarget.getBottom(d),
+        )
+    return if (full > 0) WindowInsets.ime.getBottom(d).toFloat() / full else null
+}
+
 /**
  * The quick-entry sheet (desktop quick_entry.rs create arm). Todoist
  * layout (Jack's KOS-381 correction): the title input stays at the top,
@@ -73,7 +119,7 @@ private fun SheetIconMenu(
  * «maximize», which writes the draft and opens it in the full-screen
  * task page, the same page a task-row tap drills into.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun QuickEntrySheet(
     board: Board,
@@ -82,6 +128,7 @@ fun QuickEntrySheet(
     run: (suspend () -> Unit) -> Unit,
     onExpand: (Task) -> Unit = {},
     initialWeek: Boolean = false,
+    hazeState: HazeState? = null,
 ) {
     val c = AgendaTheme.colors
     var title by remember { mutableStateOf("") }
@@ -184,139 +231,207 @@ fun QuickEntrySheet(
         onDismiss()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = c.popover,
-        contentColor = c.fg,
-        dragHandle = {
+    // The sheet rides the keyboard's own inset animation: while opening
+    // or closing, its offset is the IME's progress, so both move on the
+    // same frames with the system curve. Without a soft keyboard
+    // (hardware keyboard, tests) it falls back to its own slide.
+    val ime = imeProgress()
+    val imeNow = rememberUpdatedState(ime)
+    var phase by remember { mutableStateOf(SheetPhase.Opening) }
+    val own = remember { Animatable(0f) }
+    var dragY by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(Unit) {
+        titleFocus.requestFocus()
+        keyboard?.show()
+        val imeStarted =
+            withTimeoutOrNull(IME_START_TIMEOUT_MS) {
+                snapshotFlow { imeNow.value }.first { it != null }
+            }
+        if (imeStarted == null) {
+            own.animateTo(1f, tween(SHEET_SLIDE_MS, easing = EaseEmphasized))
+        } else {
+            snapshotFlow { imeNow.value }.first { it == null || it >= 0.999f }
+        }
+        own.snapTo(1f)
+        phase = SheetPhase.Open
+    }
+
+    fun close() {
+        if (phase == SheetPhase.Closing) return
+        phase = SheetPhase.Closing
+        scope.launch {
+            if (imeNow.value != null) {
+                own.snapTo(0f)
+                focusManager.clearFocus()
+                keyboard?.hide()
+                withTimeoutOrNull(IME_HIDE_TIMEOUT_MS) {
+                    snapshotFlow { imeNow.value }.first { it == null }
+                }
+            } else {
+                own.animateTo(0f, tween(SHEET_SLIDE_MS, easing = EaseEmphasized))
+            }
+            onDismiss()
+        }
+    }
+
+    BackHandler(enabled = phase != SheetPhase.Closing) { close() }
+
+    val shown =
+        when (phase) {
+            SheetPhase.Opening -> maxOf(own.value, ime ?: 0f)
+            SheetPhase.Open -> 1f
+            SheetPhase.Closing -> ime ?: own.value
+        }
+    val sheetShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+    val dismissDragPx = with(LocalDensity.current) { 96.dp.toPx() }
+
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = shown }
+                .background(Color.Black.copy(alpha = 0.32f))
+                .pointerInput(Unit) { detectTapGestures { close() } }
+        )
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .graphicsLayer { translationY = (1f - shown) * size.height + dragY }
+                .draggable(
+                    state = rememberDraggableState { dragY = (dragY + it).coerceAtLeast(0f) },
+                    orientation = Orientation.Vertical,
+                    onDragStopped = { velocity ->
+                        if (dragY > dismissDragPx || velocity > 1500f) {
+                            close()
+                        } else {
+                            animate(dragY, 0f, animationSpec = tween(SHEET_SLIDE_MS, easing = EaseEmphasized)) { v, _ ->
+                                dragY = v
+                            }
+                        }
+                    },
+                )
+                .clip(sheetShape)
+                // Opaque base: without RenderEffect (API < 31) haze only tints, and the bottom bar would show through.
+                .background(c.popover)
+                .then(
+                    if (hazeState != null) {
+                        Modifier.hazeEffect(hazeState, style = HazeMaterials.thick(containerColor = c.popover))
+                    } else {
+                        Modifier
+                    }
+                )
+                .border(0.5.dp, c.border, sheetShape)
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+        ) {
             Box(
                 Modifier
+                    .align(Alignment.CenterHorizontally)
                     .padding(top = 10.dp, bottom = 2.dp)
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(c.border)
             )
-        },
-    ) {
-        // Snap the ime padding to its final value instead of animating it:
-        // DISPATCH_MODE_STOP makes this subtree receive the end-state IME
-        // insets immediately, so the input row is already in place when the
-        // keyboard slides up (Jack: the rise felt too slow).
-        val view = LocalView.current
-        androidx.compose.runtime.DisposableEffect(view) {
-            val cb =
-                object : WindowInsetsAnimationCompat.Callback(
-                    DISPATCH_MODE_STOP
-                ) {
-                    override fun onProgress(
-                        insets: WindowInsetsCompat,
-                        runningAnimations: List<WindowInsetsAnimationCompat>,
-                    ): WindowInsetsCompat = insets
-                }
-            ViewCompat.setWindowInsetsAnimationCallback(view, cb)
-            onDispose { ViewCompat.setWindowInsetsAnimationCallback(view, null) }
-        }
-        Column(modifier = Modifier.imePadding().padding(bottom = 4.dp)) {
-            // Title first — a large, comfortable input line at the top.
-            SheetField(
-                value = title,
-                onValueChange = { title = it },
-                placeholder = "Новая задача",
-                style = AgendaType.input,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                singleLine = true,
-                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
-                // No-suggestions input type: kills the IME candidate
-                // strip and the accent composing underline Jack flagged
-                // as a crooked autocomplete artifact (p9 item 3).
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii,
-                keyboardActions =
-                    androidx.compose.foundation.text.KeyboardActions(
-                        onDone = { createAndContinue() }
-                    ),
-                focusRequester = titleFocus,
-            )
-            LaunchedEffect(Unit) {
-                titleFocus.requestFocus()
-                keyboard?.show()
-            }
+            Column(modifier = Modifier.padding(bottom = 4.dp)) {
+                // Title first — a large, comfortable input line at the top.
+                SheetField(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = "Новая задача",
+                    style = AgendaType.input,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    singleLine = true,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                    // No-suggestions input type: kills the IME candidate
+                    // strip and the accent composing underline Jack flagged
+                    // as a crooked autocomplete artifact (p9 item 3).
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii,
+                    keyboardActions =
+                        androidx.compose.foundation.text.KeyboardActions(
+                            onDone = { createAndContinue() }
+                        ),
+                    focusRequester = titleFocus,
+                )
 
-            ADivider(modifier = Modifier.padding(horizontal = 12.dp))
-            // Bottom icon row: property pickers left, actions right.
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SheetIconMenu(
-                    icon = R.drawable.ic_folder,
-                    desc = "Проект",
-                    active = projectId != null,
+                ADivider(modifier = Modifier.padding(horizontal = 12.dp))
+                // Bottom icon row: property pickers left, actions right.
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AMenuItem("Без проекта", leading = { NoneIcon() }) {
-                        projectId = null; projectTouched = true
-                    }
-                    // Desktop dropdowns skip completed (status 2) projects.
-                    for (p in board.projects.filter { it.status != 2 }) {
-                        AMenuItem(p.title, leading = { ProjectDot() }) {
-                            projectId = p.id; projectTouched = true
+                    SheetIconMenu(
+                        icon = R.drawable.ic_folder,
+                        desc = "Проект",
+                        active = projectId != null,
+                    ) {
+                        AMenuItem("Без проекта", leading = { NoneIcon() }) {
+                            projectId = null; projectTouched = true
+                        }
+                        // Desktop dropdowns skip completed (status 2) projects.
+                        for (p in board.projects.filter { it.status != 2 }) {
+                            AMenuItem(p.title, leading = { ProjectDot() }) {
+                                projectId = p.id; projectTouched = true
+                            }
                         }
                     }
-                }
-                SheetIconMenu(
-                    icon = R.drawable.ic_calendar_02,
-                    desc = "Дата",
-                    active = dateSet,
-                ) {
-                    AMenuItem("Эта неделя", leading = { AIcon(R.drawable.ic_calendar_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
-                        weekFlag = true; somedayFlag = false; pickedDate = null
-                        dateTouched = true
+                    SheetIconMenu(
+                        icon = R.drawable.ic_calendar_02,
+                        desc = "Дата",
+                        active = dateSet,
+                    ) {
+                        AMenuItem("Эта неделя", leading = { AIcon(R.drawable.ic_calendar_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
+                            weekFlag = true; somedayFlag = false; pickedDate = null
+                            dateTouched = true
+                        }
+                        AMenuItem("Следующая неделя", leading = { AIcon(R.drawable.ic_calendar_02, tint = AgendaTheme.colors.fg(0.6f)) }) {
+                            weekFlag = false; somedayFlag = false; pickedDate = nextMonday
+                            dateTouched = true
+                        }
+                        AMenuItem("Потом", leading = { AIcon(R.drawable.ic_clock_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
+                            weekFlag = false; somedayFlag = true; pickedDate = null
+                            dateTouched = true
+                        }
+                        AMenuItem("Без даты", leading = { NoneIcon() }) {
+                            weekFlag = false; somedayFlag = false; pickedDate = null
+                            dateTouched = true
+                        }
                     }
-                    AMenuItem("Следующая неделя", leading = { AIcon(R.drawable.ic_calendar_02, tint = AgendaTheme.colors.fg(0.6f)) }) {
-                        weekFlag = false; somedayFlag = false; pickedDate = nextMonday
-                        dateTouched = true
+                    if (dateSet || projectId != null) {
+                        Text(
+                            buildList {
+                                if (dateSet) add(dateLabel ?: "")
+                                projectId?.let { pid ->
+                                    board.projects.firstOrNull { it.id == pid }?.let { add(it.title) }
+                                }
+                            }.filter { it.isNotBlank() }.joinToString(" · "),
+                            style = AgendaType.meta,
+                            color = c.mutedFg,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 4.dp).weight(1f, fill = false),
+                        )
                     }
-                    AMenuItem("Потом", leading = { AIcon(R.drawable.ic_clock_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
-                        weekFlag = false; somedayFlag = true; pickedDate = null
-                        dateTouched = true
-                    }
-                    AMenuItem("Без даты", leading = { NoneIcon() }) {
-                        weekFlag = false; somedayFlag = false; pickedDate = null
-                        dateTouched = true
-                    }
-                }
-                if (dateSet || projectId != null) {
-                    Text(
-                        buildList {
-                            if (dateSet) add(dateLabel ?: "")
-                            projectId?.let { pid ->
-                                board.projects.firstOrNull { it.id == pid }?.let { add(it.title) }
-                            }
-                        }.filter { it.isNotBlank() }.joinToString(" · "),
-                        style = AgendaType.meta,
-                        color = c.mutedFg,
-                        maxLines = 1,
-                        modifier = Modifier.padding(start = 4.dp).weight(1f, fill = false),
+                    Spacer(Modifier.weight(1f))
+                    val canSave = title.isNotBlank()
+                    AIconButton(
+                        R.drawable.ic_maximize,
+                        desc = "Открыть полностью",
+                        onClick = ::expand,
+                        enabled = canSave,
+                        tint = c.fg(0.6f),
+                    )
+                    AIconButton(
+                        R.drawable.ic_arrow_up,
+                        desc = "Сохранить",
+                        onClick = { createAndContinue() },
+                        enabled = canSave,
+                        tint = c.accent,
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                val canSave = title.isNotBlank()
-                AIconButton(
-                    R.drawable.ic_maximize,
-                    desc = "Открыть полностью",
-                    onClick = ::expand,
-                    enabled = canSave,
-                    tint = c.fg(0.6f),
-                )
-                AIconButton(
-                    R.drawable.ic_arrow_up,
-                    desc = "Сохранить",
-                    onClick = { createAndContinue() },
-                    enabled = canSave,
-                    tint = c.accent,
-                )
             }
         }
     }

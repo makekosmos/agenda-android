@@ -2,6 +2,17 @@ package com.mundus.agenda.ui
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -20,6 +31,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,7 +55,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
@@ -181,6 +192,7 @@ fun AgendaHome(
         mutableStateOf(if (initialKey in TAB_KEYS) emptyList() else listOf(TAB_WEEK))
     }
     var toast by remember { mutableStateOf<String?>(null) }
+    var navMotion by remember { mutableStateOf(NavMotion.Tab) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     // The just-created task a sheet «maximize» navigates to — the board
     // flow may lag one emission behind, so the page renders this
@@ -233,11 +245,13 @@ fun AgendaHome(
         }
     }
     fun navigate(r: Route) {
+        navMotion = NavMotion.Push
         stack = stack + route
         route = routeKey(r)
     }
     fun selectTab(tabKey: String) {
         if (route == tabKey && stack.isEmpty()) return
+        navMotion = NavMotion.Tab
         stack = emptyList()
         route = tabKey
     }
@@ -251,6 +265,7 @@ fun AgendaHome(
         // Enter/Blur — blur here is navigation away).
         if (renamingProjectId != null) commitRename(renameDraft)
         if (stack.isNotEmpty()) {
+            navMotion = NavMotion.Pop
             route = stack.last()
             stack = stack.dropLast(1)
         }
@@ -301,9 +316,18 @@ fun AgendaHome(
                 maxProgress = maxOf(maxProgress, ev.progress)
                 backPreview = ev.progress
             }
-            backPreview = 0f
             android.util.Log.d("AgendaNav", "back committed (maxProgress=$maxProgress)")
+            // Finish the gesture's own slide, then swap without a second
+            // transition replaying from the start.
+            val gestured = backPreview > 0f
+            if (gestured) {
+                animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
+                    backPreview = v
+                }
+            }
             back()
+            if (gestured) navMotion = NavMotion.None
+            backPreview = 0f
         } catch (_: kotlinx.coroutines.CancellationException) {
             android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
             backPreview = 0f
@@ -323,7 +347,7 @@ fun AgendaHome(
             is Route.About -> "О приложении"
         }
     val animate = animationsEnabled()
-    val slideDur = if (animate) 180 else 0
+    val navMs = if (animate) NAV_MS else 0
 
     val hazeState = rememberHazeState()
     var glassLight by remember { mutableFloatStateOf(0.32f) }
@@ -400,7 +424,15 @@ fun AgendaHome(
                 }
             }
 
-            Box(Modifier.weight(1f).fillMaxWidth().hazeSource(hazeState)) {
+            // adjustResize + edge-to-edge: pages keep focused fields above
+            // the keyboard themselves; the quick-entry sheet rides it instead.
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .then(if (createOpen) Modifier else Modifier.imePadding())
+                    .hazeSource(hazeState)
+            ) {
                 if (backPreview > 0f) {
                     BackGesturePreview(
                         progress = backPreview,
@@ -410,26 +442,12 @@ fun AgendaHome(
                 } else {
                     AnimatedContent(
                         targetState = current,
-                        transitionSpec = {
-                            fadeIn(tween(slideDur, easing = EaseEmphasized)) togetherWith
-                                fadeOut(tween(slideDur, easing = EaseEmphasized))
-                        },
+                        transitionSpec = { navTransition(navMotion, navMs) },
                         label = "nav",
                     ) { r -> PageContent(r) }
                 }
             }
         }
-
-        // Content fade-out where the list runs under the glass chrome.
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(110.dp)
-                .background(
-                    Brush.verticalGradient(listOf(Color.Transparent, c.bg.copy(alpha = 0.92f))),
-                ),
-        )
 
         // Linear-style bottom chrome (p9): a floating tab bar on the 4
         // tab roots with a separate accent «+» button on the right. On
@@ -466,23 +484,52 @@ fun AgendaHome(
             message = toast,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 20.dp),
         )
-    }
 
-    // Desktop quick-entry panel: create from the + button; a task-row tap
-    // drills into the full-screen task page.
-    if (createOpen) {
-        QuickEntrySheet(
-            board = board,
-            repository = repository,
-            onDismiss = { createOpen = false },
-            run = ::run,
-            onExpand = { task ->
-                createdTaskFallback = task
-                navigate(Route.Task(task.id))
-            },
-            initialWeek = current == Route.List(SmartList.WEEK),
-        )
+        // Desktop quick-entry panel: create from the + button; a task-row
+        // tap drills into the full-screen task page. In-window (not a
+        // dialog) so it can frost the page behind and follow the IME.
+        if (createOpen) {
+            QuickEntrySheet(
+                board = board,
+                repository = repository,
+                onDismiss = { createOpen = false },
+                run = ::run,
+                onExpand = { task ->
+                    createdTaskFallback = task
+                    navigate(Route.Task(task.id))
+                },
+                initialWeek = current == Route.List(SmartList.WEEK),
+                hazeState = hazeState,
+            )
+        }
     }
+}
+
+private enum class NavMotion { Tab, Push, Pop, None }
+
+private const val NAV_MS = 300
+
+/** Material motion: fade through between tabs, shared axis X for drill-in
+ * and back. The outgoing page fades out over the first 30%, the incoming
+ * one fades in after it — on the dark background that gap reads as the
+ * page dimming, then brightening. */
+private fun navTransition(motion: NavMotion, durationMs: Int): ContentTransform {
+    if (motion == NavMotion.None || durationMs == 0) {
+        return EnterTransition.None togetherWith ExitTransition.None
+    }
+    val outMs = durationMs * 3 / 10
+    val inMs = durationMs - outMs
+    val exit = fadeOut(tween(outMs, easing = FastOutLinearInEasing))
+    val enter = fadeIn(tween(inMs, delayMillis = outMs, easing = LinearOutSlowInEasing))
+    if (motion == NavMotion.Tab) {
+        return enter +
+            scaleIn(tween(inMs, delayMillis = outMs, easing = LinearOutSlowInEasing), initialScale = 0.92f) togetherWith
+            exit
+    }
+    val dir = if (motion == NavMotion.Push) 1 else -1
+    val slide = tween<IntOffset>(durationMs, easing = FastOutSlowInEasing)
+    return enter + slideInHorizontally(slide) { dir * it / 10 } togetherWith
+        exit + slideOutHorizontally(slide) { -dir * it / 10 }
 }
 
 fun routeKey(route: Route): String =
