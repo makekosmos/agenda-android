@@ -9,7 +9,7 @@ import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.unit.IntOffset
@@ -17,13 +17,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,12 +49,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -76,7 +67,6 @@ import com.mundus.agenda.BoardState
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
-import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.mundus.agenda.WriteConflict
@@ -157,15 +147,34 @@ private fun animationsEnabled(): Boolean {
 }
 
 /** Bottom-bar tabs in Jack's Linear-style order (p9): week, next week,
- * inbox, «Другое». The tab bar carries a separate «+» create button. */
+ * inbox, then a slot showing one of [SLOT_PAGES] («Другое» by default).
+ * The tab bar carries a separate «+» create button. */
 private val TAB_WEEK = "list:WEEK"
 private val TAB_NEXT_WEEK = "list:NEXT_WEEK"
 private val TAB_INBOX = "list:INBOX"
 private val TAB_OTHER = "other"
 private val TAB_KEYS = listOf(TAB_WEEK, TAB_NEXT_WEEK, TAB_INBOX, TAB_OTHER)
 
-private fun isTabRoot(route: String, stack: List<String>) =
-    stack.isEmpty() && route in TAB_KEYS
+private val FIXED_TABS =
+    listOf(
+        TabItem(TAB_WEEK, R.drawable.ic_calendar_01, "На этой неделе"),
+        TabItem(TAB_NEXT_WEEK, R.drawable.ic_calendar_02, "На следующей неделе"),
+        TabItem(TAB_INBOX, R.drawable.ic_inbox, SmartList.INBOX.titleRu),
+    )
+
+/** What the slot tab can show, picked from its menu like Linear's last tab. */
+private val SLOT_PAGES =
+    listOf(
+        TabItem(TAB_OTHER, R.drawable.ic_folder, "Другое"),
+        TabItem("list:SOMEDAY", R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu),
+        TabItem("list:LOGBOOK", R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu),
+        TabItem("list:TRASH", R.drawable.ic_delete, SmartList.TRASH.titleRu),
+        TabItem("statistics", R.drawable.ic_chart, "Статистика"),
+        TabItem("settings", R.drawable.ic_settings, "Настройки"),
+    )
+
+private fun isTabRoot(route: String, stack: List<String>, slot: String) =
+    stack.isEmpty() && (route in TAB_KEYS || route == slot)
 
 /**
  * App shell: a Linear-style bottom bar with 4 tabs + a separate create
@@ -193,6 +202,8 @@ fun AgendaHome(
     }
     var toast by remember { mutableStateOf<String?>(null) }
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
+    var slotKey by rememberSaveable { mutableStateOf(TAB_OTHER) }
+    var pickerOpen by remember { mutableStateOf(false) }
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     // The just-created task a sheet «maximize» navigates to — the board
     // flow may lag one emission behind, so the page renders this
@@ -454,10 +465,12 @@ fun AgendaHome(
         // list/project drill-ins just the «+» survives, like the old FAB
         // (desktop offers creation on task pages only, not on
         // Settings/Statistics/About — and the open task page has none).
-        if (isTabRoot(route, stack)) {
+        if (isTabRoot(route, stack, slotKey)) {
             AgendaBottomBar(
+                tabs = FIXED_TABS + SLOT_PAGES.first { it.key == slotKey },
                 selected = route,
                 onTab = ::selectTab,
+                onOpenPicker = { pickerOpen = true },
                 onCreate = { createOpen = true },
                 hazeState = hazeState,
                 lightFraction = glassLight,
@@ -479,6 +492,20 @@ fun AgendaHome(
                     .padding(end = 20.dp, bottom = 20.dp),
             )
         }
+
+        PagePicker(
+            open = pickerOpen && isTabRoot(route, stack, slotKey),
+            pages = SLOT_PAGES,
+            current = slotKey,
+            onPick = { key ->
+                pickerOpen = false
+                slotKey = key
+                selectTab(key)
+            },
+            onDismiss = { pickerOpen = false },
+            hazeState = hazeState,
+            lightFraction = glassLight,
+        )
 
         AToast(
             message = toast,
@@ -509,10 +536,9 @@ private enum class NavMotion { Tab, Push, Pop, None }
 
 private const val NAV_MS = 300
 
-/** Material motion: fade through between tabs, shared axis X for drill-in
- * and back. The outgoing page fades out over the first 30%, the incoming
- * one fades in after it — on the dark background that gap reads as the
- * page dimming, then brightening. */
+/** Tabs cross through transparent: the old page fades to 0, then the new
+ * one fades in. Drill-in and back use shared axis X: the outgoing page
+ * fades over the first 30% while both slide a tenth of the width. */
 private fun navTransition(motion: NavMotion, durationMs: Int): ContentTransform {
     if (motion == NavMotion.None || durationMs == 0) {
         return EnterTransition.None togetherWith ExitTransition.None
@@ -522,9 +548,10 @@ private fun navTransition(motion: NavMotion, durationMs: Int): ContentTransform 
     val exit = fadeOut(tween(outMs, easing = FastOutLinearInEasing))
     val enter = fadeIn(tween(inMs, delayMillis = outMs, easing = LinearOutSlowInEasing))
     if (motion == NavMotion.Tab) {
-        return enter +
-            scaleIn(tween(inMs, delayMillis = outMs, easing = LinearOutSlowInEasing), initialScale = 0.92f) togetherWith
-            exit
+        // Opacity only: down to 0, then back up — no scale or slide.
+        val half = durationMs / 2
+        return fadeIn(tween(half, delayMillis = half, easing = EaseInOut)) togetherWith
+            fadeOut(tween(half, easing = EaseInOut))
     }
     val dir = if (motion == NavMotion.Push) 1 else -1
     val slide = tween<IntOffset>(durationMs, easing = FastOutSlowInEasing)
@@ -712,79 +739,5 @@ fun OtherPage(
                 onNavigate(Route.About)
             }
         }
-    }
-}
-
-/**
- * The Linear-style floating bottom bar: one rounded bar with the four
- * tab icons, then a separate accent «+» button on the right (see Jack's
- * linear-list-bottom-nav.png). Tabs are icon-only; the selected tab's
- * glyph goes full-fg, the rest stay muted.
- */
-@Composable
-fun AgendaBottomBar(
-    selected: String,
-    onTab: (String) -> Unit,
-    onCreate: () -> Unit,
-    hazeState: HazeState,
-    lightFraction: Float,
-    modifier: Modifier = Modifier,
-) {
-    val c = AgendaTheme.colors
-    Row(
-        modifier = modifier.padding(horizontal = 26.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .glassChrome(hazeState, lightFraction, CircleShape)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            val tabs =
-                listOf(
-                    Triple(TAB_WEEK, R.drawable.ic_calendar_01, "На этой неделе"),
-                    Triple(TAB_NEXT_WEEK, R.drawable.ic_calendar_02, "На следующей неделе"),
-                    Triple(TAB_INBOX, R.drawable.ic_inbox, SmartList.INBOX.titleRu),
-                    Triple(TAB_OTHER, R.drawable.ic_more_h, "Другое"),
-                )
-            tabs.forEach { (key, icon, desc) ->
-                val sel = selected == key
-                val interaction = remember { MutableInteractionSource() }
-                val pressed by interaction.collectIsPressedAsState()
-                val scale by
-                    animateFloatAsState(if (pressed) 1.08f else 1f, label = "tab-pulse")
-                Box(
-                    modifier =
-                        Modifier
-                            .size(width = 58.dp, height = 48.dp)
-                            .graphicsLayer { scaleX = scale; scaleY = scale }
-                            .clip(RoundedCornerShape(23.dp))
-                            .then(if (sel) Modifier.background(c.secondary) else Modifier)
-                            .clickable(
-                                interactionSource = interaction,
-                                indication = null,
-                                role = Role.Button,
-                                onClick = { onTab(key) },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AIcon(
-                        icon,
-                        tint = if (sel) c.fg else c.fg(0.45f),
-                        desc = desc,
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.width(10.dp))
-        QuickEntryButton(
-            onClick = onCreate,
-            hazeState = hazeState,
-            lightFraction = lightFraction,
-        )
     }
 }
