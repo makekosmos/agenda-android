@@ -171,6 +171,10 @@ fun QuickEntrySheet(
     // Live parse preview — the chips mirror desktop's parsed capture.
     LaunchedEffect(title, weekFlag, somedayFlag, projectId, projectTouched) {
         if (repository == null || editing != null) return@LaunchedEffect
+        if (title.isBlank() && !weekFlag && !somedayFlag && projectId == null) {
+            preview = null
+            return@LaunchedEffect
+        }
         delay(120)
         preview =
             repository.quickEntryPreview(
@@ -227,13 +231,13 @@ fun QuickEntrySheet(
 
     ModalBottomSheet(
         onDismissRequest = { dismissWithSave() },
-        sheetState = rememberModalBottomSheetState(),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = c.popover,
         contentColor = c.fg,
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 10.dp, bottom = 2.dp)
+                    .padding(top = 12.dp, bottom = 4.dp)
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
