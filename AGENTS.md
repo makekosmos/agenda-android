@@ -29,11 +29,6 @@ Signing secrets live in the repo: `AGENDA_RELEASE_KEYSTORE_BASE64`,
 `AGENDA_RELEASE_KEY_PASSWORD`. Never create a new key: installed apps only
 accept updates signed with the same certificate.
 
-## CI
-
-Push and pull_request events do not start `ci.yml` in this repo; run it with
-`gh workflow run ci.yml --ref <branch>` and check `gh run list`.
-
 ## Local dev on macOS
 
 `scripts/device.sh` boots the arm64 AVD `agenda35` with snapshots
