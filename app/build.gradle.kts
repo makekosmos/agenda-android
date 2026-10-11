@@ -92,8 +92,8 @@ android {
         targetSdk = 35
         // -PagendaVersionCode / -PagendaVersionName override for scratch
         // builds (e.g. an older "installed" build in the updater e2e).
-        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "4").toInt()
-        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.3"
+        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "5").toInt()
+        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.4"
         // Self-update feed BASE (manifest.json first, latest-android.yml
         // fallback — cortex feed.rs:15,63-93). Override with
         // -PagendaUpdateFeedBase=… for tests.
