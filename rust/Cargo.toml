@@ -31,6 +31,14 @@ codegen-units = 1
 opt-level = "s"
 strip = "debuginfo"
 
+# Debug/e2e APKs (scripts/build-rust.sh, AGENDA_RUST_PROFILE): optimized
+# like release but without fat LTO, so incremental rebuilds stay fast.
+[profile.android-dev]
+inherits = "release"
+lto = "off"
+codegen-units = 16
+incremental = true
+
 [[bin]]
 name = "uniffi-bindgen"
 path = "src/bin/uniffi-bindgen.rs"

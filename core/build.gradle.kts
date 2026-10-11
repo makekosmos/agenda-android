@@ -15,6 +15,11 @@ fun localRustInputs(): List<File> = buildList {
 }.filter { it.isDirectory }
 
 val rustDir = rootDir.resolve("rust")
+/** Host cdylib name: .so on Linux (CI, Devin box), .dylib on macOS. */
+val hostLib = rustDir.resolve(
+    "target/debug/libagenda_mobile." +
+        if (System.getProperty("os.name").startsWith("Mac")) "dylib" else "so",
+)
 val generatedDir = layout.buildDirectory.dir("generated/uniffi")
 
 val buildRustHost = tasks.register<Exec>("buildRustHost") {
@@ -27,7 +32,7 @@ val buildRustHost = tasks.register<Exec>("buildRustHost") {
     // [patch] override, set AGENDA_CORTEX_DIR / AGENDA_GPUI_DIR so edits there
     // re-trigger this task.
     localRustInputs().forEach { inputs.dir(it) }
-    outputs.file(rustDir.resolve("target/debug/libagenda_mobile.so"))
+    outputs.file(hostLib)
 }
 
 val generateUniffiBindings = tasks.register<Exec>("generateUniffiBindings") {
@@ -35,12 +40,12 @@ val generateUniffiBindings = tasks.register<Exec>("generateUniffiBindings") {
     workingDir = rustDir
     commandLine(
         "cargo", "run", "--features", "cli", "--bin", "uniffi-bindgen", "--",
-        "generate", "--library", rustDir.resolve("target/debug/libagenda_mobile.so"),
+        "generate", "--library", hostLib,
         "--language", "kotlin",
         "--out-dir", generatedDir.get().asFile,
     )
     environment("CARGO_BUILD_JOBS", "4")
-    inputs.file(rustDir.resolve("target/debug/libagenda_mobile.so"))
+    inputs.file(hostLib)
     outputs.dir(generatedDir)
 }
 
