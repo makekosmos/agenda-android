@@ -286,6 +286,7 @@ fun SettingsScreen(
     onThemeMode: (String) -> Unit,
     onAbout: () -> Unit,
     onStatistics: () -> Unit = {},
+    updateManager: UpdateManager? = null,
 ) {
     val c = AgendaTheme.colors
     Column(
@@ -314,6 +315,10 @@ fun SettingsScreen(
                 }
             }
         }
+        // The desktop «Обновления» card lives on the About page, which is
+        // itself a Manager settings page (views/mod.rs:46-52, updates.rs:
+        // 13-140) — on Android it sits in Settings directly.
+        updateManager?.let { UpdateSection(it) }
         // Statistics is its own page like desktop (settings sidebar →
         // Route::Statistics, chrome.rs:335-346) — no counters here.
         ASectionHeader("Другое")
@@ -338,7 +343,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsGroup(content: @Composable () -> Unit) {
+internal fun SettingsGroup(content: @Composable () -> Unit) {
     val c = AgendaTheme.colors
     Column(
         modifier =
@@ -440,41 +445,15 @@ private fun BannerAction(label: String, color: androidx.compose.ui.graphics.Colo
     )
 }
 
-/** Hands the verified APK to the system installer; routes through the
- * unknown-sources permission screen first when needed (API 26+). */
-private fun installUpdate(
-    context: android.content.Context,
-    mgr: UpdateManager,
-    state: UpdateState.ReadyToInstall,
-) {
-    if (mgr.canRequestInstalls()) {
-        context.startActivity(mgr.installIntent(state.file))
-    } else {
-        mgr.openInstallPermissionSettings()
-    }
-}
-
-/** One-line status for the About card — mirrors the status JSON states
- * (state.rs:56-76). */
-private fun updateStatusLine(state: UpdateState): String =
-    when (val s = state) {
-        is UpdateState.Idle -> "Не проверялось"
-        is UpdateState.Checking -> "Проверка…"
-        is UpdateState.Available -> "Доступно обновление ${s.feed.version}"
-        is UpdateState.Downloading -> "Загрузка… ${s.percent}%"
-        is UpdateState.ReadyToInstall -> "Готово к установке"
-        is UpdateState.NotAvailable -> "Актуальная версия"
-        is UpdateState.Error -> s.message
-    }
-
 /**
  * About — the desktop About page (pages/settings.rs:127-191): hero +
  * the one real diagnostics check (Engine data access; the screen only
- * renders when the board loaded, so it is Ok) + the update card
- * (views/updates.rs:8-55).
+ * renders when the board loaded, so it is Ok). The update card lives in
+ * Settings now (desktop keeps it on About only because About is itself
+ * a settings page there — views/mod.rs:46-52).
  */
 @Composable
-fun AboutScreen(updateManager: UpdateManager? = null) {
+fun AboutScreen() {
     val c = AgendaTheme.colors
     Column(
         modifier =
@@ -502,43 +481,6 @@ fun AboutScreen(updateManager: UpdateManager? = null) {
                     modifier = Modifier.weight(1f),
                 )
                 Text("Ok", style = AgendaType.body, color = c.success)
-            }
-        }
-        updateManager?.let { mgr ->
-            val context = androidx.compose.ui.platform.LocalContext.current
-            Spacer(Modifier.height(12.dp))
-            SettingsGroup {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        updateStatusLine(mgr.state),
-                        style = AgendaType.body,
-                        color = c.fg,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                ADivider(indent = 12.dp)
-                ARow(
-                    onClick = {
-                        when (val s = mgr.state) {
-                            is UpdateState.Available -> mgr.download(s.feed)
-                            is UpdateState.ReadyToInstall -> installUpdate(context, mgr, s)
-                            else -> mgr.check()
-                        }
-                    }
-                ) { glyph ->
-                    Text(
-                        when (mgr.state) {
-                            is UpdateState.Available -> "Скачать"
-                            is UpdateState.ReadyToInstall -> "Установить"
-                            else -> "Проверить обновления"
-                        },
-                        style = AgendaType.body,
-                        color = glyph,
-                    )
-                }
             }
         }
         Spacer(Modifier.height(24.dp))

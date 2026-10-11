@@ -147,4 +147,43 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/editsheet-dark.png")
     }
 
+    private val feed013 =
+        com.mundus.agenda.updater.UpdateFeed(
+            version = "0.1.3",
+            versionCode = 4,
+            path = "agenda-android-0.1.3-arm64-release.apk",
+            sha256 = "ab12",
+            size = 100,
+        )
+
+    /** Settings «Обновления» card, one golden per updater state
+     * (updates.rs:13-140). */
+    private fun updateShot(name: String, dark: Boolean, state: com.mundus.agenda.updater.UpdateState) {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = dark) {
+                Box(
+                    Modifier.fillMaxWidth()
+                        .background(AgendaTheme.colors.bg)
+                        .padding(bottom = 24.dp)
+                ) {
+                    com.mundus.agenda.ui.UpdateSection(
+                        state = state,
+                        currentVersion = "0.1.2",
+                        onCheck = {},
+                        onDownloadOrInstall = {},
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
+    }
+
+    @Test fun updatesIdleLight() = updateShot("updates-idle-light", false, com.mundus.agenda.updater.UpdateState.Idle)
+    @Test fun updatesCheckingLight() = updateShot("updates-checking-light", false, com.mundus.agenda.updater.UpdateState.Checking)
+    @Test fun updatesNotAvailableLight() = updateShot("updates-notavailable-light", false, com.mundus.agenda.updater.UpdateState.NotAvailable)
+    @Test fun updatesAvailableLight() = updateShot("updates-available-light", false, com.mundus.agenda.updater.UpdateState.Available(feed013))
+    @Test fun updatesDownloadingLight() = updateShot("updates-downloading-light", false, com.mundus.agenda.updater.UpdateState.Downloading(feed013, 42))
+    @Test fun updatesReadyLight() = updateShot("updates-ready-light", false, com.mundus.agenda.updater.UpdateState.ReadyToInstall(feed013, java.io.File("/tmp/a.apk")))
+    @Test fun updatesErrorLight() = updateShot("updates-error-light", false, com.mundus.agenda.updater.UpdateState.Error("Не удалось проверить обновления"))
+    @Test fun updatesAvailableDark() = updateShot("updates-available-dark", true, com.mundus.agenda.updater.UpdateState.Available(feed013))
 }

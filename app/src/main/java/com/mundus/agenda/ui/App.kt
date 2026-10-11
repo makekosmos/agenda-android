@@ -325,9 +325,10 @@ fun AgendaHome(
                             onThemeMode = onThemeMode,
                             onAbout = { navigate(Route.About) },
                             onStatistics = { navigate(Route.Statistics) },
+                            updateManager = updateManager,
                         )
                     is Route.Statistics -> StatisticsScreen(board = board)
-                    is Route.About -> AboutScreen(updateManager)
+                    is Route.About -> AboutScreen()
                     is Route.Project ->
                         ProjectScreen(
                             board = board,
