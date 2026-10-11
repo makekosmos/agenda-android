@@ -38,6 +38,13 @@ import com.mundus.agenda.SyncApi
 import com.mundus.agenda.SyncSnapshot
 import kotlinx.coroutines.delay
 
+/** Debug-only injection slot for the e2e pairing flow (MainActivity
+ * reads `--es pair_ticket` and deposits the ticket here; release builds
+ * never set it). */
+object DebugPairing {
+    var pendingTicket: String? = null
+}
+
 @Composable
 private fun SyncButton(label: String, primary: Boolean = false, onClick: () -> Unit) {
     val c = AgendaTheme.colors
@@ -89,7 +96,9 @@ fun SyncScreen(
     val c = AgendaTheme.colors
     var snap by remember { mutableStateOf<SyncSnapshot?>(null) }
     var myCode by remember { mutableStateOf<String?>(null) }
-    var peerCode by remember { mutableStateOf("") }
+    var peerCode by remember {
+        mutableStateOf(DebugPairing.pendingTicket?.also { DebugPairing.pendingTicket = null } ?: "")
+    }
     var connectError by remember { mutableStateOf(false) }
 
     LaunchedEffect(sync) {
