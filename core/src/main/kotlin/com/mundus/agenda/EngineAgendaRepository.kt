@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -48,7 +49,7 @@ class EngineAgendaRepository(
         val now = Instant.now()
         LocalDate.now(zone).toString() to zone.rules.getOffset(now).totalSeconds
     },
-) : BoardRepository {
+) : BoardRepository, SyncApi {
     // encodeDefaults: Rust side structs (Project, RecurrenceRule) require
     // fields whose values equal the Kotlin default — never elide them.
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -57,8 +58,11 @@ class EngineAgendaRepository(
     internal val engine: MobileEngine
         get() = engineLazy.value
 
-    internal fun call(op: String, params: JsonObject): JsonElement {
-        val response = json.parseToJsonElement(engine.call(op, params.toString())).jsonObject
+    internal fun call(op: String, params: JsonObject): JsonElement =
+        unwrap(engine.call(op, params.toString()), op)
+
+    private fun unwrap(raw: String, op: String): JsonElement {
+        val response = json.parseToJsonElement(raw).jsonObject
         check(response["ok"]?.jsonPrimitive?.boolean == true) {
             "$op rejected: ${response["error"]}"
         }
@@ -489,6 +493,58 @@ class EngineAgendaRepository(
     override suspend fun nextMondayKey(): String = withContext(Dispatchers.IO) {
         val (today, offset) = localDay()
         nextMondayKey(today, offset)
+    }
+
+    // -- SyncApi: pairing + sync status -------------------------------
+
+    override suspend fun startSync(deviceName: String): Unit = withContext(Dispatchers.IO) {
+        unwrap(
+            engine.startSync(
+                buildJsonObject { put("device_name", deviceName) }.toString()
+            ),
+            "start_sync",
+        )
+        Unit
+    }
+
+    override suspend fun syncSnapshot(): SyncSnapshot = withContext(Dispatchers.IO) {
+        json.decodeFromString(unwrap(engine.syncStatus(), "get_sync_snapshot").toString())
+    }
+
+    override suspend fun showPairingCode(): String? = withContext(Dispatchers.IO) {
+        unwrap(engine.showPairingCode(), "show_pairing_code")
+            .let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+    }
+
+    override suspend fun ownIrohTicket(): String? = withContext(Dispatchers.IO) {
+        unwrap(engine.ownIrohTicket(), "get_own_iroh_ticket")
+            .let { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+    }
+
+    override suspend fun connectWithPairingCode(code: String): String =
+        withContext(Dispatchers.IO) {
+            val data = unwrap(engine.connectWithPairingCode(code), "connect_with_pairing_code")
+            (data as? JsonObject)?.get("status")?.jsonPrimitive?.content ?: "pending"
+        }
+
+    override suspend fun acceptPairing(deviceId: String): Unit = withContext(Dispatchers.IO) {
+        call("accept_pairing", buildJsonObject { put("device_id", deviceId) })
+        Unit
+    }
+
+    override suspend fun declinePairing(deviceId: String): Unit = withContext(Dispatchers.IO) {
+        call("decline_pairing", buildJsonObject { put("device_id", deviceId) })
+        Unit
+    }
+
+    override suspend fun cancelPairing(): Unit = withContext(Dispatchers.IO) {
+        call("cancel_pairing", buildJsonObject {})
+        Unit
+    }
+
+    override suspend fun disconnectPeer(deviceId: String): Unit = withContext(Dispatchers.IO) {
+        call("disconnect_peer", buildJsonObject { put("device_id", deviceId) })
+        Unit
     }
 
     override fun close() {

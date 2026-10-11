@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.flowOf
  * populated, all task-field variants represented. Roborazzi tests render
  * real screens off `boardFlow()` with no native .so involved.
  */
-class FakeRepository : BoardRepository {
+class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
     private val day = "2026-10-12"
 
     private fun task(id: String, title: String): Task =
@@ -294,4 +294,48 @@ class FakeRepository : BoardRepository {
         }
 
     override suspend fun nextMondayKey() = "2026-10-19"
+
+    // -- SyncApi -------------------------------------------------------
+    var snapshot = com.mundus.agenda.SyncSnapshot(
+        running = true,
+        transport = "iroh",
+        localDevice = com.mundus.agenda.SyncLocalDevice("dev-phone", "Pixel"),
+    )
+
+    override suspend fun startSync(deviceName: String) {
+        snapshot = snapshot.copy(running = true)
+    }
+
+    override suspend fun syncSnapshot() = snapshot
+
+    override suspend fun showPairingCode() = "ticket-phone-abc123"
+
+    override suspend fun ownIrohTicket() = "ticket-phone-abc123"
+
+    var connectedCode: String? = null
+    override suspend fun connectWithPairingCode(code: String): String {
+        connectedCode = code
+        snapshot = snapshot.copy(
+            outgoingPairing = com.mundus.agenda.OutgoingPairing("pending")
+        )
+        return "pending"
+    }
+
+    var accepted = mutableListOf<String>()
+    override suspend fun acceptPairing(deviceId: String) {
+        accepted += deviceId
+        snapshot = snapshot.copy(incomingPairingRequests = emptyList())
+    }
+
+    override suspend fun declinePairing(deviceId: String) {
+        snapshot = snapshot.copy(incomingPairingRequests = emptyList())
+    }
+
+    override suspend fun cancelPairing() {
+        snapshot = snapshot.copy(outgoingPairing = null)
+    }
+
+    override suspend fun disconnectPeer(deviceId: String) {
+        snapshot = snapshot.copy(peers = snapshot.peers.filter { it.deviceId != deviceId })
+    }
 }

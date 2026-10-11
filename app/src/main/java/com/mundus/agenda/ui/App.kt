@@ -68,6 +68,7 @@ sealed interface Route {
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
     data object Settings : Route
+    data object Sync : Route
     data object Statistics : Route
     data object About : Route
 }
@@ -276,6 +277,7 @@ fun AgendaHome(
             is Route.Home -> "Agenda"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
+            is Route.Sync -> "Синхронизация"
             is Route.Settings -> "Настройки"
             is Route.Statistics -> "Статистика"
             is Route.About -> "О приложении"
@@ -325,8 +327,11 @@ fun AgendaHome(
                             onThemeMode = onThemeMode,
                             onAbout = { navigate(Route.About) },
                             onStatistics = { navigate(Route.Statistics) },
+                            onSync = { navigate(Route.Sync) },
                             updateManager = updateManager,
                         )
+                    is Route.Sync ->
+                        SyncScreen(sync = repository as? com.mundus.agenda.SyncApi, run = ::run)
                     is Route.Statistics -> StatisticsScreen(board = board)
                     is Route.About -> AboutScreen()
                     is Route.Project ->
@@ -370,7 +375,7 @@ fun AgendaHome(
 
         // Desktop only offers task creation on task pages (not
         // Settings/Statistics/About).
-        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About) {
+        if (current !is Route.Settings && current !is Route.Statistics && current !is Route.About && current !is Route.Sync) {
             QuickEntryButton(
                 onClick = { createOpen = true },
             modifier =
@@ -416,6 +421,7 @@ fun routeKey(route: Route): String =
         is Route.Home -> "home"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
+        is Route.Sync -> "sync"
         is Route.Settings -> "settings"
         is Route.Statistics -> "statistics"
         is Route.About -> "about"
@@ -423,6 +429,7 @@ fun routeKey(route: Route): String =
 
 fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
+        "sync" -> Route.Sync
         "settings" -> Route.Settings
         "statistics" -> Route.Statistics
         "about" -> Route.About

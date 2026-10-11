@@ -286,6 +286,7 @@ fun SettingsScreen(
     onThemeMode: (String) -> Unit,
     onAbout: () -> Unit,
     onStatistics: () -> Unit = {},
+    onSync: () -> Unit = {},
     updateManager: UpdateManager? = null,
 ) {
     val c = AgendaTheme.colors
@@ -323,6 +324,14 @@ fun SettingsScreen(
         // Route::Statistics, chrome.rs:335-346) — no counters here.
         ASectionHeader("Другое")
         SettingsGroup {
+            ARow(onClick = onSync) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AIcon(R.drawable.ic_repeat, tint = glyph.copy(alpha = 0.85f))
+                    Spacer(Modifier.width(12.dp))
+                    Text("Синхронизация", style = AgendaType.body, color = glyph)
+                }
+            }
+            ADivider(indent = 44.dp)
             ARow(onClick = onStatistics) { glyph ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AIcon(R.drawable.ic_chart, tint = glyph.copy(alpha = 0.85f))

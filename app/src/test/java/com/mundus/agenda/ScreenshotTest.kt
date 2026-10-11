@@ -51,6 +51,28 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
     }
 
+    @Test
+    fun syncLight() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = false) {
+                AgendaHome(board = board, repository = FakeRepository(), initialRoute = Route.Sync)
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/sync-light.png")
+    }
+
+    @Test
+    fun syncDark() {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = true) {
+                AgendaHome(board = board, repository = FakeRepository(), initialRoute = Route.Sync)
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/sync-dark.png")
+    }
+
     @Test fun homeLight() = shot("home-light", false, Route.Home)
     @Test fun homeDark() = shot("home-dark", true, Route.Home)
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))
