@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -147,13 +146,13 @@ private fun animationsEnabled(): Boolean {
 }
 
 /** Bottom-bar tabs in Jack's Linear-style order (p9): week, next week,
- * inbox, then a slot showing one of [SLOT_PAGES] («Другое» by default).
- * The tab bar carries a separate «+» create button. */
+ * inbox, then the page menu button that opens [PICKER_PAGES]. The tab
+ * bar carries a separate «+» create button. */
 private val TAB_WEEK = "list:WEEK"
 private val TAB_NEXT_WEEK = "list:NEXT_WEEK"
 private val TAB_INBOX = "list:INBOX"
-private val TAB_OTHER = "other"
-private val TAB_KEYS = listOf(TAB_WEEK, TAB_NEXT_WEEK, TAB_INBOX, TAB_OTHER)
+private val TAB_KEYS = listOf(TAB_WEEK, TAB_NEXT_WEEK, TAB_INBOX)
+private val PICKER_BUTTON = TabItem("menu", R.drawable.ic_grid, "Страницы")
 
 private val FIXED_TABS =
     listOf(
@@ -162,10 +161,11 @@ private val FIXED_TABS =
         TabItem(TAB_INBOX, R.drawable.ic_inbox, SmartList.INBOX.titleRu),
     )
 
-/** What the slot tab can show, picked from its menu like Linear's last tab. */
-private val SLOT_PAGES =
+/** The menu behind the last bar button, like Linear's. While one of these
+ * pages is open the button wears its glyph under the lens. */
+private val PICKER_PAGES =
     listOf(
-        TabItem(TAB_OTHER, R.drawable.ic_folder, "Другое"),
+        TabItem("other", R.drawable.ic_folder, "Проекты"),
         TabItem("list:SOMEDAY", R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu),
         TabItem("list:LOGBOOK", R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu),
         TabItem("list:TRASH", R.drawable.ic_delete, SmartList.TRASH.titleRu),
@@ -173,8 +173,9 @@ private val SLOT_PAGES =
         TabItem("settings", R.drawable.ic_settings, "Настройки"),
     )
 
-private fun isTabRoot(route: String, stack: List<String>, slot: String) =
-    stack.isEmpty() && (route in TAB_KEYS || route == slot)
+private fun isRootKey(route: String) = route in TAB_KEYS || PICKER_PAGES.any { it.key == route }
+
+private fun isTabRoot(route: String, stack: List<String>) = stack.isEmpty() && isRootKey(route)
 
 /**
  * App shell: a Linear-style bottom bar with 4 tabs + a separate create
@@ -198,12 +199,11 @@ fun AgendaHome(
     // (exits the app). A non-tab initial route (deep link, tests) gets
     // the week tab under it so back has somewhere to land.
     var stack by rememberSaveable {
-        mutableStateOf(if (initialKey in TAB_KEYS) emptyList() else listOf(TAB_WEEK))
+        mutableStateOf(if (isRootKey(initialKey)) emptyList() else listOf(TAB_WEEK))
     }
     var toast by remember { mutableStateOf<String?>(null) }
     var navMotion by remember { mutableStateOf(NavMotion.Tab) }
-    var slotKey by rememberSaveable { mutableStateOf(TAB_OTHER) }
-    var pickerOpen by remember { mutableStateOf(false) }
+    val picker = rememberPagePickerState(PICKER_PAGES.size)
     var createOpen by rememberSaveable { mutableStateOf(initialCreate) }
     // The just-created task a sheet «maximize» navigates to — the board
     // flow may lag one emission behind, so the page renders this
@@ -348,7 +348,7 @@ fun AgendaHome(
     val current = parseRoute(route)
     val title =
         when (val r = current) {
-            is Route.Other -> "Другое"
+            is Route.Other -> "Проекты"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
             is Route.Task -> "Задача"
@@ -465,13 +465,18 @@ fun AgendaHome(
         // list/project drill-ins just the «+» survives, like the old FAB
         // (desktop offers creation on task pages only, not on
         // Settings/Statistics/About — and the open task page has none).
-        if (isTabRoot(route, stack, slotKey)) {
+        val atTabRoot = isTabRoot(route, stack)
+        LaunchedEffect(atTabRoot) { if (!atTabRoot) picker.snapClosed() }
+        if (atTabRoot) {
+            val slot =
+                PICKER_PAGES.firstOrNull { it.key == route }?.copy(desc = PICKER_BUTTON.desc)
+                    ?: PICKER_BUTTON
             AgendaBottomBar(
-                tabs = FIXED_TABS + SLOT_PAGES.first { it.key == slotKey },
+                tabs = FIXED_TABS + slot,
                 selected = route,
                 onTab = ::selectTab,
-                onOpenPicker = { pickerOpen = true },
                 onCreate = { createOpen = true },
+                picker = picker,
                 hazeState = hazeState,
                 lightFraction = glassLight,
                 modifier =
@@ -494,15 +499,13 @@ fun AgendaHome(
         }
 
         PagePicker(
-            open = pickerOpen && isTabRoot(route, stack, slotKey),
-            pages = SLOT_PAGES,
-            current = slotKey,
+            picker = picker,
+            pages = PICKER_PAGES,
+            current = route,
             onPick = { key ->
-                pickerOpen = false
-                slotKey = key
+                picker.close()
                 selectTab(key)
             },
-            onDismiss = { pickerOpen = false },
             hazeState = hazeState,
             lightFraction = glassLight,
         )
@@ -639,11 +642,10 @@ private fun HomeRow(
 }
 
 /**
- * The «Другое» tab — everything that used to be the home page, minus
- * the nav lists now owned by the bottom bar: «Потом», all projects
- * with create-project, then Архив / Корзина / Статистика / Настройки /
- * О приложении (Jack's p9 list). No counts: the desktop sidebar renders
- * none.
+ * The «Проекты» page from the bar's page menu: the update banner, then
+ * all projects with create-project. The other former home rows live in
+ * the menu itself; «О приложении» stays under Настройки. No counts: the
+ * desktop sidebar renders none.
  */
 @Composable
 fun OtherPage(
@@ -663,12 +665,6 @@ fun OtherPage(
         updateManager?.let {
             UpdateBanner(it, Modifier.padding(bottom = 8.dp))
         }
-        HomeGroup {
-            HomeRow(R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu) {
-                onNavigate(Route.List(SmartList.SOMEDAY))
-            }
-        }
-
         // Desktop renders the «Проекты» group unconditionally with a «+»
         // button on its header (chrome.rs:457-474) — same here, including
         // the empty state.
@@ -714,29 +710,6 @@ fun OtherPage(
                         }
                     }
                 }
-            }
-        }
-
-        Spacer(Modifier.height(14.dp))
-        HomeGroup {
-            HomeRow(R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu) {
-                onNavigate(Route.List(SmartList.LOGBOOK))
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_delete, SmartList.TRASH.titleRu) {
-                onNavigate(Route.List(SmartList.TRASH))
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_chart, "Статистика") {
-                onNavigate(Route.Statistics)
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_settings, "Настройки") {
-                onNavigate(Route.Settings)
-            }
-            ADivider(indent = 44.dp)
-            HomeRow(R.drawable.ic_help_circle, "О приложении") {
-                onNavigate(Route.About)
             }
         }
     }

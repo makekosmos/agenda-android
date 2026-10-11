@@ -4,6 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasImeAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -26,8 +29,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Bottom-bar navigation (p9): the app opens on the «Эта неделя» tab,
- * the «Другое» tab carries the old home content (Потом, projects,
- * Архив, Корзина, Статистика, Настройки, О приложении), and drill-ins
+ * the last bar button opens the page menu (Проекты, Потом, Архив,
+ * Корзина, Статистика, Настройки), and drill-ins
  * push/pop while back at a tab root exits.
  */
 @RunWith(AndroidJUnit4::class)
@@ -40,43 +43,63 @@ class NavigationTest {
             (FakeRepository().boardFlow().first() as BoardState.Ready).board
         }
 
-    private fun openOtherTab() {
-        composeTestRule.onNodeWithContentDescription("Другое").performClick()
+    private fun openPage(label: String) {
+        composeTestRule.onNodeWithContentDescription("Страницы").performClick()
+        composeTestRule.waitForIdle()
+        // performClick() dispatches a real touch at the node centre; in
+        // Robolectric the floating chrome can swallow it, so drive the
+        // row's OnClick semantics action directly.
+        composeTestRule
+            .onNodeWithText(label)
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         composeTestRule.waitForIdle()
     }
 
     @Test
-    fun otherTabShowsItemsInOrderWithoutCounts() {
+    fun pageMenuListsPagesInOrder() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
         // Opens on «Эта неделя» by default (p9 item 4).
         composeTestRule.onNodeWithText("Созвон по дизайну").assertIsDisplayed()
-        openOtherTab()
-        val expected =
-            listOf(
-                "Потом",
-                "Проекты",
-                "Релиз Agenda 1.0",
-                "Дом и быт",
-                "Архив",
-                "Корзина",
-                "Статистика",
-                "Настройки",
-                "О приложении",
-            )
-        // Ordered walk: every expected label must exist; the sequence is
-        // checked by scanning semantics node positions.
-        for (label in expected) {
-            val found =
-                composeTestRule
-                    .onAllNodes(androidx.compose.ui.test.hasText(label))
-                    .fetchSemanticsNodes()
-            assert(found.isNotEmpty()) { "other row missing: $label" }
+        composeTestRule.onNodeWithContentDescription("Страницы").performClick()
+        composeTestRule.waitForIdle()
+        val expected = listOf("Проекты", "Потом", "Архив", "Корзина", "Статистика", "Настройки")
+        val texts = textsInOrder()
+        val indices = expected.map { texts.indexOf(it) }
+        assert(indices.none { it < 0 } && indices.zipWithNext().all { (a, b) -> a < b }) {
+            "menu rows out of order: $expected at $indices in $texts"
         }
-        // Order: walk the semantics tree top-down (composition order
-        // matches visual order in the Column) and check the labels form
-        // an increasing subsequence.
-        val rootNode = composeTestRule.onRoot().fetchSemanticsNode()
+        assert(texts.none { it == "Другое" }) { "«Другое» is gone from the menu: $texts" }
+    }
+
+    @Test
+    fun swipeUpOnBarOpensPageMenu() {
+        composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
+        composeTestRule.waitForIdle()
+        assert(composeTestRule.onAllNodes(hasText("Статистика")).fetchSemanticsNodes().isEmpty())
+        composeTestRule
+            .onNodeWithContentDescription("Входящие")
+            .performTouchInput { swipeUp(startY = bottom, endY = top - 200f) }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Статистика").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Созвон по дизайну").assertExists()
+    }
+
+    @Test
+    fun projectsPageListsProjectsWithoutCounts() {
+        composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
+        composeTestRule.waitForIdle()
+        openPage("Проекты")
+        val texts = textsInOrder()
+        for (label in listOf("Релиз Agenda 1.0", "Дом и быт")) {
+            assert(label in texts) { "project row missing: $label in $texts" }
+        }
+        val bareCounts = texts.filter { it.matches(Regex("\\d+")) }
+        assert(bareCounts.isEmpty()) { "unexpected count labels on projects: $bareCounts" }
+    }
+
+    private fun textsInOrder(): List<String> {
+        // Composition order matches visual order within a Column.
         val texts = mutableListOf<String>()
         fun collect(node: androidx.compose.ui.semantics.SemanticsNode) {
             if (androidx.compose.ui.semantics.SemanticsProperties.Text in node.config) {
@@ -85,27 +108,15 @@ class NavigationTest {
             }
             node.children.forEach(::collect)
         }
-        collect(rootNode)
-        val indices = expected.map { texts.indexOf(it) }
-        assert(indices.none { it < 0 } && indices.zipWithNext().all { (a, b) -> a < b }) {
-            "other rows out of order: $expected at $indices in $texts"
-        }
-        val bareCounts = texts.filter { it.matches(Regex("\\d+")) }
-        assert(bareCounts.isEmpty()) { "unexpected count labels on other: $bareCounts" }
+        collect(composeTestRule.onRoot().fetchSemanticsNode())
+        return texts
     }
 
     @Test
     fun settingsAndAboutOpenAndReturn() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
-        openOtherTab()
-        // performClick() dispatches a real touch at the node centre; in
-        // Robolectric the floating bottom bar swallows it, so drive the
-        // row's OnClick semantics action directly.
-        composeTestRule
-            .onNodeWithText("Настройки")
-            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
-        composeTestRule.waitForIdle()
+        openPage("Настройки")
         // Settings mirrors the desktop sidebar: Отображение tiles +
         // Статистика counters, no desktop-only rows.
         composeTestRule.onNodeWithText("Отображение").assertIsDisplayed()
@@ -117,9 +128,6 @@ class NavigationTest {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         ) { "settings missing Статистика" }
-        composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Потом").assertIsDisplayed()
 
         composeTestRule
             .onNodeWithText("О приложении")
@@ -131,7 +139,7 @@ class NavigationTest {
             .assertIsDisplayed()
         composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Потом").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Отображение").assertIsDisplayed()
     }
 
     @Test
@@ -141,11 +149,10 @@ class NavigationTest {
             AgendaTheme { AgendaHome(board = board, repository = repo) }
         }
         composeTestRule.waitForIdle()
-        openOtherTab()
+        openPage("Проекты")
         // Sidebar «+» on the «Проекты» header (desktop chrome.rs:457-474).
-        composeTestRule
-            .onNodeWithText("Проекты")
-            .assertIsDisplayed()
+        // Page title plus the section header carrying the «+».
+        assert(composeTestRule.onAllNodes(hasText("Проекты")).fetchSemanticsNodes().size == 2)
         composeTestRule
             .onNodeWithContentDescription("Новый проект")
             .performClick()
@@ -280,11 +287,12 @@ class NavigationTest {
         composeTestRule.onNodeWithContentDescription("Входящие").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Созвон по дизайну").assertDoesNotExist()
-        // «На следующей неделе» tab then «Другое».
+        // «На следующей неделе» tab then «Потом» from the page menu; the
+        // menu button then wears that page's glyph.
         composeTestRule.onNodeWithContentDescription("На следующей неделе").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithContentDescription("Другое").performClick()
-        composeTestRule.waitForIdle()
+        openPage("Потом")
         composeTestRule.onNodeWithText("Потом").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Страницы").assertExists()
     }
 }
