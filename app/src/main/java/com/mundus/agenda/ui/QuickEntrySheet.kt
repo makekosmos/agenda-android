@@ -157,21 +157,31 @@ fun QuickEntrySheet(
     var title by remember { mutableStateOf(editing?.title ?: "") }
     var notes by remember { mutableStateOf(editing?.notes ?: "") }
 
-    // No date-selection UI on the phone (Jack, p4-fix) — typed text still
-    // parses via the engine preview; these flags only carry the initial
-    // state (edit mode / Week-route preset) into quickEntry.
-    val weekFlag = editing?.isToday ?: initialWeek
-    val somedayFlag = editing?.isSomeday == true
+    // Draft state (create) / current values (edit) for the two properties.
+    // Desktop QeDate offers Эта неделя / Следующая неделя / Потом / Без даты
+    // (dropdown.rs); typed text still parses via the engine preview.
+    var pickedDate by remember { mutableStateOf(editing?.scheduledDate) }
+    // Desktop presets qe_week when the sheet opens on the Week route.
+    var weekFlag by remember { mutableStateOf(editing?.isToday ?: initialWeek) }
+    var somedayFlag by remember { mutableStateOf(editing?.isSomeday == true) }
     var projectId by remember { mutableStateOf(editing?.projectId) }
     var projectTouched by remember { mutableStateOf(false) }
+    var dateTouched by remember { mutableStateOf(false) }
 
     var preview by remember { mutableStateOf<QuickEntryPreview?>(null) }
+    var nextMonday by remember { mutableStateOf<String?>(null) }
     var dateLabel by remember { mutableStateOf<String?>(null) }
 
+    LaunchedEffect(repository) {
+        nextMonday = repository?.nextMondayKey()
+    }
+
     // Live parse preview — the chips mirror desktop's parsed capture.
-    LaunchedEffect(title, weekFlag, somedayFlag, projectId, projectTouched) {
+    LaunchedEffect(title, pickedDate, weekFlag, somedayFlag, projectId, projectTouched) {
         if (repository == null || editing != null) return@LaunchedEffect
-        if (title.isBlank() && !weekFlag && !somedayFlag && projectId == null) {
+        if (title.isBlank() && !weekFlag && !somedayFlag && projectId == null &&
+            pickedDate == null
+        ) {
             preview = null
             return@LaunchedEffect
         }
@@ -179,7 +189,7 @@ fun QuickEntrySheet(
         preview =
             repository.quickEntryPreview(
                 title,
-                null,
+                pickedDate,
                 weekFlag,
                 somedayFlag,
                 projectId,
@@ -187,6 +197,29 @@ fun QuickEntrySheet(
             )
         preview?.scheduledDate?.let { dateLabel = repository.dayLabel(it) }
     }
+    // Until the user picks, the parsed date previews in the row (desktop
+    // shows the capture the same way); an explicit choice wins over parse.
+    val effectiveDate =
+        pickedDate ?: preview?.scheduledDate.takeIf { editing == null && !dateTouched }
+
+    LaunchedEffect(effectiveDate, weekFlag, somedayFlag) {
+        if (repository == null) return@LaunchedEffect
+        dateLabel =
+            when {
+                weekFlag -> "Эта неделя"
+                somedayFlag -> "Потом"
+                effectiveDate != null -> repository.dayLabel(effectiveDate)
+                else -> null
+            }
+    }
+
+    val dateValue =
+        when {
+            weekFlag -> "Эта неделя"
+            somedayFlag -> "Потом"
+            effectiveDate != null -> dateLabel ?: effectiveDate
+            else -> "Пусто"
+        }
 
     val projectValue =
         projectId?.let { pid -> board.projects.firstOrNull { it.id == pid }?.title }
@@ -217,7 +250,7 @@ fun QuickEntrySheet(
         // turn, after the fields below are already cleared.
         val t = title
         val n = notes.ifBlank { null }
-        val d: String? = null
+        val d = pickedDate
         val w = weekFlag
         val s = somedayFlag
         val p = projectId
@@ -237,7 +270,7 @@ fun QuickEntrySheet(
         dragHandle = {
             Box(
                 Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
+                    .padding(top = 10.dp, bottom = 2.dp)
                     .width(36.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
@@ -272,6 +305,34 @@ fun QuickEntrySheet(
             }
 
             ADivider(modifier = Modifier.padding(horizontal = 12.dp))
+            PropertyRow(
+                label = "Дата",
+                value = dateValue,
+                hasValue = weekFlag || somedayFlag || effectiveDate != null,
+            ) {
+                // Desktop DropKind::Date (edit) / QeDate (create).
+                AMenuItem("Эта неделя") {
+                    if (editing != null) run { repository?.moveToWeek(editing) }
+                    weekFlag = true; somedayFlag = false; pickedDate = null
+                    dateTouched = true
+                }
+                AMenuItem("Следующая неделя") {
+                    if (editing != null) run { repository?.setScheduled(editing, nextMonday) }
+                    weekFlag = false; somedayFlag = false; pickedDate = nextMonday
+                    dateTouched = true
+                }
+                if (editing == null) {
+                    AMenuItem("Потом") {
+                        weekFlag = false; somedayFlag = true; pickedDate = null
+                        dateTouched = true
+                    }
+                }
+                AMenuItem("Без даты") {
+                    if (editing != null) run { repository?.setScheduled(editing, null) }
+                    weekFlag = false; somedayFlag = false; pickedDate = null
+                    dateTouched = true
+                }
+            }
             PropertyRow(
                 label = "Проект",
                 value = projectValue,
