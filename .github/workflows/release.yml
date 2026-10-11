@@ -1,0 +1,129 @@
+name: Release
+
+# Signed arm64 release: push a v* tag whose name matches versionName in
+# app/build.gradle.kts. workflow_dispatch re-runs it for an existing tag.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v0.1.8"
+        required: true
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  NDK_VERSION: 27.2.12479018
+  CERT_SHA256: 617d4881cbff1482a0970cd4c3135f7a0fded9a2a82856c7893a473d583cd2cb
+  CARGO_TERM_COLOR: always
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+
+      - name: Tag matches versionName
+        run: |
+          version=$(sed -n 's/.*versionName = .*?: "\([^"]*\)".*/\1/p' app/build.gradle.kts)
+          echo "versionName=$version tag=$TAG"
+          [ "v$version" = "$TAG" ] || { echo "::error::tag $TAG != versionName $version (app/build.gradle.kts)"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Default package list includes the removed 'tools' package (sdkmanager exits 1).
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android platform + NDK
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;${NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Rust toolchain (rust/rust-toolchain.toml) + Android target
+        working-directory: rust
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.AGENDA_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::secret AGENDA_RELEASE_KEYSTORE_BASE64 is empty"; exit 1; }
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "AGENDA_RELEASE_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Assemble signed release (arm64)
+        env:
+          AGENDA_RELEASE_STORE_PASSWORD: ${{ secrets.AGENDA_RELEASE_STORE_PASSWORD }}
+          AGENDA_RELEASE_KEY_ALIAS: ${{ secrets.AGENDA_RELEASE_KEY_ALIAS }}
+          AGENDA_RELEASE_KEY_PASSWORD: ${{ secrets.AGENDA_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease -PagendaAbis=arm64-v8a
+
+      - name: Verify signing certificate and version
+        run: |
+          src=app/build/outputs/apk/release/app-release.apk
+          [ -f "$src" ] || { echo "::error::no signed APK at $src"; ls app/build/outputs/apk/release/; exit 1; }
+          APK="agenda-android-${VERSION}-arm64-release.apk"
+          mkdir -p dist && cp "$src" "dist/$APK"
+          bt="$ANDROID_HOME/build-tools/35.0.0"
+          certs=$("$bt/apksigner" verify --print-certs "dist/$APK")
+          echo "$certs" | grep -i 'SHA-256'
+          echo "$certs" | grep -qi "certificate SHA-256 digest: $CERT_SHA256" \
+            || { echo "::error::APK is not signed with the release key ($CERT_SHA256)"; exit 1; }
+          badging=$("$bt/aapt2" dump badging "dist/$APK" | head -1)
+          echo "$badging"
+          echo "$badging" | grep -q "versionName='$VERSION'" || { echo "::error::APK versionName != $VERSION"; exit 1; }
+          echo "APK=$APK" >> "$GITHUB_ENV"
+
+      - name: Update feed
+        run: |
+          scripts/make-update-feed.sh "dist/$APK" \
+            "https://github.com/makekosmos/agenda-android/releases/download/$TAG" dist
+          cat dist/manifest.json
+
+      # Symbol table for crash symbolication; AGP strips the copy in the APK.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agenda-android-${{ env.VERSION }}-arm64-symbols
+          path: app/build/rust-jnilibs/arm64-v8a/libagenda_mobile.so
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" --verify-tag --title "Agenda Android $VERSION" --generate-notes \
+            "dist/$APK" dist/manifest.json dist/latest-android.yml dist/release-bom-android.json
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
