@@ -20,6 +20,14 @@ class UpdateCacheCleanupTest {
     private fun staleApk(): File {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val dir = File(context.cacheDir, "updates")
+        // AgendaApplication.onCreate sweeps cache/updates on Dispatchers.IO;
+        // drain that one-time sweep with a sentinel before asserting that a
+        // file survives, otherwise the coroutine races the test body.
+        val sentinel = File(dir, ".sentinel")
+        dir.mkdirs()
+        sentinel.writeText("x")
+        val deadline = System.currentTimeMillis() + 5000
+        while (sentinel.exists() && System.currentTimeMillis() < deadline) Thread.sleep(10)
         dir.mkdirs()
         return File(dir, "agenda-android-0.1.5-arm64-release.apk").apply { writeBytes(ByteArray(42)) }
     }
@@ -38,9 +46,6 @@ class UpdateCacheCleanupTest {
         val apk = staleApk()
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         UpdateCleanupReceiver().onReceive(context, Intent(Intent.ACTION_MY_PACKAGE_REPLACED))
-        // goAsync defers to a thread; poll briefly instead of sleeping.
-        val deadline = System.currentTimeMillis() + 5000
-        while (apk.exists() && System.currentTimeMillis() < deadline) Thread.sleep(20)
         assertFalse(apk.exists())
     }
 
