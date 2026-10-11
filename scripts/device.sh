@@ -3,11 +3,13 @@
 # Fallback for agents when the mobile-mcp MCP server is unavailable.
 # See docs/testing-on-device.md.
 #
-#   scripts/device.sh boot                 # start headless emulator (AVD $AVD, default agenda30 = only image with working screenshots here), wait for boot
-#     env: AVD=agenda34atd (API 34, no screenshots), GPU=guest|swiftshader_indirect|host, EMU_EXTRA="...", KVM=1 (never on this box)
+#   scripts/device.sh boot                 # start headless emulator (AVD $AVD), wait for boot
+#     Linux: default AVD agenda30 (x86_64, TCG; KVM=1 opt-in, never on the Devin box), -no-snapshot.
+#     macOS: default AVD agenda35 (arm64-v8a, Hypervisor.framework), quick-boot snapshot on; COLD=1 cold boots.
+#     env: AVD=..., GPU=guest|swiftshader_indirect|host, WINDOW=1 (show window), EMU_EXTRA="..."
 #   scripts/device.sh stop                 # kill the emulator
-#   scripts/device.sh build [release|debug]  # x86_64 APK for the emulator
-#   scripts/device.sh install [apk]        # default: latest x86_64 release build
+#   scripts/device.sh build [release|debug|e2e]  # APK for the emulator ABI ($ABI: arm64-v8a on macOS, x86_64 on Linux)
+#   scripts/device.sh install [apk]        # default: latest release build
 #   scripts/device.sh launch | kill | clear
 #   scripts/device.sh shot out.png         # screenshot to file
 #   scripts/device.sh tap X Y | swipe X1 Y1 X2 Y2 [ms] | text "hello" | key KEYCODE
@@ -23,14 +25,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SDK="${ANDROID_SDK_ROOT_EMU:-${ANDROID_HOME:?set ANDROID_HOME}}"          # has emulator + system image
 ADB="${ADB:-${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb}"
-AVD="${AVD:-agenda30}"
+if [ "$(uname -s)" = Darwin ]; then MAC=1; else MAC=0; fi
+if [ "$MAC" = 1 ]; then AVD="${AVD:-agenda35}"; ABI="${ABI:-arm64-v8a}"; else AVD="${AVD:-agenda30}"; ABI="${ABI:-x86_64}"; fi
+EMULATOR="$SDK/emulator/emulator"
 SERIAL="${ANDROID_SERIAL:-emulator-5554}"
 PKG="com.mundus.agenda"
 EMU_LOG="${EMU_LOG:-/tmp/agenda-emulator.log}"
 a() { "$ADB" -s "$SERIAL" "$@"; }
 
 accel_flag() {
-    # Default: pure software (TCG). On this box /dev/kvm exists but creating a vCPU
+    # macOS: Hypervisor.framework always works on Apple Silicon.
+    if [ "$MAC" = 1 ]; then echo "-accel on"; return; fi
+    # Linux default: pure software (TCG). On this box /dev/kvm exists but creating a vCPU
     # hits a host kernel BUG (kvm_spurious_fault, nested VMX broken), so KVM is opt-in
     # only (KVM=1) for machines where it really works.
     if [ "${KVM:-0}" = 1 ]; then echo "-accel on"; else echo "-accel off"; fi
@@ -39,16 +45,27 @@ accel_flag() {
 cmd="${1:-}"; shift || true
 case "$cmd" in
   boot)
-    if a get-state >/dev/null 2>&1; then echo "already running: $SERIAL"; exit 0; fi
+    # get-state alone lies for a few seconds after `stop` (stale adb entry).
+    if [ "$(a shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; then echo "already running: $SERIAL"; exit 0; fi
+    [ -x "$EMULATOR" ] || { echo "no emulator binary at $EMULATOR (sdkmanager emulator)" >&2; exit 1; }
     start=$(date +%s)
-    # shellcheck disable=SC2046
-    ANDROID_SDK_ROOT="$SDK" ANDROID_HOME="$SDK" nohup "$SDK/emulator/emulator" -avd "$AVD" \
-        $(accel_flag) -no-window -no-audio -no-boot-anim -gpu "${GPU:-guest}" \
-        ${EMU_EXTRA:-} -no-snapshot -memory 2048 -cores 4 -port "${SERIAL#emulator-}" >"$EMU_LOG" 2>&1 &
+    if [ "$MAC" = 1 ]; then
+        snap=""; [ "${COLD:-0}" = 1 ] && snap="-no-snapshot-load"
+        mem=""
+    else
+        snap="-no-snapshot"; mem="-memory 2048"
+    fi
+    win="-no-window"; [ "${WINDOW:-0}" = 1 ] && win=""
+    # shellcheck disable=SC2046,SC2086
+    ANDROID_SDK_ROOT="$SDK" ANDROID_HOME="$SDK" nohup "$EMULATOR" -avd "$AVD" \
+        $(accel_flag) $win -no-audio -no-boot-anim -gpu "${GPU:-$([ "$MAC" = 1 ] && echo host || echo guest)}" \
+        ${EMU_EXTRA:-} $snap $mem -cores 4 -port "${SERIAL#emulator-}" >"$EMU_LOG" 2>&1 &
+    emu_pid=$!
     "$ADB" start-server >/dev/null
     until [ "$(a shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
-        sleep 5
-        if [ $(( $(date +%s) - start )) -gt "${BOOT_TIMEOUT:-1800}" ]; then echo "boot timeout, see $EMU_LOG"; exit 1; fi
+        sleep 2
+        if ! kill -0 "$emu_pid" 2>/dev/null; then echo "emulator exited during boot, see $EMU_LOG:" >&2; tail -20 "$EMU_LOG" >&2; exit 1; fi
+        if [ $(( $(date +%s) - start )) -gt "${BOOT_TIMEOUT:-$([ "$MAC" = 1 ] && echo 300 || echo 1800)}" ]; then echo "boot timeout, see $EMU_LOG"; exit 1; fi
     done
     # Lighter UI: no animations would hide animation bugs, so keep them unless NOANIM=1.
     if [ "${NOANIM:-0}" = 1 ]; then
@@ -61,7 +78,8 @@ case "$cmd" in
   stop) a emu kill || true ;;
   build)
     variant="${1:-release}"
-    (cd "$ROOT" && { [ ! -f .devin-env.sh ] || source .devin-env.sh; } && ./gradlew ":app:assemble${variant^}" -PagendaAbis=x86_64 -q)
+    Variant="$(printf '%s' "${variant:0:1}" | tr '[:lower:]' '[:upper:]')${variant:1}"  # bash 3.2 has no ${v^}
+    (cd "$ROOT" && { [ ! -f .devin-env.sh ] || source .devin-env.sh; } && ./gradlew ":app:assemble$Variant" -PagendaAbis="$ABI" -q)
     ls -la "$ROOT/app/build/outputs/apk/$variant/"*.apk
     ;;
   install)
