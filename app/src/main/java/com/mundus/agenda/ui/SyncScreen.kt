@@ -267,10 +267,10 @@ fun SyncScreen(
                 Presence(
                     when {
                         snap == null -> "…"
-                        running -> "Я"
+                        running || syncing -> "Я"
                         else -> "Синхронизация остановлена"
                     },
-                    if (running || snap == null) c.mutedFg else c.warn,
+                    if (running || syncing || snap == null) c.mutedFg else c.warn,
                 )
             }
             for (peer in snap?.peers.orEmpty()) {
