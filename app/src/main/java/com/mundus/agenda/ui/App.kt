@@ -90,11 +90,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface Route {
-    data object Other : Route
+    data object Projects : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
     data class Task(val id: String) : Route
-    data object Settings : Route
+    data object Other : Route
     data object Appearance : Route
     data object Database : Route
     data object Sync : Route
@@ -189,11 +189,10 @@ private val FIXED_TABS =
  * pages is open the button wears its glyph under the lens. */
 private val PICKER_PAGES =
     listOf(
-        TabItem("other", R.drawable.ic_folder, "Проекты"),
+        TabItem("search", R.drawable.ic_search, "Поиск"),
+        TabItem("projects", R.drawable.ic_folder, "Проекты"),
         TabItem("list:SOMEDAY", R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu),
-        TabItem("list:LOGBOOK", R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu),
-        TabItem("list:TRASH", R.drawable.ic_delete, SmartList.TRASH.titleRu),
-        TabItem("settings", R.drawable.ic_settings, "Настройки"),
+        TabItem("other", R.drawable.ic_settings, "Другое"),
     )
 
 private fun isRootKey(route: String) = route in TAB_KEYS || PICKER_PAGES.any { it.key == route }
@@ -398,12 +397,12 @@ fun AgendaHome(
     val current = parseRoute(route)
     val title =
         when (val r = current) {
-            is Route.Other -> "Проекты"
+            is Route.Projects -> "Проекты"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
             is Route.Task -> ""
             is Route.Sync -> "Синхронизация"
-            is Route.Settings -> "Настройки"
+            is Route.Other -> "Другое"
             is Route.Appearance -> "Отображение"
             is Route.Database -> "База данных"
             is Route.Statistics -> "Статистика"
@@ -428,7 +427,7 @@ fun AgendaHome(
             val renamingProject =
                 (current as? Route.Project)
                     ?.takeIf { renamingProjectId == it.id }
-            AgendaTopBar(
+            if (current != Route.Search) AgendaTopBar(
                 title = title,
                 onBack = if (stack.isNotEmpty()) ::back else null,
                 titleContent =
@@ -460,7 +459,6 @@ fun AgendaHome(
                                     ListMenu(
                                         options = listOptions[key] ?: ListOptions(),
                                         onOptions = { listOptions = HashMap(listOptions).apply { put(key, it) } },
-                                        onSearch = { navigate(Route.Search) },
                                     )
                                 }
                             }
@@ -469,8 +467,8 @@ fun AgendaHome(
             @Composable
             fun PageContent(r: Route) {
                 when (r) {
-                    is Route.Other ->
-                        OtherPage(
+                    is Route.Projects ->
+                        ProjectsPage(
                             board = board,
                             onNavigate = ::navigate,
                             actions = actions,
@@ -485,11 +483,13 @@ fun AgendaHome(
                             options = optionsKey(r)?.let { listOptions[it] } ?: ListOptions(),
                         )
                     is Route.Search -> SearchScreen(board = board, actions = actions)
-                    is Route.Settings ->
-                        SettingsScreen(
+                    is Route.Other ->
+                        OtherScreen(
                             onAppearance = { navigate(Route.Appearance) },
                             onDatabase = { navigate(Route.Database) },
                             onAbout = { navigate(Route.About) },
+                            onLogbook = { navigate(Route.List(SmartList.LOGBOOK)) },
+                            onTrash = { navigate(Route.List(SmartList.TRASH)) },
                             onStatistics = { navigate(Route.Statistics) },
                             onSync = { navigate(Route.Sync) },
                             updateManager = updateManager,
@@ -678,12 +678,12 @@ private fun navTransition(motion: NavMotion, durationMs: Int): ContentTransform 
 
 fun routeKey(route: Route): String =
     when (route) {
-        is Route.Other -> "other"
+        is Route.Projects -> "projects"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
         is Route.Task -> "task:${route.id}"
         is Route.Sync -> "sync"
-        is Route.Settings -> "settings"
+        is Route.Other -> "other"
         is Route.Appearance -> "appearance"
         is Route.Database -> "database"
         is Route.Statistics -> "statistics"
@@ -694,7 +694,7 @@ fun routeKey(route: Route): String =
 fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
         "sync" -> Route.Sync
-        "settings" -> Route.Settings
+        "other" -> Route.Other
         "appearance" -> Route.Appearance
         "database" -> Route.Database
         "statistics" -> Route.Statistics
@@ -707,7 +707,8 @@ fun parseRoute(key: String): Route =
                 runCatching { SmartList.valueOf(key.substringAfter(':')) }
                     .getOrDefault(SmartList.INBOX)
             )
-        else -> Route.Other
+        "projects" -> Route.Projects
+        else -> Route.Projects
     }
 
 /** One home section group — the desktop sidebar "card" (sidebar_bg
@@ -768,7 +769,7 @@ private fun HomeRow(
  * desktop sidebar renders none.
  */
 @Composable
-fun OtherPage(
+fun ProjectsPage(
     board: Board,
     onNavigate: (Route) -> Unit,
     actions: TaskActions = TaskActions(),
@@ -842,12 +843,12 @@ private fun optionsKey(route: Route): String? =
         else -> null
     }
 
-/** List «⋯»: search, then the desktop display-options popover
+/** List «⋯»: the desktop display-options popover
  * (pages/options.rs) — «Сортировка» and «Группировка» with a check on
  * the active choice. A pick applies and closes, like desktop. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ListMenu(options: ListOptions, onOptions: (ListOptions) -> Unit, onSearch: () -> Unit) {
+private fun ListMenu(options: ListOptions, onOptions: (ListOptions) -> Unit) {
     var open by remember { mutableStateOf(false) }
     AIconButton(R.drawable.ic_more_h, desc = "Параметры отображения", onClick = { open = true }, filled = true)
     if (!open) return
@@ -857,10 +858,6 @@ private fun ListMenu(options: ListOptions, onOptions: (ListOptions) -> Unit, onS
         containerColor = c.popover,
     ) {
         Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 16.dp)) {
-            AMenuItem("Поиск", leading = { AIcon(R.drawable.ic_search, tint = c.fg) }) {
-                open = false
-                onSearch()
-            }
             ASectionHeader("Сортировка")
             for (key in SortKey.entries) {
                 OptionItem(key.label, options.sort == key) {

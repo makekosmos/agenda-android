@@ -41,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -48,9 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mundus.agenda.Board
 import com.mundus.agenda.ListOptions
-import com.mundus.agenda.TaskGroup
 import com.mundus.agenda.arrangeTasks
-import com.mundus.agenda.searchBoard
+import com.mundus.agenda.searchTasks
 import com.mundus.agenda.sortTasks
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
@@ -252,7 +252,7 @@ fun TaskListScreen(
         if (list == SmartList.LOGBOOK && tasks.isNotEmpty()) {
             item(key = "header-tasks") { ASectionHeader("Задачи") }
         }
-        taskGroups(board, arrangeTasks(board, tasks, options), actions)
+        taskRows(board, arrangeTasks(board, tasks, options), actions)
         if (archivedProjects.isNotEmpty()) {
             item(key = "header-projects") { ASectionHeader("Проекты") }
             items(archivedProjects, key = { it.id }) { project ->
@@ -296,15 +296,17 @@ fun TaskListScreen(
     }
 }
 
-/** Settings: «Обновления» first, then one group of pages. Theme lives on
- * its own «Отображение» page. */
+/** «Другое»: «Обновления» first, then Архив and Корзина, then the former
+ * settings pages. Theme lives on its own «Отображение» page. */
 @Composable
-fun SettingsScreen(
+fun OtherScreen(
     onAppearance: () -> Unit,
     onAbout: () -> Unit,
     onStatistics: () -> Unit = {},
     onSync: () -> Unit = {},
     onDatabase: () -> Unit = {},
+    onLogbook: () -> Unit = {},
+    onTrash: () -> Unit = {},
     updateManager: UpdateManager? = null,
 ) {
     Column(
@@ -316,23 +318,35 @@ fun SettingsScreen(
     ) {
         updateManager?.let { UpdateSection(it) }
         Spacer(Modifier.height(24.dp))
-        SettingsGroup {
-            val pages =
-                listOf(
-                    Triple(R.drawable.ic_paint, "Отображение", onAppearance),
-                    Triple(R.drawable.ic_repeat, "Синхронизация", onSync),
-                    Triple(R.drawable.ic_database, "База данных", onDatabase),
-                    Triple(R.drawable.ic_chart, "Статистика", onStatistics),
-                    Triple(R.drawable.ic_help_circle, "О приложении", onAbout),
-                )
-            pages.forEachIndexed { i, (icon, label, onClick) ->
-                if (i > 0) ADivider(indent = 44.dp)
-                ARow(onClick = onClick) { glyph ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AIcon(icon, tint = glyph.copy(alpha = 0.85f))
-                        Spacer(Modifier.width(12.dp))
-                        Text(label, style = AgendaType.body, color = glyph)
-                    }
+        PageGroup(
+            listOf(
+                Triple(R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu, onLogbook),
+                Triple(R.drawable.ic_delete, SmartList.TRASH.titleRu, onTrash),
+            )
+        )
+        Spacer(Modifier.height(24.dp))
+        PageGroup(
+            listOf(
+                Triple(R.drawable.ic_paint, "Отображение", onAppearance),
+                Triple(R.drawable.ic_repeat, "Синхронизация", onSync),
+                Triple(R.drawable.ic_database, "База данных", onDatabase),
+                Triple(R.drawable.ic_chart, "Статистика", onStatistics),
+                Triple(R.drawable.ic_help_circle, "О приложении", onAbout),
+            )
+        )
+    }
+}
+
+@Composable
+private fun PageGroup(pages: List<Triple<Int, String, () -> Unit>>) {
+    SettingsGroup {
+        pages.forEachIndexed { i, (icon, label, onClick) ->
+            if (i > 0) ADivider(indent = 44.dp)
+            ARow(onClick = onClick) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AIcon(icon, tint = glyph.copy(alpha = 0.85f))
+                    Spacer(Modifier.width(12.dp))
+                    Text(label, style = AgendaType.body, color = glyph)
                 }
             }
         }
@@ -630,7 +644,7 @@ fun ProjectScreen(
     val active = tasks.filter { !it.isCompleted && !it.isCancelled }
     val done = sortTasks(board, tasks.filter { it.isCompleted || it.isCancelled }, options.sort)
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
-        taskGroups(board, arrangeTasks(board, active, options), actions, hideProjectMeta)
+        taskRows(board, arrangeTasks(board, active, options), actions, hideProjectMeta)
         if (done.isNotEmpty()) {
             item(key = "done-header") { ASectionHeader("Завершённые") }
             items(done, key = { it.id }) { task ->
@@ -641,91 +655,60 @@ fun ProjectScreen(
     }
 }
 
-/** Task rows under the desktop board's group headers: label plus count. */
-private fun LazyListScope.taskGroups(
+private fun LazyListScope.taskRows(
     board: Board,
-    groups: List<TaskGroup>,
+    tasks: List<Task>,
     actions: TaskActions,
     hideProjectMeta: Boolean = false,
 ) {
-    groups.forEachIndexed { i, group ->
-        if (group.label != null) {
-            item(key = "group-$i-${group.label}") {
-                Row(Modifier.animateItem(), verticalAlignment = Alignment.Bottom) {
-                    ASectionHeader(group.label, modifier = Modifier.padding(end = 0.dp))
-                    Text(
-                        group.tasks.size.toString(),
-                        style = AgendaType.section,
-                        color = AgendaTheme.colors.fg(0.4f),
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    )
-                }
-            }
-        }
-        items(group.tasks, key = { it.id }) { task ->
-            TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
-            RowDivider()
-        }
+    items(tasks, key = { it.id }) { task ->
+        TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
+        RowDivider()
     }
 }
 
-/** Search page — the desktop Cmd-K quick search (pages/quick_search.rs) as
- * a full page: up to 8 tasks and 5 projects whose title contains the query. */
+/** Search page, a bar root: the field takes the top bar's row, then every
+ * matching task, open ones first. */
 @Composable
 fun SearchScreen(board: Board, actions: TaskActions = TaskActions(), initialQuery: String = "") {
     val c = AgendaTheme.colors
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    val (tasks, projects) = searchBoard(board, query)
+    val tasks = searchTasks(board, query)
+    val titleLine = with(LocalDensity.current) { AgendaType.pageTitle.lineHeight.toDp() }
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.fg(0.06f))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            Modifier.fillMaxWidth().height(maxOf(56.dp, titleLine + 20.dp)).padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            AIcon(R.drawable.ic_search, tint = c.mutedFg)
-            Spacer(Modifier.width(10.dp))
-            SheetField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = "Поиск задач и проектов...",
-                style = AgendaType.body,
-                singleLine = true,
-                imeAction = androidx.compose.ui.text.input.ImeAction.Search,
-                focusRequester = focus,
-            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(c.fg(0.06f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AIcon(R.drawable.ic_search, tint = c.mutedFg)
+                Spacer(Modifier.width(10.dp))
+                SheetField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = "Поиск задач",
+                    style = AgendaType.body,
+                    singleLine = true,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+                    focusRequester = focus,
+                )
+            }
         }
         when {
             query.isBlank() -> SearchHint("Начните вводить для поиска", null)
-            tasks.isEmpty() && projects.isEmpty() ->
-                SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
+            tasks.isEmpty() -> SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
             else ->
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
-                    if (tasks.isNotEmpty()) {
-                        item(key = "header-tasks") { ASectionHeader("Задачи") }
-                        items(tasks, key = { it.id }) { task ->
-                            TaskRow(board, task, modifier = Modifier.animateItem(), actions = actions)
-                            RowDivider()
-                        }
-                    }
-                    if (projects.isNotEmpty()) {
-                        item(key = "header-projects") { ASectionHeader("Проекты") }
-                        items(projects, key = { "project-${it.id}" }) { project ->
-                            ARow(onClick = { actions.onProjectOpen(project) }) { glyph ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AIcon(R.drawable.ic_folder, tint = c.mutedFg)
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(project.title, style = AgendaType.body, color = glyph)
-                                }
-                            }
-                            RowDivider()
-                        }
-                    }
+                    taskRows(board, tasks, actions)
                 }
         }
     }

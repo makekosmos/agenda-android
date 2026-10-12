@@ -19,9 +19,6 @@ data class ListOptions(
     val group: GroupKey = GroupKey.NONE,
 ) : java.io.Serializable
 
-/** A run of rows under an optional header; `null` label = ungrouped. */
-data class TaskGroup(val label: String?, val tasks: List<Task>)
-
 /** Desktop `view_options_key`: lists with display options; Корзина has none. */
 fun listOptionsKey(list: SmartList): String? =
     when (list) {
@@ -44,38 +41,28 @@ fun sortTasks(board: Board, tasks: List<Task>, key: SortKey): List<Task> =
         SortKey.TITLE -> tasks.sortedWith(compareBy({ it.title.lowercase() }, { it.sortOrder }))
     }
 
-/** agenda-gpui board grouping (pages/board.rs); empty groups are dropped. */
-fun groupTasks(board: Board, tasks: List<Task>, key: GroupKey): List<TaskGroup> {
-    val groups =
-        when (key) {
-            GroupKey.NONE -> listOf(TaskGroup(null, tasks))
-            GroupKey.PROJECT -> {
-                val known = board.projects.map { it.id }.toSet()
-                listOf(TaskGroup("Без проекта", tasks.filter { it.projectId == null })) +
-                    board.projects.map { p -> TaskGroup(p.title, tasks.filter { it.projectId == p.id }) } +
-                    TaskGroup("Проект", tasks.filter { it.projectId != null && it.projectId !in known })
-            }
-            GroupKey.DATE ->
-                tasks
-                    .map { board.dateView(it).dateKey }
-                    .distinct()
-                    .sortedBy { it ?: "9999" }
-                    .map { k ->
-                        val bucket = tasks.filter { board.dateView(it).dateKey == k }
-                        TaskGroup(board.dateView(bucket.first()).label, bucket)
-                    }
+/** agenda-gpui board group order (pages/board.rs), headerless: «Без
+ * проекта» first, then projects in order, orphans last; dates ascending,
+ * undated last. Stable, so the sort holds inside each run. */
+fun groupTasks(board: Board, tasks: List<Task>, key: GroupKey): List<Task> =
+    when (key) {
+        GroupKey.NONE -> tasks
+        GroupKey.PROJECT -> {
+            val rank = board.projects.withIndex().associate { (i, p) -> p.id to i + 1 }
+            tasks.sortedBy { t -> t.projectId?.let { rank[it] ?: Int.MAX_VALUE } ?: 0 }
         }
-    return groups.filter { it.tasks.isNotEmpty() }
-}
+        GroupKey.DATE -> tasks.sortedBy { board.dateView(it).dateKey ?: "9999" }
+    }
 
-fun arrangeTasks(board: Board, tasks: List<Task>, options: ListOptions): List<TaskGroup> =
+fun arrangeTasks(board: Board, tasks: List<Task>, options: ListOptions): List<Task> =
     groupTasks(board, sortTasks(board, tasks, options.sort), options.group)
 
-/** agenda-gpui `quick_matches` (app.rs): title substring, case-insensitive. */
-fun searchBoard(board: Board, query: String): Pair<List<Task>, List<Project>> {
+/** Every non-trashed task whose title contains the query, case-insensitive;
+ * open tasks first, then completed or cancelled ones. */
+fun searchTasks(board: Board, query: String): List<Task> {
     val q = query.trim().lowercase()
-    if (q.isEmpty()) return emptyList<Task>() to emptyList()
-    val tasks = board.todos.filter { !it.isTrashed && it.title.lowercase().contains(q) }.take(8)
-    val projects = board.projects.filter { it.title.lowercase().contains(q) }.take(5)
-    return tasks to projects
+    if (q.isEmpty()) return emptyList()
+    return board.todos
+        .filter { !it.isTrashed && it.title.lowercase().contains(q) }
+        .sortedBy { it.isCompleted || it.isCancelled }
 }

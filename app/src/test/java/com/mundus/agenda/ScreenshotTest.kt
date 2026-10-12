@@ -111,8 +111,8 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
     }
 
-    @Test fun settingsLight() = paletteShot("settings-light", false, "agenda", Route.Settings)
-    @Test fun settingsDark() = paletteShot("settings-dark", true, "agenda", Route.Settings)
+    @Test fun otherLight() = paletteShot("other-light", false, "agenda", Route.Other)
+    @Test fun otherDark() = paletteShot("other-dark", true, "agenda", Route.Other)
     @Test fun appearanceLight() = paletteShot("appearance-light", false, "agenda", Route.Appearance)
     @Test fun appearanceDark() = paletteShot("appearance-dark", true, "agenda", Route.Appearance)
 
@@ -139,8 +139,8 @@ class ScreenshotTest {
     @Test fun weekCatppuccinLight() = paletteShot("week-catppuccin-light", false, "catppuccin", Route.List(SmartList.WEEK))
     @Test fun weekDracula() = paletteShot("week-dracula", true, "dracula", Route.List(SmartList.WEEK))
 
-    @Test fun homeLight() = shot("home-light", false, Route.Other)
-    @Test fun homeDark() = shot("home-dark", true, Route.Other)
+    @Test fun projectsLight() = shot("projects-light", false, Route.Projects)
+    @Test fun projectsDark() = shot("projects-dark", true, Route.Projects)
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))
     @Test fun inboxDark() = shot("inbox-dark", true, Route.List(SmartList.INBOX))
     @Test fun weekLight() = shot("week-light", false, Route.List(SmartList.WEEK))

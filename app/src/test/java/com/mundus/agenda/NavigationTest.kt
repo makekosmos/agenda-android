@@ -97,26 +97,26 @@ class NavigationTest {
         composeTestRule.onNodeWithText("Созвон по дизайну").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Страницы").performClick()
         composeTestRule.waitForIdle()
-        val expected = listOf("Проекты", "Потом", "Архив", "Корзина", "Настройки")
+        val expected = listOf("Поиск", "Проекты", "Потом", "Другое")
         val texts = textsInOrder()
         val indices = expected.map { texts.indexOf(it) }
         assert(indices.none { it < 0 } && indices.zipWithNext().all { (a, b) -> a < b }) {
             "menu rows out of order: $expected at $indices in $texts"
         }
-        assert(texts.none { it == "Другое" }) { "«Другое» is gone from the menu: $texts" }
-        assert(texts.none { it == "Статистика" }) { "Статистика lives in settings only: $texts" }
+        assert(texts.none { it == "Архив" || it == "Корзина" }) { "Архив and Корзина live in «Другое»: $texts" }
+        assert(texts.none { it == "Статистика" }) { "Статистика lives in «Другое» only: $texts" }
     }
 
     @Test
     fun swipeUpOnBarOpensPageMenu() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
-        assert(composeTestRule.onAllNodes(hasText("Настройки")).fetchSemanticsNodes().isEmpty())
+        assert(composeTestRule.onAllNodes(hasText("Другое")).fetchSemanticsNodes().isEmpty())
         composeTestRule
             .onNodeWithContentDescription("Входящие")
             .performTouchInput { swipeUp(startY = bottom, endY = top - 200f) }
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Настройки").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Другое").assertIsDisplayed()
         composeTestRule.onNodeWithText("Созвон по дизайну").assertExists()
     }
 
@@ -173,11 +173,12 @@ class NavigationTest {
     }
 
     @Test
-    fun settingsAndAboutOpenAndReturn() {
+    fun otherPageOpensSettingsPagesAndReturns() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
-        openPage("Настройки")
-        composeTestRule.onNodeWithText("Статистика").assertIsDisplayed()
+        openPage("Другое")
+        composeTestRule.onNodeWithText("Корзина").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Статистика").assertExists()
         composeTestRule
             .onNodeWithText("Отображение")
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
