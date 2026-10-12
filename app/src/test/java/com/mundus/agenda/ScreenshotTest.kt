@@ -73,6 +73,35 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/sync-dark.png")
     }
 
+    @Test
+    fun syncPairingDark() {
+        val repo =
+            FakeRepository().apply {
+                snapshot =
+                    snapshot.copy(
+                        peers =
+                            listOf(
+                                SyncPeer(
+                                    deviceId = "dev-mac",
+                                    deviceName = "MacBook Pro",
+                                    status = "online",
+                                    platform = "macos",
+                                    appVersion = "0.4.2",
+                                )
+                            ),
+                        incomingPairingRequests =
+                            listOf(IncomingPairing("dev-ipad", "iPad", "ipados", "0.1.10")),
+                    )
+            }
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = true) {
+                AgendaHome(board = board, repository = repo, initialRoute = Route.Sync)
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onRoot().captureRoboImage("roborazzi/sync-pairing-dark.png")
+    }
+
     private fun paletteShot(name: String, dark: Boolean, palette: String, route: Route) {
         composeTestRule.setContent {
             AgendaTheme(darkTheme = dark, palette = palette) {

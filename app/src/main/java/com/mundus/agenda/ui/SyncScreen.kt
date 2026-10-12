@@ -339,27 +339,6 @@ fun SyncScreen(
                     }
                 }
             }
-            // Incoming consent (worktree modals.rs:91-190, inline here).
-            for (req in snap?.incomingPairingRequests.orEmpty()) {
-                ADivider(indent = 12.dp)
-                ARow(onClick = null) { glyph ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            req.deviceName ?: req.deviceId,
-                            style = AgendaType.body,
-                            color = glyph,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                        )
-                        SyncButton("Отклонить") {
-                            act { sync?.declinePairing(req.deviceId) }
-                        }
-                        SyncButton("Принять", primary = true) {
-                            act { sync?.acceptPairing(req.deviceId) }
-                        }
-                    }
-                }
-            }
         }
 
         ASectionHeader("Синхронизация")
@@ -419,27 +398,102 @@ fun SyncScreen(
         }
     }
 
-    snap?.peers?.firstOrNull { it.deviceId == openPeerId }?.let { peer ->
-        PeerSheet(
-            peer = peer,
-            onDismiss = { openPeerId = null },
-            onDisconnect = {
-                openPeerId = null
-                act { sync?.disconnectPeer(peer.deviceId) }
+    // Incoming consent (worktree modals.rs:91-190) uses the same sheet
+    // as a peer's details, with «Подключить» in place of «Отключить».
+    val incoming = snap?.incomingPairingRequests?.firstOrNull()
+    val peer = snap?.peers?.firstOrNull { it.deviceId == openPeerId }
+    if (incoming != null) {
+        val platform = Platform.parse(incoming.platform)
+        DeviceSheet(
+            name = incoming.deviceName?.trim()?.ifEmpty { null } ?: "Устройство",
+            platform = platform,
+            status = { Presence("Хочет подключиться", c.accent) },
+            rows =
+                listOf(
+                    "Система" to (platform.label ?: "Не передана"),
+                    "Версия" to (incoming.appVersion?.ifBlank { null } ?: "Не передана"),
+                    "ID устройства" to incoming.deviceId,
+                ),
+            onDismiss = { act { sync?.declinePairing(incoming.deviceId) } },
+        ) {
+            SheetAction("Подключить", c.accent, bold = true) {
+                act { sync?.acceptPairing(incoming.deviceId) }
+            }
+            Spacer(Modifier.height(8.dp))
+            SheetAction("Отклонить", c.mutedFg) {
+                act { sync?.declinePairing(incoming.deviceId) }
+            }
+        }
+    } else if (peer != null) {
+        val platform = Platform.parse(peer.platform)
+        var confirming by remember(peer.deviceId) { mutableStateOf(false) }
+        DeviceSheet(
+            name = peerName(peer),
+            platform = platform,
+            status = {
+                Presence(peerStatus(peer.status), if (peer.status == "online") c.success else c.mutedFg)
             },
-        )
+            rows =
+                listOfNotNull(
+                    lastSeenLabel(peer.lastSeen)?.let { "Последний раз в сети" to it },
+                    "Система" to (platform.label ?: "Не передана"),
+                    "Версия" to (peer.appVersion?.ifBlank { null } ?: "Не передана"),
+                    "ID устройства" to peer.deviceId,
+                ),
+            onDismiss = { openPeerId = null },
+        ) {
+            SheetAction(
+                if (confirming) "Нажмите ещё раз, чтобы отключить" else "Отключить устройство",
+                c.destructive,
+            ) {
+                if (confirming) {
+                    openPeerId = null
+                    act { sync?.disconnectPeer(peer.deviceId) }
+                } else {
+                    confirming = true
+                }
+            }
+            if (confirming) {
+                Text(
+                    "«${peerName(peer)}» будет удалено из списка синхронизации.",
+                    style = AgendaType.meta,
+                    color = c.mutedFg,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 12.dp, end = 12.dp),
+                )
+            }
+        }
     }
 }
 
-/** Peer details: who it is, when we last heard from it, and the
- * desktop «Отключить» (confirmed in place, like its confirm modal). */
+@Composable
+private fun SheetAction(label: String, color: Color, bold: Boolean = false, onClick: () -> Unit) {
+    SettingsGroup {
+        ARow(onClick = onClick) {
+            Text(
+                label,
+                style = if (bold) AgendaType.body.copy(fontWeight = FontWeight.SemiBold) else AgendaType.body,
+                color = color,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/** A device in a sheet: avatar, name, status, a facts table, then the
+ * caller's actions (disconnect for a peer, accept for a pairing request). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun PeerSheet(peer: SyncPeer, onDismiss: () -> Unit, onDisconnect: () -> Unit) {
+private fun DeviceSheet(
+    name: String,
+    platform: Platform,
+    status: @Composable () -> Unit,
+    rows: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    actions: @Composable () -> Unit,
+) {
     val c = AgendaTheme.colors
-    val platform = Platform.parse(peer.platform)
-    val online = peer.status == "online"
-    var confirming by remember { mutableStateOf(false) }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.popover) {
         Column(Modifier.padding(bottom = 24.dp)) {
             Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -447,24 +501,17 @@ private fun PeerSheet(peer: SyncPeer, onDismiss: () -> Unit, onDisconnect: () ->
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        peerName(peer),
+                        name,
                         style = AgendaType.body.copy(fontWeight = FontWeight.SemiBold),
                         color = c.fg,
                         maxLines = 1,
                     )
                     Spacer(Modifier.height(2.dp))
-                    Presence(peerStatus(peer.status), if (online) c.success else c.mutedFg)
+                    status()
                 }
             }
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
-                val rows =
-                    listOfNotNull(
-                        lastSeenLabel(peer.lastSeen)?.let { "Последний раз в сети" to it },
-                        "Система" to (platform.label ?: "Не передана"),
-                        "Версия" to (peer.appVersion?.ifBlank { null } ?: "Не передана"),
-                        "ID устройства" to peer.deviceId,
-                    )
                 rows.forEachIndexed { i, (label, value) ->
                     if (i > 0) ADivider(indent = 12.dp)
                     ARow(onClick = null) { glyph ->
@@ -485,26 +532,7 @@ private fun PeerSheet(peer: SyncPeer, onDismiss: () -> Unit, onDisconnect: () ->
                 }
             }
             Spacer(Modifier.height(16.dp))
-            SettingsGroup {
-                ARow(onClick = { if (confirming) onDisconnect() else confirming = true }) {
-                    Text(
-                        if (confirming) "Нажмите ещё раз, чтобы отключить" else "Отключить устройство",
-                        style = AgendaType.body,
-                        color = c.destructive,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            if (confirming) {
-                Text(
-                    "«${peerName(peer)}» будет удалено из списка синхронизации.",
-                    style = AgendaType.meta,
-                    color = c.mutedFg,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 12.dp, end = 12.dp),
-                )
-            }
+            actions()
         }
     }
 }
