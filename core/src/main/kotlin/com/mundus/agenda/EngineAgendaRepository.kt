@@ -8,6 +8,8 @@ import java.time.ZoneId
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
@@ -44,6 +46,7 @@ import kotlinx.serialization.json.put
  */
 class EngineAgendaRepository(
     dataDir: String,
+    private val dayCheckMillis: Long = 10_000,
     private val localDayProvider: () -> Pair<String, Int> = {
         val zone = ZoneId.systemDefault()
         val now = Instant.now()
@@ -186,7 +189,23 @@ class EngineAgendaRepository(
                         }
                     )
                 trySend(Unit)
-                awaitClose { subscription.close() }
+                // Week/next-week membership depends on today, which no engine
+                // event announces: re-emit when the local day turns.
+                val dayWatch = launch {
+                    var day = localDay()
+                    while (true) {
+                        delay(dayCheckMillis)
+                        val now = localDay()
+                        if (now != day) {
+                            day = now
+                            trySend(Unit)
+                        }
+                    }
+                }
+                awaitClose {
+                    dayWatch.cancel()
+                    subscription.close()
+                }
             }
             .conflate()
             .map {
