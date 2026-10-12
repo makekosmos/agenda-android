@@ -743,7 +743,7 @@ fun OtherPage(
 @Composable
 private fun TaskMenu(onDelete: () -> Unit) {
     var open by remember { mutableStateOf(false) }
-    AIconButton(R.drawable.ic_more_h, desc = "Ещё", onClick = { open = true })
+    AIconButton(R.drawable.ic_more_h, desc = "Ещё", onClick = { open = true }, filled = true)
     if (open) {
         val c = AgendaTheme.colors
         androidx.compose.material3.ModalBottomSheet(
