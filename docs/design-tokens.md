@@ -44,7 +44,7 @@ Desktop base font is Inter, base size 13px (`theme.rs:16` `FONT_SIZE=13.0`,
 
 | Role | Desktop | Android |
 |---|---|---|
-| page title | ~17px semibold (M3 titleLarge 18sp kept p1) | 22sp semibold, -0.3sp letterSpacing |
+| page title | ~17px semibold (M3 titleLarge 18sp kept p1) | 30sp bold, -0.6sp letterSpacing |
 | section header | 12px medium, fg alpha 0.6 (`chrome.rs:436-441`) | 12sp medium, muted |
 | nav/row label | 13px, lh 15px (`chrome.rs:107`, `task.rs` row) | 15sp body |
 | meta | 12px muted (`task.rs` meta block) | 12.5sp muted |
