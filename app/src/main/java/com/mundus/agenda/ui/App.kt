@@ -281,6 +281,12 @@ fun AgendaHome(
             stack = stack.dropLast(1)
         }
     }
+    fun deleteTask(id: String) {
+        val task = board.todos.firstOrNull { it.id == id } ?: createdTaskFallback?.takeIf { it.id == id }
+        if (task != null) run { repository?.setTrashed(task, true) }
+        back()
+    }
+
     fun onCreateProject() {
         scope.launch {
             try {
@@ -351,7 +357,7 @@ fun AgendaHome(
             is Route.Other -> "Проекты"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
-            is Route.Task -> "Задача"
+            is Route.Task -> ""
             is Route.Sync -> "Синхронизация"
             is Route.Settings -> "Настройки"
             is Route.Statistics -> "Статистика"
@@ -387,6 +393,10 @@ fun AgendaHome(
                                 onCommit = ::commitRename,
                             )
                         }
+                    },
+                trailing =
+                    (current as? Route.Task)?.let { r ->
+                        { TaskMenu(onDelete = { deleteTask(r.id) }) }
                     },
             )
             @Composable
@@ -709,6 +719,32 @@ fun OtherPage(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Task page «⋯»: a bottom sheet whose only action moves the task to the trash. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun TaskMenu(onDelete: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    AIconButton(R.drawable.ic_more_h, desc = "Ещё", onClick = { open = true })
+    if (open) {
+        val c = AgendaTheme.colors
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { open = false },
+            containerColor = c.popover,
+        ) {
+            Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 16.dp)) {
+                AMenuItem(
+                    "Удалить",
+                    destructive = true,
+                    leading = { AIcon(R.drawable.ic_delete, tint = c.destructive) },
+                ) {
+                    open = false
+                    onDelete()
                 }
             }
         }

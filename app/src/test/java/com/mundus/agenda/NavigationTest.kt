@@ -10,6 +10,8 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.performClick
@@ -236,7 +238,24 @@ class NavigationTest {
         ) { "task page has no editable fields" }
         composeTestRule.onNodeWithText("Дата").assertIsDisplayed()
         composeTestRule.onNodeWithText("Проект").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Задача").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Ещё").assertIsDisplayed()
+    }
+
+    @Test
+    fun taskMenuDeleteTrashesTaskAndGoesBack() {
+        val repo = FakeRepository()
+        composeTestRule.setContent {
+            AgendaTheme { AgendaHome(board = board, repository = repo) }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Созвон по дизайну").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithText("Задача").assertCountEquals(0)
+        composeTestRule.onNodeWithContentDescription("Ещё").performClick()
+        composeTestRule.onNodeWithText("Удалить").performClick()
+        composeTestRule.waitForIdle()
+        assert(repo.trashedTitles == listOf("Созвон по дизайну")) { "trashed: ${repo.trashedTitles}" }
+        composeTestRule.onNodeWithContentDescription("Ещё").assertDoesNotExist()
     }
 
     @Test
@@ -260,7 +279,7 @@ class NavigationTest {
             "quickEntry calls: ${repo.quickEntryCalls}"
         }
         // Landed on the task page; sheet is gone (no ImeAction.Done field).
-        composeTestRule.onNodeWithText("Задача").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Ещё").assertIsDisplayed()
         composeTestRule.onNodeWithText("Дата").assertIsDisplayed()
     }
 
@@ -272,7 +291,7 @@ class NavigationTest {
         // to the same tab root.
         composeTestRule.onNodeWithText("Созвон по дизайну").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Задача").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Ещё").assertIsDisplayed()
         composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Созвон по дизайну").assertIsDisplayed()
