@@ -34,7 +34,7 @@ class AgendaApplication : Application() {
         prefs.edit().putString("theme", mode).apply()
     }
 
-    /** `AgendaPalette` or a zeron family id (ui/ZeronThemes.kt). */
+    /** `AgendaPalette`, `MundusPalette`, or a zeron family id (ui/ZeronThemes.kt). */
     val palette by lazy {
         androidx.compose.runtime.mutableStateOf(
             prefs.getString("palette", com.mundus.agenda.ui.AgendaPalette) ?: com.mundus.agenda.ui.AgendaPalette
