@@ -1,6 +1,6 @@
+<!-- Phosphor arrow-up (bold) @phosphor-icons/core 2.1.1, MIT. tools/gen_phosphor_icons.py -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:pathData="M12 19V5" android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round"/>
-    <path android:pathData="M5 12L12 5L19 12" android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    android:viewportWidth="256" android:viewportHeight="256">
+    <path android:pathData="M208.49,120.49a12,12,0,0,1-17,0L140,69V216a12,12,0,0,1-24,0V69L64.49,120.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0l72,72A12,12,0,0,1,208.49,120.49Z" android:fillColor="#FF000000"/>
 </vector>

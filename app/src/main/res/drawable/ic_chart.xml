@@ -1,6 +1,6 @@
+<!-- Phosphor chart-bar (fill) @phosphor-icons/core 2.1.1, MIT. tools/gen_phosphor_icons.py -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <!-- analytics-01: bar chart (desktop icons/analytics-01.svg) -->
-    <path android:pathData="M7 15v4M12 10v9M17 5v14" android:strokeColor="#FF000000" android:strokeWidth="2" android:strokeLineCap="round"/>
+    android:viewportWidth="256" android:viewportHeight="256">
+    <path android:pathData="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1,0-16h8V136a8,8,0,0,1,8-8H72a8,8,0,0,1,8,8v64H96V88a8,8,0,0,1,8-8h32a8,8,0,0,1,8,8V200h16V40a8,8,0,0,1,8-8h40a8,8,0,0,1,8,8V200h8A8,8,0,0,1,232,208Z" android:fillColor="#FF000000"/>
 </vector>

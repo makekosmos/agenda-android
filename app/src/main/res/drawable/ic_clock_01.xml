@@ -1,6 +1,6 @@
+<!-- Phosphor clock (fill) @phosphor-icons/core 2.1.1, MIT. tools/gen_phosphor_icons.py -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:pathData="M2.0 12.0A10.0 10.0 0 1 0 22.0 12.0A10.0 10.0 0 1 0 2.0 12.0Z" android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round"/>
-    <path android:pathData="M12 8V12L14 14" android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round"/>
+    android:viewportWidth="256" android:viewportHeight="256">
+    <path android:pathData="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm56,112H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48a8,8,0,0,1,0,16Z" android:fillColor="#FF000000"/>
 </vector>
