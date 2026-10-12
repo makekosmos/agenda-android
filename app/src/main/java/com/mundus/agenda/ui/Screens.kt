@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -32,9 +33,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +47,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mundus.agenda.Board
+import com.mundus.agenda.ListOptions
+import com.mundus.agenda.TaskGroup
+import com.mundus.agenda.arrangeTasks
+import com.mundus.agenda.searchBoard
+import com.mundus.agenda.sortTasks
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
@@ -226,7 +234,12 @@ private fun RowDivider() {
  * archived tasks (pages/logbook.rs).
  */
 @Composable
-fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskActions()) {
+fun TaskListScreen(
+    board: Board,
+    list: SmartList,
+    actions: TaskActions = TaskActions(),
+    options: ListOptions = ListOptions(),
+) {
     val c = AgendaTheme.colors
     val tasks = board.list(list)
     val archivedProjects =
@@ -239,10 +252,7 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
         if (list == SmartList.LOGBOOK && tasks.isNotEmpty()) {
             item(key = "header-tasks") { ASectionHeader("Задачи") }
         }
-        items(tasks, key = { it.id }) { task ->
-            TaskRow(board, task, modifier = Modifier.animateItem(), actions = actions)
-            RowDivider()
-        }
+        taskGroups(board, arrangeTasks(board, tasks, options), actions)
         if (archivedProjects.isNotEmpty()) {
             item(key = "header-projects") { ASectionHeader("Проекты") }
             items(archivedProjects, key = { it.id }) { project ->
@@ -593,6 +603,7 @@ fun ProjectScreen(
     projectId: String,
     hideProjectMeta: Boolean = false,
     actions: TaskActions = TaskActions(),
+    options: ListOptions = ListOptions(),
 ) {
     val c = AgendaTheme.colors
     val tasks = board.projectTasks[projectId].orEmpty()
@@ -617,18 +628,120 @@ fun ProjectScreen(
         return
     }
     val active = tasks.filter { !it.isCompleted && !it.isCancelled }
-    val done = tasks.filter { it.isCompleted || it.isCancelled }
+    val done = sortTasks(board, tasks.filter { it.isCompleted || it.isCancelled }, options.sort)
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
-        items(active, key = { it.id }) { task ->
-            TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
-            RowDivider()
-        }
+        taskGroups(board, arrangeTasks(board, active, options), actions, hideProjectMeta)
         if (done.isNotEmpty()) {
             item(key = "done-header") { ASectionHeader("Завершённые") }
             items(done, key = { it.id }) { task ->
                 TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
                 RowDivider()
             }
+        }
+    }
+}
+
+/** Task rows under the desktop board's group headers: label plus count. */
+private fun LazyListScope.taskGroups(
+    board: Board,
+    groups: List<TaskGroup>,
+    actions: TaskActions,
+    hideProjectMeta: Boolean = false,
+) {
+    groups.forEachIndexed { i, group ->
+        if (group.label != null) {
+            item(key = "group-$i-${group.label}") {
+                Row(Modifier.animateItem(), verticalAlignment = Alignment.Bottom) {
+                    ASectionHeader(group.label, modifier = Modifier.padding(end = 0.dp))
+                    Text(
+                        group.tasks.size.toString(),
+                        style = AgendaType.section,
+                        color = AgendaTheme.colors.fg(0.4f),
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                }
+            }
+        }
+        items(group.tasks, key = { it.id }) { task ->
+            TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
+            RowDivider()
+        }
+    }
+}
+
+/** Search page — the desktop Cmd-K quick search (pages/quick_search.rs) as
+ * a full page: up to 8 tasks and 5 projects whose title contains the query. */
+@Composable
+fun SearchScreen(board: Board, actions: TaskActions = TaskActions(), initialQuery: String = "") {
+    val c = AgendaTheme.colors
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val (tasks, projects) = searchBoard(board, query)
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.fg(0.06f))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AIcon(R.drawable.ic_search, tint = c.mutedFg)
+            Spacer(Modifier.width(10.dp))
+            SheetField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "Поиск задач и проектов...",
+                style = AgendaType.body,
+                singleLine = true,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+                focusRequester = focus,
+            )
+        }
+        when {
+            query.isBlank() -> SearchHint("Начните вводить для поиска", null)
+            tasks.isEmpty() && projects.isEmpty() ->
+                SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
+            else ->
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
+                    if (tasks.isNotEmpty()) {
+                        item(key = "header-tasks") { ASectionHeader("Задачи") }
+                        items(tasks, key = { it.id }) { task ->
+                            TaskRow(board, task, modifier = Modifier.animateItem(), actions = actions)
+                            RowDivider()
+                        }
+                    }
+                    if (projects.isNotEmpty()) {
+                        item(key = "header-projects") { ASectionHeader("Проекты") }
+                        items(projects, key = { "project-${it.id}" }) { project ->
+                            ARow(onClick = { actions.onProjectOpen(project) }) { glyph ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    AIcon(R.drawable.ic_folder, tint = c.mutedFg)
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(project.title, style = AgendaType.body, color = glyph)
+                                }
+                            }
+                            RowDivider()
+                        }
+                    }
+                }
+        }
+    }
+}
+
+@Composable
+private fun SearchHint(title: String, hint: String?) {
+    val c = AgendaTheme.colors
+    Column(
+        Modifier.fillMaxWidth().padding(top = 48.dp, start = 24.dp, end = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(title, style = AgendaType.body, color = if (hint == null) c.mutedFg else c.fg)
+        if (hint != null) {
+            Spacer(Modifier.height(2.dp))
+            Text(hint, style = AgendaType.meta, color = c.mutedFg)
         }
     }
 }
