@@ -81,8 +81,8 @@ data class TaskDateView(
  * Корзина live under the desktop «Другое» footer menu (chrome.rs:1056-1067). */
 enum class SmartList(val titleRu: String) {
     INBOX("Входящие"),
-    WEEK("Эта неделя"),
-    NEXT_WEEK("Следующая неделя"),
+    WEEK("Неделя"),
+    NEXT_WEEK("Следующая"),
     SOMEDAY("Потом"),
     LOGBOOK("Архив"),
     TRASH("Корзина"),

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.Task
+import com.mundus.agenda.SmartList
 
 /** Desktop task-panel title (quick_entry/fields.rs:16-18): 24px/32 bold. */
 private val TaskTitleStyle =
@@ -72,9 +73,9 @@ fun TaskScreen(
         if (repository == null) return@LaunchedEffect
         dateLabel =
             when {
-                task.isToday && task.scheduledDate == null -> "Эта неделя"
+                task.isToday && task.scheduledDate == null -> SmartList.WEEK.titleRu
                 task.isSomeday -> "Потом"
-                dateKey == nextMonday -> "Следующая неделя"
+                dateKey == nextMonday -> SmartList.NEXT_WEEK.titleRu
                 dateKey != null -> repository.dayLabel(dateKey)
                 else -> null
             }
@@ -104,10 +105,10 @@ fun TaskScreen(
                 hasValue = task.isToday || task.isSomeday || dateKey != null,
             ) {
                 // Desktop DropKind::Date (dropdown.rs:44-75).
-                AMenuItem("Эта неделя") {
+                AMenuItem(SmartList.WEEK.titleRu) {
                     run { repository?.moveToWeek(task) }
                 }
-                AMenuItem("Следующая неделя") {
+                AMenuItem(SmartList.NEXT_WEEK.titleRu) {
                     run { repository?.setScheduled(task, nextMonday) }
                 }
                 AMenuItem("Без даты") {
