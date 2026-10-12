@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -48,6 +49,10 @@ class AgendaColors(
     fun fg(alpha: Float): Color = fg.copy(alpha = alpha)
 
     fun accent(alpha: Float): Color = accent.copy(alpha = alpha)
+
+    /** imago `UiStyle::card` (settings.rs:121-133): `rgba(foreground, 0.045)`
+     * flattened over the page so grouped rows read as a raised surface. */
+    val group: Color get() = fg(0.045f).compositeOver(bg)
 }
 
 private val LightColors =
