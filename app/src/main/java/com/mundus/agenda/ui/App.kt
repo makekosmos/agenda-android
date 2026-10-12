@@ -535,13 +535,10 @@ fun AgendaHome(
                     .hazeSource(hazeState)
                     .nestedScroll(topFade)
             ) {
-                if (backPreview > 0f) {
-                    BackGesturePreview(
-                        progress = backPreview,
-                        behind = { PageContent(stack.lastOrNull()?.let(::parseRoute) ?: current) },
-                        front = { PageContent(current) },
-                    )
-                } else {
+                BackGesturePreview(
+                    progress = { backPreview },
+                    behind = { PageContent(stack.lastOrNull()?.let(::parseRoute) ?: current) },
+                ) {
                     AnimatedContent(
                         targetState = current,
                         transitionSpec = { navTransition(navMotion, navMs) },
