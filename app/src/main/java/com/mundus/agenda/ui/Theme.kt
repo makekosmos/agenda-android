@@ -121,7 +121,6 @@ val InterFamily =
         inter(400, FontWeight.Normal),
         inter(500, FontWeight.Medium),
         inter(600, FontWeight.SemiBold),
-        inter(700, FontWeight.Bold),
     )
 
 /** M3's default scale with Inter, for Material components that read
@@ -153,7 +152,7 @@ object AgendaType {
     val pageTitle =
         TextStyle(
             fontFamily = InterFamily,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             fontSize = 30.sp,
             lineHeight = 36.sp,
             letterSpacing = (-0.6).sp,
