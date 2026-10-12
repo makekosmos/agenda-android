@@ -109,7 +109,6 @@ fun UpdateSection(
     onDownloadOrInstall: () -> Unit,
 ) {
     val model = updateCardModel(state, currentVersion)
-    ASectionHeader("Обновления")
     SettingsGroup { UpdateCardBody(model, onCheck, onDownloadOrInstall) }
 }
 

@@ -82,12 +82,14 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.mundus.agenda.WriteConflict
 import com.mundus.agenda.updater.UpdateManager
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface Route {
     data object Projects : Route
@@ -378,17 +380,26 @@ fun AgendaHome(
                 backPreview = ev.progress
             }
             android.util.Log.d("AgendaNav", "back committed (maxProgress=$maxProgress)")
-            // Finish the gesture's own slide, then swap without a second
-            // transition replaying from the start.
-            val gestured = backPreview > 0f
-            if (gestured) {
-                animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
-                    backPreview = v
+            // The commit is already decided, so finishing it must not be
+            // interruptible: a cancel here (a second gesture's started
+            // event, the handler's enabled flip after the stack empties)
+            // would skip back() and the catch below would snap the
+            // leaving page back to full opacity — the page would flash
+            // at the end of the exit animation.
+            withContext(NonCancellable) {
+                // gestured = "the user saw a gesture preview" — the peak
+                // progress, not the last event: a release can deliver a
+                // trailing progress=0 event while the preview ran.
+                val gestured = maxProgress > 0f
+                if (gestured) {
+                    animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
+                        backPreview = v
+                    }
                 }
+                back()
+                if (gestured) navMotion = NavMotion.None
+                backPreview = 0f
             }
-            back()
-            if (gestured) navMotion = NavMotion.None
-            backPreview = 0f
         } catch (_: kotlinx.coroutines.CancellationException) {
             android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
             backPreview = 0f
@@ -579,10 +590,11 @@ fun AgendaHome(
         }
 
         // Linear-style bottom chrome (p9): a floating tab bar on the 4
-        // tab roots with a separate accent «+» button on the right. On
-        // list/project drill-ins just the «+» survives, like the old FAB
-        // (desktop offers creation on task pages only, not on
-        // Settings/Statistics/About — and the open task page has none).
+        // tab roots with a separate accent «+» button on the right. Of
+        // the drill-ins only a project page keeps the «+»: Корзина and
+        // Архив can't take new tasks, and neither can Settings/
+        // Statistics/About or the open task page — matching desktop,
+        // which offers creation only where tasks can be added.
         val atTabRoot = isTabRoot(route, stack)
         LaunchedEffect(atTabRoot) { if (!atTabRoot) picker.snapClosed() }
         if (atTabRoot) {
@@ -603,7 +615,7 @@ fun AgendaHome(
                         .navigationBarsPadding()
                         .padding(bottom = 24.dp),
             )
-        } else if (current is Route.List || current is Route.Project) {
+        } else if (current is Route.Project) {
             QuickEntryButton(
                 onClick = { createOpen = true },
                 hazeState = hazeState,

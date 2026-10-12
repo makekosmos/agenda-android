@@ -15,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mundus.agenda.Board
@@ -23,12 +22,12 @@ import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.Task
 import com.mundus.agenda.SmartList
 
-/** Desktop task-panel title (quick_entry/fields.rs:16-18): 24px/32 bold. */
+/** Desktop task-panel title (quick_entry/fields.rs:16-18): 24px/32. Weight
+ * stays at pageTitle's SemiBold — the scale caps at SemiBold (KOS-387). */
 private val TaskTitleStyle =
     AgendaType.pageTitle.copy(
         fontSize = 24.sp,
         lineHeight = 32.sp,
-        fontWeight = FontWeight.Bold,
     )
 
 /**

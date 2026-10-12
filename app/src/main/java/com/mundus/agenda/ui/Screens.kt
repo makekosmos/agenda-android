@@ -341,7 +341,7 @@ fun OtherScreen(
 private fun PageGroup(pages: List<Triple<Int, String, () -> Unit>>) {
     SettingsGroup {
         pages.forEachIndexed { i, (icon, label, onClick) ->
-            if (i > 0) ADivider(indent = 44.dp)
+            if (i > 0) SettingsDivider()
             ARow(onClick = onClick) { glyph ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AIcon(icon, tint = glyph.copy(alpha = 0.85f))
@@ -370,10 +370,9 @@ fun AppearanceScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = bottomClearance())
     ) {
-        ASectionHeader("Режим")
         SettingsGroup {
             for ((mode, label) in listOf("system" to "Системная", "light" to "Светлая", "dark" to "Тёмная")) {
-                if (mode != "system") ADivider(indent = 44.dp)
+                if (mode != "system") SettingsDivider()
                 ARow(onClick = { onThemeMode(mode) }) { glyph ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -389,7 +388,7 @@ fun AppearanceScreen(
                 }
             }
         }
-        ASectionHeader("Тема")
+        Spacer(Modifier.height(24.dp))
         PalettePicker(
             selected = palette,
             dark =
