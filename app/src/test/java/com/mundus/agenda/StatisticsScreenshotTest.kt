@@ -61,7 +61,7 @@ class StatisticsScreenshotTest {
                 muted = 0xFF777777.toInt(),
                 accent = 0xFF7C3AED.toInt(),
             )
-        val bmp = com.mundus.agenda.ui.renderShareCard(stats, today, colors)
+        val bmp = com.mundus.agenda.ui.renderShareCard(org.robolectric.RuntimeEnvironment.getApplication(), stats, today, colors)
         assertTrue(bmp.width >= 1120 && bmp.height > 300)
         var opaque = 0
         for (x in 0 until bmp.width step 37) {

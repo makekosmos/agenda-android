@@ -89,6 +89,7 @@ fun StatisticsScreen(
                         File(context.cacheDir, "share/card.png").also { f ->
                             f.parentFile?.mkdirs()
                             renderShareCard(
+                                    context,
                                     stats,
                                     today,
                                     ShareCardColors(
