@@ -174,6 +174,7 @@ fun AIconButton(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(bg)
+                .then(if (filled) Modifier.border(1.dp, c.border, CircleShape) else Modifier)
                 .clickable(
                     interactionSource = interaction,
                     indication = null,
