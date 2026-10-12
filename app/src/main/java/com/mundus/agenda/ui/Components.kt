@@ -242,7 +242,7 @@ fun AgendaTopBar(
         if (onBack != null) {
             AIconButton(R.drawable.ic_arrow_left, desc = "Назад", onClick = onBack)
         } else {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(8.dp))
         }
         if (titleContent != null) {
             titleContent()
