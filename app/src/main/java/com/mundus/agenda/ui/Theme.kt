@@ -143,10 +143,10 @@ object AgendaType {
     val pageTitle =
         TextStyle(
             fontFamily = InterFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 22.sp,
-            lineHeight = 26.sp,
-            letterSpacing = (-0.3).sp,
+            fontWeight = FontWeight.Bold,
+            fontSize = 30.sp,
+            lineHeight = 36.sp,
+            letterSpacing = (-0.6).sp,
         )
     val barTitle =
         TextStyle(

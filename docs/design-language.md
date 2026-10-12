@@ -42,7 +42,7 @@ linear.app/now (blog/changelog), Linear Method pages. No APK inspection.
 
 7. **Typography does the hierarchy.** Inter everywhere; hierarchy comes
    from weight + muted color, not size jumps: 12sp medium section headers,
-   15sp rows, 22sp semibold page titles with slight negative tracking.
+   15sp rows, 30sp bold page titles with slight negative tracking.
    Android uses Inter everywhere, numbers included (KOS-386).
 
 ## What we deliberately did NOT copy
