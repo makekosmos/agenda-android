@@ -82,12 +82,14 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.mundus.agenda.WriteConflict
 import com.mundus.agenda.updater.UpdateManager
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface Route {
     data object Projects : Route
@@ -378,17 +380,26 @@ fun AgendaHome(
                 backPreview = ev.progress
             }
             android.util.Log.d("AgendaNav", "back committed (maxProgress=$maxProgress)")
-            // Finish the gesture's own slide, then swap without a second
-            // transition replaying from the start.
-            val gestured = backPreview > 0f
-            if (gestured) {
-                animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
-                    backPreview = v
+            // The commit is already decided, so finishing it must not be
+            // interruptible: a cancel here (a second gesture's started
+            // event, the handler's enabled flip after the stack empties)
+            // would skip back() and the catch below would snap the
+            // leaving page back to full opacity — the page would flash
+            // at the end of the exit animation.
+            withContext(NonCancellable) {
+                // gestured = "the user saw a gesture preview" — the peak
+                // progress, not the last event: a release can deliver a
+                // trailing progress=0 event while the preview ran.
+                val gestured = maxProgress > 0f
+                if (gestured) {
+                    animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
+                        backPreview = v
+                    }
                 }
+                back()
+                if (gestured) navMotion = NavMotion.None
+                backPreview = 0f
             }
-            back()
-            if (gestured) navMotion = NavMotion.None
-            backPreview = 0f
         } catch (_: kotlinx.coroutines.CancellationException) {
             android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
             backPreview = 0f
