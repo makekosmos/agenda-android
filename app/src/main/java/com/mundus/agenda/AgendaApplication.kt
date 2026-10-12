@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  */
 class AgendaApplication : Application() {
     val repository: EngineAgendaRepository by lazy {
-        EngineAgendaRepository(filesDir.absolutePath)
+        EngineAgendaRepository(filesDir.absolutePath, appVersion = BuildConfig.VERSION_NAME)
     }
 
     // «Отображение» theme (desktop settings.rs appearance tiles):

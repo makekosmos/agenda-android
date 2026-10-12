@@ -47,6 +47,8 @@ import kotlinx.serialization.json.put
 class EngineAgendaRepository(
     private val dataDir: String,
     private val dayCheckMillis: Long = 10_000,
+    /** Shown to peers next to our platform; engine-mobile otherwise sends its crate version. */
+    private val appVersion: String? = null,
     private val localDayProvider: () -> Pair<String, Int> = {
         val zone = ZoneId.systemDefault()
         val now = Instant.now()
@@ -529,6 +531,7 @@ class EngineAgendaRepository(
             engine.startSync(
                 buildJsonObject {
                     put("device_name", deviceName)
+                    if (appVersion != null) put("app_version", appVersion)
                     if (ticket != null) put("iroh_peer_ticket", ticket)
                 }.toString()
             ),
