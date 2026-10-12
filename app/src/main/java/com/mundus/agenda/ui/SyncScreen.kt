@@ -254,7 +254,7 @@ fun SyncScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = 96.dp)
     ) {
-        ASectionHeader("Это устройство")
+        ASectionHeader("Устройства")
         SettingsGroup {
             val running = snap?.running == true
             DeviceRow(
@@ -266,32 +266,14 @@ fun SyncScreen(
                 Presence(
                     when {
                         snap == null -> "…"
-                        running -> "Активна"
-                        else -> "Остановлена"
+                        running -> "Это устройство"
+                        else -> "Синхронизация остановлена"
                     },
-                    if (running) c.success else c.warn,
+                    if (running || snap == null) c.mutedFg else c.warn,
                 )
             }
-            ADivider(indent = 56.dp)
-            ARow(onClick = { act { sync?.restartSync(deviceName) } }) { glyph ->
-                Text("Обновить", style = AgendaType.body, color = glyph)
-            }
-        }
-
-        ASectionHeader("Другие устройства")
-        SettingsGroup {
-            val peers = snap?.peers.orEmpty()
-            if (peers.isEmpty()) {
-                ARow(onClick = null) {
-                    Text(
-                        "Других устройств пока нет. Подключите их по коду ниже.",
-                        style = AgendaType.body,
-                        color = c.mutedFg,
-                    )
-                }
-            }
-            peers.forEachIndexed { i, peer ->
-                if (i > 0) ADivider(indent = 56.dp)
+            for (peer in snap?.peers.orEmpty()) {
+                ADivider(indent = 56.dp)
                 val platform = Platform.parse(peer.platform)
                 DeviceRow(
                     platform = platform,
@@ -301,42 +283,6 @@ fun SyncScreen(
                 ) {
                     val online = peer.status == "online"
                     Presence(peerStatus(peer.status), if (online) c.success else c.mutedFg)
-                }
-            }
-        }
-
-        ASectionHeader("Подключение устройств")
-        SettingsGroup {
-            // «Мой код» — desktop «Скопировать код» row (pairing.rs:44-75).
-            ARow(
-                onClick = {
-                    if (myCode == null) act { myCode = sync?.showPairingCode() }
-                }
-            ) { glyph ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Мой код", style = AgendaType.body, color = glyph)
-                    Spacer(Modifier.weight(1f))
-                    if (myCode == null) {
-                        Text("Показать", style = AgendaType.body, color = c.accent)
-                    }
-                }
-            }
-            myCode?.let { code ->
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-                    Text(
-                        code,
-                        style = AgendaType.meta,
-                        color = c.mutedFg,
-                        maxLines = 4,
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        SyncButton("Скопировать", primary = true) {
-                            clipboard.setText(AnnotatedString(code))
-                        }
-                    }
                 }
             }
             ADivider(indent = 12.dp)
@@ -412,6 +358,46 @@ fun SyncScreen(
                         }
                     }
                 }
+            }
+        }
+
+        ASectionHeader("Это устройство")
+        SettingsGroup {
+            // «Мой код» — desktop «Скопировать код» row (pairing.rs:44-75).
+            ARow(
+                onClick = {
+                    if (myCode == null) act { myCode = sync?.showPairingCode() }
+                }
+            ) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Мой код", style = AgendaType.body, color = glyph)
+                    Spacer(Modifier.weight(1f))
+                    if (myCode == null) {
+                        Text("Показать", style = AgendaType.body, color = c.accent)
+                    }
+                }
+            }
+            myCode?.let { code ->
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Text(
+                        code,
+                        style = AgendaType.meta,
+                        color = c.mutedFg,
+                        maxLines = 4,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        SyncButton("Скопировать", primary = true) {
+                            clipboard.setText(AnnotatedString(code))
+                        }
+                    }
+                }
+            }
+            ADivider(indent = 12.dp)
+            ARow(onClick = { act { sync?.restartSync(deviceName) } }) { glyph ->
+                Text("Переподключиться", style = AgendaType.body, color = glyph)
             }
         }
     }
