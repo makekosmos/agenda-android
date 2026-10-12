@@ -37,7 +37,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Bottom-bar navigation (p9): the app opens on the «Эта неделя» tab,
  * the last bar button opens the page menu (Проекты, Потом, Архив,
- * Корзина, Статистика, Настройки), and drill-ins
+ * Корзина, Настройки), and drill-ins
  * push/pop while back at a tab root exits.
  */
 @RunWith(AndroidJUnit4::class)
@@ -97,25 +97,26 @@ class NavigationTest {
         composeTestRule.onNodeWithText("Созвон по дизайну").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Страницы").performClick()
         composeTestRule.waitForIdle()
-        val expected = listOf("Проекты", "Потом", "Архив", "Корзина", "Статистика", "Настройки")
+        val expected = listOf("Проекты", "Потом", "Архив", "Корзина", "Настройки")
         val texts = textsInOrder()
         val indices = expected.map { texts.indexOf(it) }
         assert(indices.none { it < 0 } && indices.zipWithNext().all { (a, b) -> a < b }) {
             "menu rows out of order: $expected at $indices in $texts"
         }
         assert(texts.none { it == "Другое" }) { "«Другое» is gone from the menu: $texts" }
+        assert(texts.none { it == "Статистика" }) { "Статистика lives in settings only: $texts" }
     }
 
     @Test
     fun swipeUpOnBarOpensPageMenu() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
-        assert(composeTestRule.onAllNodes(hasText("Статистика")).fetchSemanticsNodes().isEmpty())
+        assert(composeTestRule.onAllNodes(hasText("Настройки")).fetchSemanticsNodes().isEmpty())
         composeTestRule
             .onNodeWithContentDescription("Входящие")
             .performTouchInput { swipeUp(startY = bottom, endY = top - 200f) }
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Статистика").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Настройки").assertIsDisplayed()
         composeTestRule.onNodeWithText("Созвон по дизайну").assertExists()
     }
 
