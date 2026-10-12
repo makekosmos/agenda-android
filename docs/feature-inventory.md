@@ -36,7 +36,7 @@ priority (0–3), scheduled_date, deadline, reminder_date, is_today («эта
 (Inbox/Todo/Started/Deferred/Done/Canceled), system_kind (service tasks),
 is_completed + completed_at, is_cancelled, is_trashed, created_at,
 heading_id, project_id, area_id, tag_ids, checklist items, recurrence rule,
-billable/price, significance («значимость» 1–10), fuel_cost («мыслетопливо»),
+billable/price, significance («значимость» 1–10),
 sort_order. `Project` (status 0/1/2, deadline, area_id, sort_order) and `Tag`
 (title + color) in the same file. Engine object mapping
 `crates/agenda-core/src/mapping.rs` (`read`/`write_at`, type
