@@ -372,4 +372,27 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Созвон по дизайну").assertDoesNotExist()
     }
+
+    @Test
+    fun pickingSyncIntervalArmsAlarmOnWallClockSlot() {
+        composeTestRule.setContent {
+            AgendaTheme {
+                AgendaHome(board = board, repository = FakeRepository(), initialRoute = com.mundus.agenda.ui.Route.Sync)
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("каждые 15 мин").performClick()
+        composeTestRule.onNodeWithText("Каждые 30 мин").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("каждые 30 мин").assertIsDisplayed()
+
+        val context = composeTestRule.activity
+        assertEquals(30, com.mundus.agenda.sync.SyncSlots.interval(context))
+        val alarms = context.getSystemService(android.app.AlarmManager::class.java)
+        val at = org.robolectric.Shadows.shadowOf(alarms).peekNextScheduledAlarm()!!.triggerAtTime
+        val slot = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+        assertEquals(0, slot.minute % 30)
+        assertEquals(0, slot.second)
+        assert(at > System.currentTimeMillis()) { "slot $slot is in the past" }
+    }
 }

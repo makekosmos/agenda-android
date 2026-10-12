@@ -2,6 +2,7 @@ package com.mundus.agenda
 
 import android.app.Application
 import android.os.Build
+import com.mundus.agenda.sync.SyncSlots
 import com.mundus.agenda.sync.SyncWorker
 import com.mundus.agenda.updater.UpdateManager
 import kotlinx.coroutines.CoroutineScope
@@ -49,9 +50,9 @@ class AgendaApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Sync on open + periodic (program.md): start_sync is idempotent
-        // enough for the keepalive worker to re-assert when stopped.
-        SyncWorker.schedule(this)
+        // Sync on open + at wall-clock slots (program.md).
+        SyncWorker.cancelLegacyPeriodic(this)
+        SyncSlots.schedule(this)
         scope.launch {
             // No install can be pending on a cold start: a downloaded APK
             // in cache/updates is only a footprint doubling (KOS-370).

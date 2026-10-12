@@ -1,6 +1,7 @@
 package com.mundus.agenda
 
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -108,7 +109,7 @@ private fun SyncSnapshot.peerOnline() = peers.any { it.status == "online" }
 suspend fun SyncApi.syncPass(
     deviceName: String,
     changes: Flow<*>,
-    connectTimeout: Duration = 45.seconds,
+    connectTimeout: Duration = 2.minutes,
     quiet: Duration = 5.seconds,
     cap: Duration = 90.seconds,
     poll: Duration = 1.seconds,
@@ -123,4 +124,22 @@ suspend fun SyncApi.syncPass(
     } ?: return false
     withTimeoutOrNull(cap) { changes.debounce(quiet).first() }
     return true
+}
+
+/** Background sync intervals offered in settings, minutes; each divides an hour. */
+val SYNC_INTERVALS = listOf(5, 15, 30, 60)
+
+const val DEFAULT_SYNC_INTERVAL = 15
+
+/**
+ * The next background sync slot strictly after [now]: wall-clock multiples
+ * of [intervalMinutes] from local midnight (10:00, 10:15, ...), so every
+ * device on the same interval wakes at the same minute and finds the
+ * others online.
+ */
+fun nextSyncSlot(now: java.time.ZonedDateTime, intervalMinutes: Int): java.time.ZonedDateTime {
+    val local = now.toLocalDateTime()
+    val minuteOfDay = local.hour * 60 + local.minute
+    val next = (minuteOfDay / intervalMinutes + 1) * intervalMinutes
+    return local.toLocalDate().atStartOfDay().plusMinutes(next.toLong()).atZone(now.zone)
 }
