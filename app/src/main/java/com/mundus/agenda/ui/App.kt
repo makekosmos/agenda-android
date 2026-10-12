@@ -178,7 +178,6 @@ private val PICKER_PAGES =
         TabItem("list:SOMEDAY", R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu),
         TabItem("list:LOGBOOK", R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu),
         TabItem("list:TRASH", R.drawable.ic_delete, SmartList.TRASH.titleRu),
-        TabItem("statistics", R.drawable.ic_chart, "Статистика"),
         TabItem("settings", R.drawable.ic_settings, "Настройки"),
     )
 
