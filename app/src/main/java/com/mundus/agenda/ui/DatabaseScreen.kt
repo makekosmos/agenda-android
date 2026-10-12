@@ -137,7 +137,6 @@ fun DatabaseScreen(board: Board, usage: StorageUsage? = null) {
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = 96.dp)
     ) {
-        ASectionHeader("Хранилище")
         SettingsGroup {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 val u = measured
@@ -163,14 +162,14 @@ fun DatabaseScreen(board: Board, usage: StorageUsage? = null) {
                 SegmentLegend(segments)
             }
         }
-        ASectionHeader("Содержимое")
+        Spacer(Modifier.height(24.dp))
         SettingsGroup {
             CountRow("Задачи", board.todos.count { !it.isTrashed })
-            ADivider(indent = 16.dp)
+            SettingsDivider()
             CountRow("Проекты", board.projects.size)
-            ADivider(indent = 16.dp)
+            SettingsDivider()
             CountRow("Теги", board.tags.size)
-            ADivider(indent = 16.dp)
+            SettingsDivider()
             CountRow("В корзине", board.count(SmartList.TRASH))
         }
     }

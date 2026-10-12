@@ -173,6 +173,39 @@ class NavigationTest {
     }
 
     @Test
+    fun createButtonShowsOnlyOnProjectDrillIns() {
+        // KOS-390: Корзина and Архив take no new tasks, so the floating
+        // «+» survives on project drill-ins only, like desktop. At tab
+        // roots the bottom bar carries its own «+», so navigate through
+        // the real pages instead of re-setting content.
+        composeTestRule.setContent {
+            AgendaTheme {
+                AgendaHome(
+                    board = board,
+                    initialRoute = com.mundus.agenda.ui.Route.List(SmartList.TRASH),
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Новая задача").assertDoesNotExist()
+
+        val click = androidx.compose.ui.semantics.SemanticsActions.OnClick
+        composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
+        composeTestRule.waitForIdle()
+        openPage("Другое")
+        composeTestRule.onNodeWithText("Архив").performSemanticsAction(click)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Новая задача").assertDoesNotExist()
+
+        composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
+        composeTestRule.waitForIdle()
+        openPage("Проекты")
+        composeTestRule.onNodeWithText("Релиз Agenda 1.0").performSemanticsAction(click)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithContentDescription("Новая задача").assertExists()
+    }
+
+    @Test
     fun otherPageOpensSettingsPagesAndReturns() {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()

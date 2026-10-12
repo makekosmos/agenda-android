@@ -261,7 +261,6 @@ fun SyncScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = bottomClearance())
     ) {
-        ASectionHeader("Устройства")
         SettingsGroup {
             val running = snap?.running == true
             DeviceRow(
@@ -280,7 +279,7 @@ fun SyncScreen(
                 )
             }
             for (peer in snap?.peers.orEmpty()) {
-                ADivider(indent = 56.dp)
+                SettingsDivider()
                 val platform = Platform.parse(peer.platform)
                 DeviceRow(
                     platform = platform,
@@ -292,7 +291,7 @@ fun SyncScreen(
                     Presence(peerStatus(peer.status), if (online) c.success else c.mutedFg)
                 }
             }
-            ADivider(indent = 12.dp)
+            SettingsDivider()
             // The other device's code is always copied, never typed:
             // one tap reads the clipboard and dials.
             ARow(onClick = { connect(clipboard.getText()?.text?.trim().orEmpty()) }) {
@@ -321,7 +320,7 @@ fun SyncScreen(
             }
             // Outgoing attempt status (worktree pairing.rs:115-168).
             snap?.outgoingPairing?.let { out ->
-                ADivider(indent = 12.dp)
+                SettingsDivider()
                 ARow(onClick = null) { glyph ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -347,7 +346,7 @@ fun SyncScreen(
             }
         }
 
-        ASectionHeader("Синхронизация")
+        Spacer(Modifier.height(24.dp))
         SettingsGroup {
             // No engine «sync now»: a restart redials every peer and the
             // Hello/VersionVector exchange pulls whatever was missed.
@@ -368,7 +367,7 @@ fun SyncScreen(
                     color = c.accent,
                 )
             }
-            ADivider(indent = 12.dp)
+            SettingsDivider()
             // «Мой код» — desktop «Скопировать код» row (pairing.rs:44-75).
             ARow(
                 onClick = {
@@ -520,7 +519,7 @@ private fun DeviceSheet(
             Spacer(Modifier.height(16.dp))
             SettingsGroup {
                 rows.forEachIndexed { i, (label, value) ->
-                    if (i > 0) ADivider(indent = 12.dp)
+                    if (i > 0) SettingsDivider(surface = c.popover)
                     ARow(onClick = null) { glyph ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(label, style = AgendaType.body, color = glyph)
@@ -557,7 +556,7 @@ private fun ScheduleSection(
 ) {
     val c = AgendaTheme.colors
     var menuOpen by remember { mutableStateOf(false) }
-    ASectionHeader("Расписание")
+    Spacer(Modifier.height(24.dp))
     SettingsGroup {
         androidx.compose.foundation.layout.Box {
             ARow(onClick = { menuOpen = true }) { glyph ->
@@ -576,7 +575,7 @@ private fun ScheduleSection(
             }
         }
         if (exact != null) {
-            ADivider(indent = 44.dp)
+            SettingsDivider()
             ARow(onClick = if (exact) null else onExactAlarms) { glyph ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Точно по времени", style = AgendaType.body, color = c.fg, modifier = Modifier.weight(1f))
