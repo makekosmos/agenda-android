@@ -228,7 +228,7 @@ class NavigationTest {
         composeTestRule.setContent {
             AgendaTheme {
                 com.mundus.agenda.ui.BackGesturePreview(
-                    progress = 0.5f,
+                    progress = { 0.5f },
                     behind = { androidx.compose.material3.Text("HOME_PAGE") },
                     front = { androidx.compose.material3.Text("INNER_PAGE") },
                 )
@@ -237,6 +237,33 @@ class NavigationTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("HOME_PAGE").assertIsDisplayed()
         composeTestRule.onNodeWithText("INNER_PAGE").assertIsDisplayed()
+    }
+
+    @Test
+    fun cancelledBackGestureKeepsThePageComposition() {
+        var progress by androidx.compose.runtime.mutableFloatStateOf(0f)
+        var pageBuilds = 0
+        composeTestRule.setContent {
+            AgendaTheme {
+                com.mundus.agenda.ui.BackGesturePreview(
+                    progress = { progress },
+                    behind = { androidx.compose.material3.Text("HOME_PAGE") },
+                ) {
+                    androidx.compose.runtime.remember { pageBuilds++ }
+                    androidx.compose.material3.Text("INNER_PAGE")
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        progress = 0.3f
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("HOME_PAGE").assertIsDisplayed()
+        progress = 0f
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("HOME_PAGE").assertDoesNotExist()
+        composeTestRule.onNodeWithText("INNER_PAGE").assertIsDisplayed()
+        assertEquals(1, pageBuilds)
     }
 
     @Test

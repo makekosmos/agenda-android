@@ -279,32 +279,36 @@ fun AgendaTopBar(
  * Predictive-back preview, driven by gesture [progress]: the page being
  * left slides right and fades like the committed back transition's exit
  * (+it/4, fadeOut), home slides in from the left like its enter (-it/4→0,
- * fadeIn — the same pair mirrored).
+ * fadeIn — the same pair mirrored). [front] stays in one composition
+ * whether or not a gesture runs, so starting or cancelling one never
+ * rebuilds the page; [behind] exists only mid-gesture.
  */
 @Composable
 fun BackGesturePreview(
-    progress: Float,
+    progress: () -> Float,
     behind: @Composable () -> Unit,
     front: @Composable () -> Unit,
 ) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val w = constraints.maxWidth.toFloat()
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    translationX = -w / 6f * (1f - progress)
-                    alpha = progress
-                }
-        ) {
-            behind()
+        if (progress() > 0f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = -w / 6f * (1f - progress())
+                        alpha = progress()
+                    }
+            ) {
+                behind()
+            }
         }
         Box(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationX = w / 4f * progress
-                    alpha = 1f - progress
+                    translationX = w / 4f * progress()
+                    alpha = 1f - progress()
                 }
         ) {
             front()
