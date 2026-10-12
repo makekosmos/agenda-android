@@ -70,6 +70,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mundus.agenda.Board
 import com.mundus.agenda.BoardRepository
 import com.mundus.agenda.BoardState
+import com.mundus.agenda.GroupKey
+import com.mundus.agenda.ListOptions
+import com.mundus.agenda.SortKey
+import com.mundus.agenda.listOptionsKey
+import com.mundus.agenda.projectOptionsKey
 import com.mundus.agenda.R
 import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
@@ -85,16 +90,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed interface Route {
-    data object Other : Route
+    data object Projects : Route
     data class List(val list: SmartList) : Route
     data class Project(val id: String) : Route
     data class Task(val id: String) : Route
-    data object Settings : Route
+    data object Other : Route
     data object Appearance : Route
     data object Database : Route
     data object Sync : Route
     data object Statistics : Route
     data object About : Route
+    data object Search : Route
 }
 
 class BoardViewModel(repository: BoardRepository) : ViewModel() {
@@ -183,11 +189,10 @@ private val FIXED_TABS =
  * pages is open the button wears its glyph under the lens. */
 private val PICKER_PAGES =
     listOf(
-        TabItem("other", R.drawable.ic_folder, "Проекты"),
+        TabItem("search", R.drawable.ic_search, "Поиск"),
+        TabItem("projects", R.drawable.ic_folder, "Проекты"),
         TabItem("list:SOMEDAY", R.drawable.ic_clock_01, SmartList.SOMEDAY.titleRu),
-        TabItem("list:LOGBOOK", R.drawable.ic_book_open, SmartList.LOGBOOK.titleRu),
-        TabItem("list:TRASH", R.drawable.ic_delete, SmartList.TRASH.titleRu),
-        TabItem("settings", R.drawable.ic_settings, "Настройки"),
+        TabItem("other", R.drawable.ic_settings, "Другое"),
     )
 
 private fun isRootKey(route: String) = route in TAB_KEYS || PICKER_PAGES.any { it.key == route }
@@ -232,6 +237,9 @@ fun AgendaHome(
     // like desktop edit_project_title (app/projects.rs:111-114).
     var renamingProjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var renameDraft by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    // Per-list display options keyed like desktop `view_options_key`.
+    var listOptions by rememberSaveable { mutableStateOf(HashMap<String, ListOptions>()) }
     val scope = rememberCoroutineScope()
     val c = AgendaTheme.colors
 
@@ -388,18 +396,20 @@ fun AgendaHome(
     }
 
     val current = parseRoute(route)
+    LaunchedEffect(current) { if (current != Route.Search) searchQuery = "" }
     val title =
         when (val r = current) {
-            is Route.Other -> "Проекты"
+            is Route.Projects -> "Проекты"
             is Route.List -> r.list.titleRu
             is Route.Project -> board.project(r.id)?.title ?: "Проект"
             is Route.Task -> ""
             is Route.Sync -> "Синхронизация"
-            is Route.Settings -> "Настройки"
+            is Route.Other -> "Другое"
             is Route.Appearance -> "Отображение"
             is Route.Database -> "База данных"
             is Route.Statistics -> "Статистика"
             is Route.About -> "О приложении"
+            is Route.Search -> "Поиск"
         }
     val animate = animationsEnabled()
     val navMs = if (animate) NAV_MS else 0
@@ -423,7 +433,9 @@ fun AgendaHome(
                 title = title,
                 onBack = if (stack.isNotEmpty()) ::back else null,
                 titleContent =
-                    renamingProject?.let { r ->
+                    if (current == Route.Search) {
+                        { SearchField(searchQuery) { searchQuery = it } }
+                    } else renamingProject?.let { r ->
                         {
                             InlineTitleEditor(
                                 initial = board.project(r.id)?.title ?: renameDraft,
@@ -445,14 +457,22 @@ fun AgendaHome(
                                 }
                             }
                         }
-                        else -> null
+                        else ->
+                            optionsKey(current)?.let { key ->
+                                {
+                                    ListMenu(
+                                        options = listOptions[key] ?: ListOptions(),
+                                        onOptions = { listOptions = HashMap(listOptions).apply { put(key, it) } },
+                                    )
+                                }
+                            }
                     },
             )
             @Composable
             fun PageContent(r: Route) {
                 when (r) {
-                    is Route.Other ->
-                        OtherPage(
+                    is Route.Projects ->
+                        ProjectsPage(
                             board = board,
                             onNavigate = ::navigate,
                             actions = actions,
@@ -460,12 +480,20 @@ fun AgendaHome(
                             updateManager = updateManager,
                         )
                     is Route.List ->
-                        TaskListScreen(board = board, list = r.list, actions = actions)
-                    is Route.Settings ->
-                        SettingsScreen(
+                        TaskListScreen(
+                            board = board,
+                            list = r.list,
+                            actions = actions,
+                            options = optionsKey(r)?.let { listOptions[it] } ?: ListOptions(),
+                        )
+                    is Route.Search -> SearchScreen(board = board, query = searchQuery, actions = actions)
+                    is Route.Other ->
+                        OtherScreen(
                             onAppearance = { navigate(Route.Appearance) },
                             onDatabase = { navigate(Route.Database) },
                             onAbout = { navigate(Route.About) },
+                            onLogbook = { navigate(Route.List(SmartList.LOGBOOK)) },
+                            onTrash = { navigate(Route.List(SmartList.TRASH)) },
                             onStatistics = { navigate(Route.Statistics) },
                             onSync = { navigate(Route.Sync) },
                             updateManager = updateManager,
@@ -511,6 +539,7 @@ fun AgendaHome(
                             projectId = r.id,
                             hideProjectMeta = true,
                             actions = actions,
+                            options = listOptions[projectOptionsKey(r.id)] ?: ListOptions(),
                         )
                     is Route.Task ->
                         TaskScreen(
@@ -653,26 +682,28 @@ private fun navTransition(motion: NavMotion, durationMs: Int): ContentTransform 
 
 fun routeKey(route: Route): String =
     when (route) {
-        is Route.Other -> "other"
+        is Route.Projects -> "projects"
         is Route.List -> "list:${route.list.name}"
         is Route.Project -> "project:${route.id}"
         is Route.Task -> "task:${route.id}"
         is Route.Sync -> "sync"
-        is Route.Settings -> "settings"
+        is Route.Other -> "other"
         is Route.Appearance -> "appearance"
         is Route.Database -> "database"
         is Route.Statistics -> "statistics"
         is Route.About -> "about"
+        is Route.Search -> "search"
     }
 
 fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
         "sync" -> Route.Sync
-        "settings" -> Route.Settings
+        "other" -> Route.Other
         "appearance" -> Route.Appearance
         "database" -> Route.Database
         "statistics" -> Route.Statistics
         "about" -> Route.About
+        "search" -> Route.Search
         "project" -> Route.Project(key.substringAfter(':'))
         "task" -> Route.Task(key.substringAfter(':'))
         "list" ->
@@ -680,7 +711,8 @@ fun parseRoute(key: String): Route =
                 runCatching { SmartList.valueOf(key.substringAfter(':')) }
                     .getOrDefault(SmartList.INBOX)
             )
-        else -> Route.Other
+        "projects" -> Route.Projects
+        else -> Route.Projects
     }
 
 /** One home section group — the desktop sidebar "card" (sidebar_bg
@@ -741,7 +773,7 @@ private fun HomeRow(
  * desktop sidebar renders none.
  */
 @Composable
-fun OtherPage(
+fun ProjectsPage(
     board: Board,
     onNavigate: (Route) -> Unit,
     actions: TaskActions = TaskActions(),
@@ -804,6 +836,57 @@ fun OtherPage(
                     }
                 }
             }
+        }
+    }
+}
+
+private fun optionsKey(route: Route): String? =
+    when (route) {
+        is Route.List -> listOptionsKey(route.list)
+        is Route.Project -> projectOptionsKey(route.id)
+        else -> null
+    }
+
+/** List «⋯»: the desktop display-options popover
+ * (pages/options.rs) — «Сортировка» and «Группировка» with a check on
+ * the active choice. A pick applies and closes, like desktop. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ListMenu(options: ListOptions, onOptions: (ListOptions) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    AIconButton(R.drawable.ic_more_h, desc = "Параметры отображения", onClick = { open = true }, filled = true)
+    if (!open) return
+    val c = AgendaTheme.colors
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { open = false },
+        containerColor = c.popover,
+    ) {
+        Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 16.dp)) {
+            ASectionHeader("Сортировка")
+            for (key in SortKey.entries) {
+                OptionItem(key.label, options.sort == key) {
+                    open = false
+                    onOptions(options.copy(sort = key))
+                }
+            }
+            ASectionHeader("Группировка")
+            for (key in GroupKey.entries) {
+                OptionItem(key.label, options.group == key) {
+                    open = false
+                    onOptions(options.copy(group = key))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionItem(label: String, checked: Boolean, onClick: () -> Unit) {
+    val c = AgendaTheme.colors
+    ARow(onClick = onClick, minHeight = 40.dp, verticalPadding = 9.dp) { glyph ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = AgendaType.body, color = glyph, modifier = Modifier.weight(1f))
+            if (checked) AIcon(R.drawable.ic_check, tint = c.mutedFg, desc = "Выбрано")
         }
     }
 }
