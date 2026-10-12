@@ -623,8 +623,8 @@ private fun HomeGroup(content: @Composable () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-                .background(c.sidebarBg)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(c.group)
     ) {
         content()
     }

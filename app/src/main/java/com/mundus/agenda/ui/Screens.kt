@@ -448,8 +448,8 @@ internal fun SettingsGroup(content: @Composable () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.sidebarBg)
+                .clip(RoundedCornerShape(12.dp))
+                .background(c.group)
     ) {
         content()
     }
@@ -504,8 +504,8 @@ fun UpdateBannerRow(
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.sidebarBg)
+                .clip(RoundedCornerShape(12.dp))
+                .background(c.group)
                 .clickable(onClick = onAction)
                 .padding(start = 16.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
