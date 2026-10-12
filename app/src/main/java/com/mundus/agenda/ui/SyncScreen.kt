@@ -211,6 +211,7 @@ fun SyncScreen(
     var myCode by remember { mutableStateOf<String?>(null) }
     var connectError by remember { mutableStateOf<String?>(null) }
     var openPeerId by remember { mutableStateOf<String?>(null) }
+    var syncing by remember { mutableStateOf(false) }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
     LaunchedEffect(sync) {
@@ -266,7 +267,7 @@ fun SyncScreen(
                 Presence(
                     when {
                         snap == null -> "…"
-                        running -> "Это устройство"
+                        running -> "Я"
                         else -> "Синхронизация остановлена"
                     },
                     if (running || snap == null) c.mutedFg else c.warn,
@@ -361,8 +362,28 @@ fun SyncScreen(
             }
         }
 
-        ASectionHeader("Это устройство")
+        ASectionHeader("Синхронизация")
         SettingsGroup {
+            // No engine «sync now»: a restart redials every peer and the
+            // Hello/VersionVector exchange pulls whatever was missed.
+            ARow(
+                onClick = {
+                    if (!syncing) {
+                        syncing = true
+                        act {
+                            sync?.restartSync(deviceName)
+                            syncing = false
+                        }
+                    }
+                }
+            ) {
+                Text(
+                    if (syncing) "Синхронизация…" else "Синхронизировать",
+                    style = AgendaType.body,
+                    color = c.accent,
+                )
+            }
+            ADivider(indent = 12.dp)
             // «Мой код» — desktop «Скопировать код» row (pairing.rs:44-75).
             ARow(
                 onClick = {
@@ -394,10 +415,6 @@ fun SyncScreen(
                         }
                     }
                 }
-            }
-            ADivider(indent = 12.dp)
-            ARow(onClick = { act { sync?.restartSync(deviceName) } }) { glyph ->
-                Text("Переподключиться", style = AgendaType.body, color = glyph)
             }
         }
     }
