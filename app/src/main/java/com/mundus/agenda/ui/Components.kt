@@ -153,13 +153,18 @@ fun AIconButton(
     modifier: Modifier = Modifier,
     tint: Color = AgendaTheme.colors.fg,
     enabled: Boolean = true,
+    filled: Boolean = false,
 ) {
     val c = AgendaTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val bg by
         animateColorAsState(
-            if (pressed && enabled) c.fg(0.08f) else Color.Transparent,
+            when {
+                pressed && enabled -> c.fg(if (filled) 0.14f else 0.08f)
+                filled -> c.fg(0.07f)
+                else -> Color.Transparent
+            },
             animationSpec = tween(PRESS_MS, easing = EaseStandard),
             label = "btn-press",
         )
@@ -169,6 +174,7 @@ fun AIconButton(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(bg)
+                .then(if (filled) Modifier.border(1.dp, c.border, CircleShape) else Modifier)
                 .clickable(
                     interactionSource = interaction,
                     indication = null,
@@ -236,17 +242,19 @@ fun AgendaTopBar(
 ) {
     val c = AgendaTheme.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Nested pages carry no title: the circled chevron is the header.
         if (onBack != null) {
-            AIconButton(R.drawable.ic_arrow_left, desc = "Назад", onClick = onBack)
+            AIconButton(R.drawable.ic_chevron_left, desc = "Назад", onClick = onBack, filled = true)
         } else {
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(4.dp))
         }
         if (titleContent != null) {
+            if (onBack != null) Spacer(Modifier.width(8.dp))
             titleContent()
-        } else {
+        } else if (onBack == null) {
             Text(
                 title,
                 style = AgendaType.pageTitle,
