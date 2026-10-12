@@ -232,6 +232,7 @@ fun AgendaTopBar(
     title: String,
     onBack: (() -> Unit)? = null,
     titleContent: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val c = AgendaTheme.colors
     Row(
@@ -254,6 +255,10 @@ fun AgendaTopBar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(vertical = 10.dp),
             )
+        }
+        if (trailing != null) {
+            Spacer(Modifier.weight(1f))
+            trailing()
         }
     }
 }

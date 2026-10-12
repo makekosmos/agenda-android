@@ -232,7 +232,11 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
 
     override suspend fun editTitleNotes(task: Task, title: String, notes: String?) {}
 
-    override suspend fun setTrashed(task: Task, trashed: Boolean) {}
+    val trashedTitles = mutableListOf<String>()
+
+    override suspend fun setTrashed(task: Task, trashed: Boolean) {
+        if (trashed) trashedTitles += task.title
+    }
 
     var createdProjects = mutableListOf<Project>()
 
