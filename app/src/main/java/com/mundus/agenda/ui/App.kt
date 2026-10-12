@@ -579,10 +579,11 @@ fun AgendaHome(
         }
 
         // Linear-style bottom chrome (p9): a floating tab bar on the 4
-        // tab roots with a separate accent «+» button on the right. On
-        // list/project drill-ins just the «+» survives, like the old FAB
-        // (desktop offers creation on task pages only, not on
-        // Settings/Statistics/About — and the open task page has none).
+        // tab roots with a separate accent «+» button on the right. Of
+        // the drill-ins only a project page keeps the «+»: Корзина and
+        // Архив can't take new tasks, and neither can Settings/
+        // Statistics/About or the open task page — matching desktop,
+        // which offers creation only where tasks can be added.
         val atTabRoot = isTabRoot(route, stack)
         LaunchedEffect(atTabRoot) { if (!atTabRoot) picker.snapClosed() }
         if (atTabRoot) {
@@ -603,7 +604,7 @@ fun AgendaHome(
                         .navigationBarsPadding()
                         .padding(bottom = 24.dp),
             )
-        } else if (current is Route.List || current is Route.Project) {
+        } else if (current is Route.Project) {
             QuickEntryButton(
                 onClick = { createOpen = true },
                 hazeState = hazeState,
