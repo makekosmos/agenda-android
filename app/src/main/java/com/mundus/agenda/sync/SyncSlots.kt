@@ -16,7 +16,7 @@ import java.time.ZonedDateTime
  * alarm fires at each slot, enqueues an expedited [SyncWorker] pass and
  * arms the next slot. Exact while-idle alarms need the «Будильники и
  * напоминания» access on Android 12+; without it the alarm is inexact and
- * may land a few minutes late, which the pass's 2 min wait absorbs.
+ * may land minutes late, past the pass's 1 min wait for a peer.
  */
 object SyncSlots {
     private const val PREFS = "agenda"

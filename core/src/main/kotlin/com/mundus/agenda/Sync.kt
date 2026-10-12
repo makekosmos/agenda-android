@@ -109,7 +109,7 @@ private fun SyncSnapshot.peerOnline() = peers.any { it.status == "online" }
 suspend fun SyncApi.syncPass(
     deviceName: String,
     changes: Flow<*>,
-    connectTimeout: Duration = 2.minutes,
+    connectTimeout: Duration = 1.minutes,
     quiet: Duration = 5.seconds,
     cap: Duration = 90.seconds,
     poll: Duration = 1.seconds,
