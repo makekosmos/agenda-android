@@ -6,7 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -146,8 +146,9 @@ private suspend fun PointerInputScope.detectPickerDrag(picker: PagePickerState) 
 /**
  * The Linear-style floating bar: tab glyphs on a glass capsule with an
  * accent lens under the current tab, then the «+» button. The lens
- * springs between tabs, stretches with its speed and follows a finger
- * dragged along the bar; letting go selects the tab under it. The last
+ * springs between tabs, stretches with its speed and, after a long press
+ * (with a haptic), follows the finger along the bar; letting go selects
+ * the tab under it. The last
  * tab is the page menu button: a tap or a drag that ends on it opens
  * [PagePicker], and a vertical drag on the capsule pulls the menu out
  * with the finger. Every per-frame value is read in a layer or draw
@@ -223,8 +224,9 @@ fun AgendaBottomBar(
                         .pointerInput(picker) { detectPickerDrag(picker) }
                         .pointerInput(tabs.size) {
                             var lastTick = -1
-                            detectHorizontalDragGestures(
+                            detectDragGesturesAfterLongPress(
                                 onDragStart = { at ->
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                     dragging = true
                                     lastTick = selectedIndex
                                     scope.launch {
@@ -236,10 +238,10 @@ fun AgendaBottomBar(
                                 },
                                 onDragEnd = ::settle,
                                 onDragCancel = ::settle,
-                            ) { change, dx ->
+                            ) { change, drag ->
                                 change.consume()
                                 scope.launch {
-                                    val next = (lens.value + dx / slotPx).coerceIn(0f, last.toFloat())
+                                    val next = (lens.value + drag.x / slotPx).coerceIn(0f, last.toFloat())
                                     lens.snapTo(next)
                                     val tick = next.roundToInt()
                                     if (tick != lastTick) {

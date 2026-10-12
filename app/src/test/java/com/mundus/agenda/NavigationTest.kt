@@ -295,4 +295,31 @@ class NavigationTest {
         composeTestRule.onNodeWithText("Потом").assertIsDisplayed()
         composeTestRule.onNodeWithContentDescription("Страницы").assertExists()
     }
+
+    @Test
+    fun barDragMovesLensOnlyAfterLongPress() {
+        composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
+        composeTestRule.waitForIdle()
+        fun center(desc: String) =
+            composeTestRule.onNodeWithContentDescription(desc).fetchSemanticsNode().boundsInRoot.center
+        val week = center("На этой неделе")
+        val inbox = center("Входящие")
+
+        composeTestRule.onRoot().performTouchInput {
+            down(week)
+            moveTo(inbox)
+            up()
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Созвон по дизайну").assertIsDisplayed()
+
+        composeTestRule.onRoot().performTouchInput {
+            down(week)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+            moveTo(inbox)
+            up()
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Созвон по дизайну").assertDoesNotExist()
+    }
 }
