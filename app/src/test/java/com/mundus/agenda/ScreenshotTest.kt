@@ -73,6 +73,20 @@ class ScreenshotTest {
         composeTestRule.onRoot().captureRoboImage("roborazzi/sync-dark.png")
     }
 
+    private fun paletteShot(name: String, dark: Boolean, palette: String, route: Route) {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = dark, palette = palette) {
+                AgendaHome(board = board, initialRoute = route, palette = palette)
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
+    }
+
+    @Test fun settingsLight() = paletteShot("settings-light", false, "agenda", Route.Settings)
+    @Test fun settingsDark() = paletteShot("settings-dark", true, "agenda", Route.Settings)
+    @Test fun weekCatppuccinLight() = paletteShot("week-catppuccin-light", false, "catppuccin", Route.List(SmartList.WEEK))
+    @Test fun weekDracula() = paletteShot("week-dracula", true, "dracula", Route.List(SmartList.WEEK))
+
     @Test fun homeLight() = shot("home-light", false, Route.Other)
     @Test fun homeDark() = shot("home-dark", true, Route.Other)
     @Test fun inboxLight() = shot("inbox-light", false, Route.List(SmartList.INBOX))

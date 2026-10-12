@@ -1,5 +1,6 @@
 package com.mundus.agenda.ui
 
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -9,8 +10,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -18,6 +22,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.mundus.agenda.R
 
 /**
@@ -221,14 +226,48 @@ fun tagColor(name: String, fallback: Color): Color =
         else -> fallback
     }
 
+/** Built-in Agenda palette id; every other id is a zeron family. */
+const val AgendaPalette = "agenda"
+
+/** [dark] is the variant actually shown: a dark-only zeron family stays
+ * dark under a light system theme. */
+fun paletteColors(palette: String, dark: Boolean): AgendaColors = resolveTheme(palette, dark).colors
+
+private class ResolvedTheme(val colors: AgendaColors, val dark: Boolean)
+
+private fun resolveTheme(palette: String, dark: Boolean): ResolvedTheme {
+    val seed = ZeronFamilies.firstOrNull { it.id == palette }?.variant(dark)
+    return when {
+        seed != null -> ResolvedTheme(seed.toAgendaColors(), seed.dark)
+        dark -> ResolvedTheme(DarkColors, true)
+        else -> ResolvedTheme(LightColors, false)
+    }
+}
+
 @Composable
-fun AgendaTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val c = if (darkTheme) DarkColors else LightColors
+fun AgendaTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    palette: String = AgendaPalette,
+    content: @Composable () -> Unit,
+) {
+    val resolved = remember(palette, darkTheme) { resolveTheme(palette, darkTheme) }
+    val c = resolved.colors
+    val dark = resolved.dark
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).run {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     // M3 stays only as plumbing for the few framework surfaces we still
     // use (ModalBottomSheet mechanics). Everything visual reads
     // AgendaTheme.colors / AgendaType instead.
     val scheme =
-        if (darkTheme)
+        if (dark)
             darkColorScheme(
                 background = c.bg,
                 surface = c.bg,
