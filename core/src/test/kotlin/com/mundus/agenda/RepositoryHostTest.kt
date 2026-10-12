@@ -123,6 +123,30 @@ class RepositoryHostTest {
     }
 
     @Test
+    fun nextWeekBecomesThisWeekWhenTheWeekTurns() = runBlocking {
+        val dataDir = Files.createTempDirectory("agenda-host-test").toString()
+        var today = "2026-10-14"
+        try {
+            EngineAgendaRepository(dataDir, dayCheckMillis = 50) { today to 0 }.use { repository ->
+                repository.quickEntry("сдать отчёт", null, "2026-10-19", false, false, null, false)
+                // One long-lived collection, like BoardViewModel: the day turns
+                // while it is subscribed and no write happens.
+                val turned = withTimeout(10_000) {
+                    repository.boardFlow().map { (it as BoardState.Ready).board }.first { b ->
+                        if (b.list(SmartList.NEXT_WEEK).any { it.title == "сдать отчёт" }) {
+                            today = "2026-10-19"
+                        }
+                        today == "2026-10-19" && b.list(SmartList.WEEK).any { it.title == "сдать отчёт" }
+                    }
+                }
+                assertTrue(turned.list(SmartList.NEXT_WEEK).none { it.title == "сдать отчёт" })
+            }
+        } finally {
+            java.io.File(dataDir).deleteRecursively()
+        }
+    }
+
+    @Test
     fun projectLifecycle() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
         try {
