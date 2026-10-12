@@ -1,6 +1,7 @@
 package com.mundus.agenda.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import kotlin.math.pow
 
 /** One zeron `Seeds` literal (builtins.rs), colors as 0xRRGGBB. */
@@ -119,6 +120,42 @@ fun ZeronSeed.toAgendaColors(): AgendaColors {
         destructive = Rgba.of(danger).toColor(),
         warn = Rgba.of(warning).toColor(),
         success = Rgba.of(success).toColor(),
+        qeChipBg = wash.blendOver(background).toColor(),
+        qeChipFg = (if (dark) glyphLight else glyphDeep).toColor(),
+    )
+}
+
+/**
+ * Re-derives the accent family ([AgendaColors.accent], `accentFg`,
+ * `accentDim`, `qeChipBg`, `qeChipFg`) on an already-resolved palette with
+ * the same AccentRoles math as [toAgendaColors]; chrome tokens pass
+ * through. The Mundus theme uses this to give each app its own accent on
+ * the shared chrome.
+ */
+fun AgendaColors.withAccent(accent: Int, dark: Boolean): AgendaColors {
+    val background = Rgba.of(bg.toArgb() and 0xFFFFFF)
+    val primary = Rgba.of(accent).ensureContrast(background, 3.0f)
+    val on = primary.bestOn()
+    val glyphLight = primary.mix(if (dark) Rgba.WHITE else background, if (dark) 0.28f else 0.18f)
+    val glyphDeep = primary.mix(Rgba.BLACK, if (dark) 0.18f else 0.26f)
+    val wash = primary.withAlpha(if (dark) 0.22f else 0.12f)
+
+    return AgendaColors(
+        bg = bg,
+        fg = fg,
+        mutedFg = mutedFg,
+        border = border,
+        accent = primary.toColor(),
+        accentFg = on.toColor(),
+        accentDim = (if (dark) glyphDeep else glyphLight).toColor(),
+        secondary = secondary,
+        card = card,
+        popover = popover,
+        sidebarBg = sidebarBg,
+        sidebarDivider = sidebarDivider,
+        destructive = destructive,
+        warn = warn,
+        success = success,
         qeChipBg = wash.blendOver(background).toColor(),
         qeChipFg = (if (dark) glyphLight else glyphDeep).toColor(),
     )
