@@ -39,8 +39,8 @@ Derived alpha mixes used by desktop chrome (`src/chrome.rs`):
 ## Typography
 
 Desktop base font is Inter, base size 13px (`theme.rs:16` `FONT_SIZE=13.0`,
-`text_px` scales off it). IBM Plex Mono appears for numeric/code surfaces
-(fonts dir: `IBMPlexMono-{Regular,Medium,SemiBold}.ttf`).
+`text_px` scales off it). Android uses Inter for every surface: Compose
+text, Material components and the share-card Canvas (KOS-386).
 
 | Role | Desktop | Android |
 |---|---|---|

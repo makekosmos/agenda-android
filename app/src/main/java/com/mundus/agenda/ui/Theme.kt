@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -113,11 +114,28 @@ val InterFamily =
         inter(700, FontWeight.Bold),
     )
 
-val PlexMonoFamily =
-    FontFamily(
-        Font(R.font.ibm_plex_mono_regular, FontWeight.Normal),
-        Font(R.font.ibm_plex_mono_medium, FontWeight.Medium),
-    )
+/** M3's default scale with Inter, for Material components that read
+ * MaterialTheme.typography instead of AgendaType. */
+private val InterTypography =
+    Typography().run {
+        Typography(
+            displayLarge = displayLarge.copy(fontFamily = InterFamily),
+            displayMedium = displayMedium.copy(fontFamily = InterFamily),
+            displaySmall = displaySmall.copy(fontFamily = InterFamily),
+            headlineLarge = headlineLarge.copy(fontFamily = InterFamily),
+            headlineMedium = headlineMedium.copy(fontFamily = InterFamily),
+            headlineSmall = headlineSmall.copy(fontFamily = InterFamily),
+            titleLarge = titleLarge.copy(fontFamily = InterFamily),
+            titleMedium = titleMedium.copy(fontFamily = InterFamily),
+            titleSmall = titleSmall.copy(fontFamily = InterFamily),
+            bodyLarge = bodyLarge.copy(fontFamily = InterFamily),
+            bodyMedium = bodyMedium.copy(fontFamily = InterFamily),
+            bodySmall = bodySmall.copy(fontFamily = InterFamily),
+            labelLarge = labelLarge.copy(fontFamily = InterFamily),
+            labelMedium = labelMedium.copy(fontFamily = InterFamily),
+            labelSmall = labelSmall.copy(fontFamily = InterFamily),
+        )
+    }
 
 /** Desktop type scale (base 13px Inter, tight lh) mapped per
  * docs/design-tokens.md. */
@@ -241,6 +259,7 @@ fun AgendaTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable
     CompositionLocalProvider(LocalAgendaColors provides c) {
         MaterialTheme(
             colorScheme = scheme,
+            typography = InterTypography,
             shapes =
                 Shapes(
                     small = RoundedCornerShape(6.dp),

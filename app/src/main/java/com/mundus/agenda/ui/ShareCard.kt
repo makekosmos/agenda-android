@@ -1,11 +1,13 @@
 package com.mundus.agenda.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Typeface
+import androidx.core.content.res.ResourcesCompat
+import com.mundus.agenda.R
 import com.mundus.agenda.stats.Statistics
 import com.mundus.agenda.stats.heatmap
 import java.time.LocalDate
@@ -27,7 +29,7 @@ class ShareCardColors(
  * no window-blit, so the same layout is drawn onto an offscreen canvas —
  * identical contents, independent renderer.
  */
-fun renderShareCard(stats: Statistics, today: LocalDate, colors: ShareCardColors): Bitmap {
+fun renderShareCard(context: Context, stats: Statistics, today: LocalDate, colors: ShareCardColors): Bitmap {
     val s = 2f // ~xhdpi
     val w = (560 * s).toInt()
     val pad = 20 * s
@@ -48,7 +50,9 @@ fun renderShareCard(stats: Statistics, today: LocalDate, colors: ShareCardColors
         style = Paint.Style.STROKE
         strokeWidth = 1 * s
     }
-    val text = Paint(Paint.ANTI_ALIAS_FLAG)
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = ResourcesCompat.getFont(context, R.font.inter)
+    }
 
     // Card body.
     fill.color = colors.cardBg
@@ -68,7 +72,7 @@ fun renderShareCard(stats: Statistics, today: LocalDate, colors: ShareCardColors
     cv.drawCircle(acx, acy, avatar / 2, stroke)
     text.color = colors.fg
     text.textSize = 15 * s
-    text.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    text.fontVariationSettings = "'wght' 700"
     cv.drawText("Имя Фамилия", pad + avatar + 12 * s, acy + 5 * s, text)
     text.color = colors.muted
     text.textSize = 14 * s
@@ -114,11 +118,11 @@ fun renderShareCard(stats: Statistics, today: LocalDate, colors: ShareCardColors
         text.textAlign = Paint.Align.CENTER
         text.color = colors.fg
         text.textSize = 16 * s
-        text.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        text.fontVariationSettings = "'wght' 700"
         cv.drawText(value, pad + i * colW + colW / 2, y + 18 * s, text)
         text.color = colors.muted
         text.textSize = 11 * s
-        text.typeface = Typeface.DEFAULT
+        text.fontVariationSettings = "'wght' 400"
         cv.drawText(label, pad + i * colW + colW / 2, y + 36 * s, text)
     }
     text.textAlign = Paint.Align.LEFT
