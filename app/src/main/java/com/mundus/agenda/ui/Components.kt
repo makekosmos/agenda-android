@@ -155,17 +155,17 @@ fun ADivider(modifier: Modifier = Modifier, indent: Dp = 0.dp) {
     )
 }
 
-/** One-pixel line of the surface colour between items in a settings group,
+/** Two-pixel line of the surface colour between items in a settings group,
  * with 2dp inner corners on the rows either side, so the rows read as
  * separate blocks inside the group's 12dp outer shape. [surface] is the
  * colour behind the group: the page `bg` on settings screens, `popover`
- * inside sheets. The corners draw past the 1px bounds onto the rows. */
+ * inside sheets. The corners draw past the 2px bounds onto the rows. */
 @Composable
 fun SettingsDivider(surface: Color = AgendaTheme.colors.bg) {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(with(LocalDensity.current) { 1.toDp() })
+            .height(with(LocalDensity.current) { 2.toDp() })
             .zIndex(1f)
             .drawBehind {
                 drawRect(surface)
