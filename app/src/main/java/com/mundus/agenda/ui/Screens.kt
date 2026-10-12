@@ -42,35 +42,42 @@ import com.mundus.agenda.SmartList
 import com.mundus.agenda.Task
 import com.mundus.agenda.updater.UpdateManager
 import com.mundus.agenda.updater.UpdateState
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.Icon
+import androidx.annotation.DrawableRes
 
-private fun emptyHint(list: SmartList): Pair<String, String> =
+private class EmptyHint(@DrawableRes val icon: Int, val title: String, val hint: String)
+
+private fun emptyHint(list: SmartList): EmptyHint =
     when (list) {
-        SmartList.INBOX -> "Входящие пустые" to "Создай любую задачу и она появится здесь"
-        SmartList.WEEK -> "На этой неделе пусто" to "Назначь задачу на эту неделю"
-        SmartList.NEXT_WEEK -> "На следующей неделе пусто" to "Поставь задаче дату следующей недели"
-        SmartList.SOMEDAY -> "Потом пуст" to "Отложенные задачи появятся здесь"
-        SmartList.LOGBOOK -> "Архив пуст" to "Завершённые задачи хранятся здесь"
-        SmartList.TRASH -> "Корзина пуста" to "Удалённые задачи попадают сюда"
+        SmartList.INBOX -> EmptyHint(R.drawable.ic_inbox, "Входящие пустые", "Создай любую задачу и она появится здесь")
+        SmartList.WEEK -> EmptyHint(R.drawable.ic_calendar_01, "На этой неделе пусто", "Назначь задачу на эту неделю")
+        SmartList.NEXT_WEEK -> EmptyHint(R.drawable.ic_calendar_02, "На следующей неделе пусто", "Поставь задаче дату следующей недели")
+        SmartList.SOMEDAY -> EmptyHint(R.drawable.ic_clock_01, "Потом пуст", "Отложенные задачи появятся здесь")
+        SmartList.LOGBOOK -> EmptyHint(R.drawable.ic_book_open, "Архив пуст", "Завершённые задачи хранятся здесь")
+        SmartList.TRASH -> EmptyHint(R.drawable.ic_delete, "Корзина пуста", "Удалённые задачи попадают сюда")
     }
 
 @Composable
 private fun EmptyState(list: SmartList) {
     val c = AgendaTheme.colors
+    val empty = emptyHint(list)
     Column(
         modifier = Modifier.fillMaxSize().padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(list.titleRu, style = AgendaType.barTitle, color = c.fg)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            emptyHint(list).first,
-            style = AgendaType.body,
-            color = c.mutedFg,
+        Icon(
+            painterResource(empty.icon),
+            contentDescription = null,
+            tint = c.mutedFg.copy(alpha = 0.6f),
+            modifier = Modifier.size(40.dp),
         )
+        Spacer(Modifier.height(12.dp))
+        Text(empty.title, style = AgendaType.body, color = c.mutedFg)
         Spacer(Modifier.height(2.dp))
         Text(
-            emptyHint(list).second,
+            empty.hint,
             style = AgendaType.meta,
             color = c.mutedFg.copy(alpha = 0.8f),
         )

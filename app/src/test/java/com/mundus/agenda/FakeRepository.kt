@@ -294,7 +294,7 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
     override suspend fun dayLabel(date: String) =
         when (date) {
             day -> "Сегодня"
-            "2026-10-19" -> "Следующая неделя"
+            "2026-10-19" -> "Следующая"
             else -> java.time.LocalDate.parse(date).let { "${it.dayOfMonth} окт" }
         }
 

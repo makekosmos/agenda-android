@@ -551,7 +551,7 @@ pub fn quick_entry_preview(
 }
 
 /// Date property labels exactly as desktop renders them: «Сегодня» for the
-/// current day, «Следующая неделя» for next Monday, «18 сент» otherwise.
+/// current day, «Следующая» for next Monday, «18 сент» otherwise.
 #[uniffi::export]
 pub fn day_label(
     date: String,
@@ -562,7 +562,7 @@ pub fn day_label(
     Ok(if date == day.today_key() {
         "Сегодня".to_string()
     } else if Some(&date) == day.next_monday_key().as_ref() {
-        "Следующая неделя".to_string()
+        "Следующая".to_string()
     } else {
         agenda_core::fmt_day_month(&date)
     })

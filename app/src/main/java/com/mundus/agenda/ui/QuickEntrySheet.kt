@@ -61,6 +61,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import com.mundus.agenda.SmartList
 
 /** Icon button on the sheet's bottom bar with its popup menu anchored on
  * it — Todoist's quick-add property strip. [active] tints the glyph when
@@ -181,7 +182,7 @@ fun QuickEntrySheet(
         if (repository == null) return@LaunchedEffect
         dateLabel =
             when {
-                weekFlag -> "Эта неделя"
+                weekFlag -> SmartList.WEEK.titleRu
                 somedayFlag -> "Потом"
                 effectiveDate != null -> repository.dayLabel(effectiveDate)
                 else -> null
@@ -384,11 +385,11 @@ fun QuickEntrySheet(
                         desc = "Дата",
                         active = dateSet,
                     ) {
-                        AMenuItem("Эта неделя", leading = { AIcon(R.drawable.ic_calendar_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
+                        AMenuItem(SmartList.WEEK.titleRu, leading = { AIcon(R.drawable.ic_calendar_01, tint = AgendaTheme.colors.fg(0.6f)) }) {
                             weekFlag = true; somedayFlag = false; pickedDate = null
                             dateTouched = true
                         }
-                        AMenuItem("Следующая неделя", leading = { AIcon(R.drawable.ic_calendar_02, tint = AgendaTheme.colors.fg(0.6f)) }) {
+                        AMenuItem(SmartList.NEXT_WEEK.titleRu, leading = { AIcon(R.drawable.ic_calendar_02, tint = AgendaTheme.colors.fg(0.6f)) }) {
                             weekFlag = false; somedayFlag = false; pickedDate = nextMonday
                             dateTouched = true
                         }
