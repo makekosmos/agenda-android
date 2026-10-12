@@ -575,3 +575,21 @@ pub fn next_monday_key(today: String, utc_offset_seconds: i32) -> Result<String,
     day.next_monday_key()
         .ok_or_else(|| AgendaError::Invalid("no next monday".into()))
 }
+
+/// Typo-tolerant title search (frizbee, one typo, case-insensitive, ё read
+/// as е): indices into `titles`, best match first.
+#[uniffi::export]
+pub fn fuzzy_search(query: String, titles: Vec<String>) -> Vec<u32> {
+    let fold = |s: &str| s.replace('ё', "е").replace('Ё', "Е");
+    let config = frizbee::Config {
+        max_typos: Some(1),
+        casing: frizbee::CaseMatching::Ignore,
+        ..frizbee::Config::default()
+    };
+    let titles: Vec<String> = titles.iter().map(|t| fold(t)).collect();
+    frizbee::Matcher::new(&fold(&query), &config)
+        .match_list(&titles)
+        .iter()
+        .map(|m| m.index)
+        .collect()
+}

@@ -57,12 +57,12 @@ fun groupTasks(board: Board, tasks: List<Task>, key: GroupKey): List<Task> =
 fun arrangeTasks(board: Board, tasks: List<Task>, options: ListOptions): List<Task> =
     groupTasks(board, sortTasks(board, tasks, options.sort), options.group)
 
-/** Every non-trashed task whose title contains the query, case-insensitive;
- * open tasks first, then completed or cancelled ones. */
+/** Every non-trashed task, or with a query only the fuzzy title matches,
+ * best first (Rust `fuzzy_search`); open tasks before completed or
+ * cancelled ones. */
 fun searchTasks(board: Board, query: String): List<Task> {
-    val q = query.trim().lowercase()
-    if (q.isEmpty()) return emptyList()
-    return board.todos
-        .filter { !it.isTrashed && it.title.lowercase().contains(q) }
-        .sortedBy { it.isCompleted || it.isCancelled }
+    val live = board.todos.filter { !it.isTrashed }
+    val q = query.trim()
+    val hits = if (q.isEmpty()) live else fuzzySearch(q, live.map { it.title }).map { live[it.toInt()] }
+    return hits.sortedBy { it.isCompleted || it.isCancelled }
 }

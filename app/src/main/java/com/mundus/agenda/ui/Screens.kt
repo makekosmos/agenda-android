@@ -668,7 +668,7 @@ private fun LazyListScope.taskRows(
 }
 
 /** Search page, a bar root: the field takes the top bar's row, then every
- * matching task, open ones first. */
+ * task, narrowed to fuzzy matches once a query is typed. */
 @Composable
 fun SearchScreen(board: Board, actions: TaskActions = TaskActions(), initialQuery: String = "") {
     val c = AgendaTheme.colors
@@ -704,7 +704,7 @@ fun SearchScreen(board: Board, actions: TaskActions = TaskActions(), initialQuer
             }
         }
         when {
-            query.isBlank() -> SearchHint("Начните вводить для поиска", null)
+            tasks.isEmpty() && query.isBlank() -> SearchHint("Задач нет", null)
             tasks.isEmpty() -> SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
             else ->
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {

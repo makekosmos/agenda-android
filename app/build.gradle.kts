@@ -143,6 +143,11 @@ kotlin {
     }
 }
 
+// searchTasks calls the Rust core; JVM tests load :core's host build.
+tasks.withType<Test>().configureEach {
+    systemProperty("jna.library.path", rootDir.resolve("rust/target/debug").absolutePath)
+}
+
 dependencies {
     // Android needs JNA's AAR (it carries libjnidispatch.so per ABI); the
     // plain jar :core uses on the JVM only has desktop natives.

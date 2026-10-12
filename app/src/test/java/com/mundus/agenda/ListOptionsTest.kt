@@ -54,6 +54,18 @@ class ListOptionsTest {
     @Test
     fun searchFindsAllMatchingTitlesOpenFirstAndSkipsTrash() {
         assertEquals("db", ids(searchTasks(board, "  АЛЬФА ")))
-        assertEquals(emptyList<Task>(), searchTasks(board, " "))
+    }
+
+    @Test
+    fun emptySearchListsEveryLiveTaskOpenFirst() {
+        assertEquals("acdb", ids(searchTasks(board, " ")))
+    }
+
+    @Test
+    fun searchForgivesOneTypoAndYo() {
+        assertEquals("db", ids(searchTasks(board, "алфа")))
+        val yo = board.copy(todos = listOf(Task("y", "Купить ёлку", sortOrder = 0)))
+        assertEquals("y", ids(searchTasks(yo, "елку")))
+        assertEquals("y", ids(searchTasks(yo, "ЁЛКУ")))
     }
 }
