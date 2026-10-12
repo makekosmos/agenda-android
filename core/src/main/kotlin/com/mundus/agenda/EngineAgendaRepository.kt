@@ -328,6 +328,11 @@ class EngineAgendaRepository(
             save(task, json.decodeFromString(taskSetTrashed(json.encodeToString(task), trashed)))
         }
 
+    override suspend fun deleteForever(tasks: List<Task>): Unit =
+        withContext(Dispatchers.IO) {
+            for (task in tasks) call("delete_object", buildJsonObject { put("id", task.id) })
+        }
+
     // --- Projects: desktop app.rs create_project / projects.rs rename,
     // save.rs set_project_status, projects.rs delete_project + the engine's
     // soft delete (src/store/projects.rs). Same write pattern as tasks:

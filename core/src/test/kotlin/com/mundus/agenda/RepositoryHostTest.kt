@@ -21,6 +21,34 @@ import org.junit.Test
  */
 class RepositoryHostTest {
     @Test
+    fun deleteForeverRemovesOnlyGivenTasksAcrossReopen() = runBlocking {
+        val dataDir = Files.createTempDirectory("agenda-host-purge").toString()
+        suspend fun EngineAgendaRepository.snapshot() =
+            (withTimeout(10_000) { boardFlow().first() } as BoardState.Ready).board
+        var repository = EngineAgendaRepository(dataDir)
+        try {
+            repository.quickEntry("Keep", null, null, false, false, null, false)
+            repository.quickEntry("Drop", null, null, false, false, null, false)
+            repository.setTrashed(repository.tasks().first { it.title == "Drop" }, true)
+            val trashed = repository.snapshot().list(SmartList.TRASH)
+            assertEquals(listOf("Drop"), trashed.map { it.title })
+            repository.deleteForever(trashed)
+            val after = repository.snapshot()
+            assertEquals(emptyList<String>(), after.list(SmartList.TRASH).map { it.title })
+            assertEquals(listOf("Keep"), after.todos.map { it.title })
+        } finally {
+            repository.close()
+        }
+        repository = EngineAgendaRepository(dataDir)
+        try {
+            assertEquals(listOf("Keep"), repository.snapshot().todos.map { it.title })
+        } finally {
+            repository.close()
+            java.io.File(dataDir).deleteRecursively()
+        }
+    }
+
+    @Test
     fun createListEventReopen() = runBlocking {
         val dataDir = Files.createTempDirectory("agenda-host-test").toString()
         val dataDirFile = java.io.File(dataDir)

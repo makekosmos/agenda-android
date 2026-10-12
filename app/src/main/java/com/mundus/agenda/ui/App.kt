@@ -434,8 +434,19 @@ fun AgendaHome(
                         }
                     },
                 trailing =
-                    (current as? Route.Task)?.let { r ->
-                        { TaskMenu(onDelete = { deleteTask(r.id) }) }
+                    when {
+                        current is Route.Task -> {
+                            { TaskMenu(onDelete = { deleteTask(current.id) }) }
+                        }
+                        current == Route.List(SmartList.TRASH) && board.count(SmartList.TRASH) > 0 -> {
+                            {
+                                TrashMenu(count = board.count(SmartList.TRASH)) {
+                                    val trashed = board.list(SmartList.TRASH)
+                                    run { repository?.deleteForever(trashed) }
+                                }
+                            }
+                        }
+                        else -> null
                     },
             )
             @Composable
@@ -827,4 +838,55 @@ private fun TopFade(alpha: Float) {
             .graphicsLayer { this.alpha = alpha }
             .background(Brush.verticalGradient(listOf(bg, bg.copy(alpha = 0f))))
     )
+}
+
+/** «⋯» on the trash page. Emptying is irreversible, so the first tap
+ * only arms it and the row asks again with the count. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun TrashMenu(count: Int, onEmpty: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    var armed by remember { mutableStateOf(false) }
+    AIconButton(R.drawable.ic_more_h, desc = "Ещё", onClick = { open = true; armed = false }, filled = true)
+    if (open) {
+        val c = AgendaTheme.colors
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { open = false },
+            containerColor = c.popover,
+        ) {
+            Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 16.dp)) {
+                AMenuItem(
+                    if (armed) "Удалить навсегда: ${taskCountRu(count)}" else "Очистить корзину",
+                    destructive = true,
+                    leading = { AIcon(R.drawable.ic_delete, tint = c.destructive) },
+                ) {
+                    if (armed) {
+                        open = false
+                        onEmpty()
+                    } else {
+                        armed = true
+                    }
+                }
+                if (armed) {
+                    Text(
+                        "Задачи удалятся и на других устройствах. Отменить нельзя.",
+                        style = AgendaType.meta,
+                        color = c.mutedFg,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun taskCountRu(n: Int): String {
+    val word =
+        when {
+            n % 100 in 11..14 -> "задач"
+            n % 10 == 1 -> "задача"
+            n % 10 in 2..4 -> "задачи"
+            else -> "задач"
+        }
+    return "$n $word"
 }
