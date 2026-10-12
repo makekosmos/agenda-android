@@ -27,7 +27,6 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                     isToday = true,
                     priority = 3,
                     tagIds = listOf("dev-tag-urgent", "dev-tag-focus"),
-                    fuelCost = 35.0,
                 ),
             task("dev-today-2", "Отправить инвойс клиенту")
                 .copy(
@@ -46,7 +45,6 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                     scheduledDate = "2026-10-11",
                     priority = 3,
                     tagIds = listOf("dev-tag-urgent"),
-                    fuelCost = 20.0,
                 ),
             task("dev-checklist-1", "Подготовить демо для команды")
                 .copy(
@@ -68,7 +66,6 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                     projectId = "dev-proj-release",
                     headingId = "dev-head-polish",
                     significance = 7,
-                    fuelCost = 15.0,
                 ),
             task("dev-week-3", "Оплатить интернет")
                 .copy(

@@ -36,7 +36,6 @@ data class Task(
     val billable: Boolean = false,
     val price: Double? = null,
     val significance: Int? = null,
-    @SerialName("fuel_cost") val fuelCost: Double? = null,
     @SerialName("sort_order") val sortOrder: Int = 0,
 )
 
