@@ -35,6 +35,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -146,6 +152,39 @@ fun ADivider(modifier: Modifier = Modifier, indent: Dp = 0.dp) {
             .padding(start = indent)
             .height(0.5.dp)
             .background(AgendaTheme.colors.border)
+    )
+}
+
+/** Four-pixel line of the surface colour between items in a settings group,
+ * with 2dp inner corners on the rows either side, so the rows read as
+ * separate blocks inside the group's 12dp outer shape. [surface] is the
+ * colour behind the group: the page `bg` on settings screens, `popover`
+ * inside sheets. The corners draw past the 4px bounds onto the rows. */
+@Composable
+fun SettingsDivider(surface: Color = AgendaTheme.colors.bg) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(with(LocalDensity.current) { 4.toDp() })
+            .zIndex(1f)
+            .drawBehind {
+                drawRect(surface)
+                val r = 2.dp.toPx()
+                for (left in listOf(true, false)) for (above in listOf(true, false)) {
+                    val x = if (left) 0f else size.width - r
+                    val y = if (above) -r else size.height
+                    val center = Offset(if (left) r else size.width - r, if (above) -r else size.height + r)
+                    val corner =
+                        Path().apply {
+                            op(
+                                Path().apply { addRect(Rect(Offset(x, y), Size(r, r))) },
+                                Path().apply { addOval(Rect(center, r)) },
+                                PathOperation.Difference,
+                            )
+                        }
+                    drawPath(corner, surface)
+                }
+            }
     )
 }
 
