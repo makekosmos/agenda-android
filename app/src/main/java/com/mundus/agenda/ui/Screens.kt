@@ -286,24 +286,57 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
     }
 }
 
-/**
- * Settings — only what desktop has AND a phone can back
- * (chrome.rs:295-372 settings sidebar):
- * «Отображение» theme tiles (settings.rs:100-103), «Статистика» counters
- * (statistics.rs:59-63). VSync / dev tools / hotkeys are desktop-only —
- * no row at all.
- */
+/** Settings: «Обновления» first, then one group of pages. Theme lives on
+ * its own «Отображение» page. */
 @Composable
 fun SettingsScreen(
-    board: Board,
+    onAppearance: () -> Unit,
+    onAbout: () -> Unit,
+    onStatistics: () -> Unit = {},
+    onSync: () -> Unit = {},
+    onDatabase: () -> Unit = {},
+    updateManager: UpdateManager? = null,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 8.dp, bottom = 96.dp)
+    ) {
+        updateManager?.let { UpdateSection(it) }
+        Spacer(Modifier.height(24.dp))
+        SettingsGroup {
+            val pages =
+                listOf(
+                    Triple(R.drawable.ic_paint, "Отображение", onAppearance),
+                    Triple(R.drawable.ic_repeat, "Синхронизация", onSync),
+                    Triple(R.drawable.ic_database, "База данных", onDatabase),
+                    Triple(R.drawable.ic_chart, "Статистика", onStatistics),
+                    Triple(R.drawable.ic_help_circle, "О приложении", onAbout),
+                )
+            pages.forEachIndexed { i, (icon, label, onClick) ->
+                if (i > 0) ADivider(indent = 44.dp)
+                ARow(onClick = onClick) { glyph ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AIcon(icon, tint = glyph.copy(alpha = 0.85f))
+                        Spacer(Modifier.width(12.dp))
+                        Text(label, style = AgendaType.body, color = glyph)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** «Отображение»: theme mode tiles (desktop settings.rs:100-103) and the
+ * zeron palette picker. */
+@Composable
+fun AppearanceScreen(
     themeMode: String,
     onThemeMode: (String) -> Unit,
     palette: String = AgendaPalette,
     onPalette: (String) -> Unit = {},
-    onAbout: () -> Unit,
-    onStatistics: () -> Unit = {},
-    onSync: () -> Unit = {},
-    updateManager: UpdateManager? = null,
 ) {
     val c = AgendaTheme.colors
     Column(
@@ -313,7 +346,7 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 8.dp, bottom = bottomClearance())
     ) {
-        ASectionHeader("Отображение")
+        ASectionHeader("Режим")
         SettingsGroup {
             for ((mode, label) in listOf("system" to "Системная", "light" to "Светлая", "dark" to "Тёмная")) {
                 if (mode != "system") ADivider(indent = 44.dp)
@@ -343,38 +376,6 @@ fun SettingsScreen(
                 },
             onPick = onPalette,
         )
-        // The desktop «Обновления» card lives on the About page, which is
-        // itself a Manager settings page (views/mod.rs:46-52, updates.rs:
-        // 13-140) — on Android it sits in Settings directly.
-        updateManager?.let { UpdateSection(it) }
-        // Statistics is its own page like desktop (settings sidebar →
-        // Route::Statistics, chrome.rs:335-346) — no counters here.
-        ASectionHeader("Другое")
-        SettingsGroup {
-            ARow(onClick = onSync) { glyph ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AIcon(R.drawable.ic_repeat, tint = glyph.copy(alpha = 0.85f))
-                    Spacer(Modifier.width(12.dp))
-                    Text("Синхронизация", style = AgendaType.body, color = glyph)
-                }
-            }
-            ADivider(indent = 44.dp)
-            ARow(onClick = onStatistics) { glyph ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AIcon(R.drawable.ic_chart, tint = glyph.copy(alpha = 0.85f))
-                    Spacer(Modifier.width(12.dp))
-                    Text("Статистика", style = AgendaType.body, color = glyph)
-                }
-            }
-            ADivider(indent = 44.dp)
-            ARow(onClick = onAbout) { glyph ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AIcon(R.drawable.ic_help_circle, tint = glyph.copy(alpha = 0.85f))
-                    Spacer(Modifier.width(12.dp))
-                    Text("О приложении", style = AgendaType.body, color = glyph)
-                }
-            }
-        }
     }
 }
 

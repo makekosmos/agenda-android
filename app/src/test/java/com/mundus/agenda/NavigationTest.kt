@@ -72,7 +72,7 @@ class NavigationTest {
                 seenBg = com.mundus.agenda.ui.AgendaTheme.colors.bg
                 AgendaHome(
                     board = board,
-                    initialRoute = com.mundus.agenda.ui.Route.Settings,
+                    initialRoute = com.mundus.agenda.ui.Route.Appearance,
                     palette = palette,
                     onPalette = { palette = it },
                 )
@@ -150,17 +150,14 @@ class NavigationTest {
         composeTestRule.setContent { AgendaTheme { AgendaHome(board = board) } }
         composeTestRule.waitForIdle()
         openPage("Настройки")
-        // Settings mirrors the desktop sidebar: Отображение tiles +
-        // Статистика counters, no desktop-only rows.
-        composeTestRule.onNodeWithText("Отображение").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Статистика").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Отображение")
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Светлая").assertIsDisplayed()
-        // Below the fold at w411-h891: exists, may need scroll to display.
-        assert(
-            composeTestRule
-                .onAllNodes(androidx.compose.ui.test.hasText("Статистика"))
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        ) { "settings missing Статистика" }
+        composeTestRule.runOnUiThread { composeTestRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeTestRule.waitForIdle()
 
         composeTestRule
             .onNodeWithText("О приложении")

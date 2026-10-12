@@ -113,6 +113,29 @@ class ScreenshotTest {
 
     @Test fun settingsLight() = paletteShot("settings-light", false, "agenda", Route.Settings)
     @Test fun settingsDark() = paletteShot("settings-dark", true, "agenda", Route.Settings)
+    @Test fun appearanceLight() = paletteShot("appearance-light", false, "agenda", Route.Appearance)
+    @Test fun appearanceDark() = paletteShot("appearance-dark", true, "agenda", Route.Appearance)
+
+    private fun databaseShot(name: String, dark: Boolean) {
+        composeTestRule.setContent {
+            AgendaTheme(darkTheme = dark) {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.background(com.mundus.agenda.ui.AgendaTheme.colors.bg)
+                ) {
+                com.mundus.agenda.ui.DatabaseScreen(
+                    board = board,
+                    usage = com.mundus.agenda.ui.StorageUsage(
+                        database = 3_400_000, journal = 1_100_000, other = 600_000, deviceFree = 42_000_000_000,
+                    ),
+                )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage("roborazzi/$name.png")
+    }
+
+    @Test fun databaseLight() = databaseShot("database-light", false)
+    @Test fun databaseDark() = databaseShot("database-dark", true)
     @Test fun weekCatppuccinLight() = paletteShot("week-catppuccin-light", false, "catppuccin", Route.List(SmartList.WEEK))
     @Test fun weekDracula() = paletteShot("week-dracula", true, "dracula", Route.List(SmartList.WEEK))
 

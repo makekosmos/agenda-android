@@ -1,5 +1,12 @@
 package com.mundus.agenda.ui
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -83,6 +90,8 @@ sealed interface Route {
     data class Project(val id: String) : Route
     data class Task(val id: String) : Route
     data object Settings : Route
+    data object Appearance : Route
+    data object Database : Route
     data object Sync : Route
     data object Statistics : Route
     data object About : Route
@@ -388,6 +397,8 @@ fun AgendaHome(
             is Route.Task -> ""
             is Route.Sync -> "Синхронизация"
             is Route.Settings -> "Настройки"
+            is Route.Appearance -> "Отображение"
+            is Route.Database -> "База данных"
             is Route.Statistics -> "Статистика"
             is Route.About -> "О приложении"
         }
@@ -442,11 +453,8 @@ fun AgendaHome(
                         TaskListScreen(board = board, list = r.list, actions = actions)
                     is Route.Settings ->
                         SettingsScreen(
-                            board = board,
-                            themeMode = themeMode,
-                            onThemeMode = onThemeMode,
-                            palette = palette,
-                            onPalette = onPalette,
+                            onAppearance = { navigate(Route.Appearance) },
+                            onDatabase = { navigate(Route.Database) },
                             onAbout = { navigate(Route.About) },
                             onStatistics = { navigate(Route.Statistics) },
                             onSync = { navigate(Route.Sync) },
@@ -454,6 +462,14 @@ fun AgendaHome(
                         )
                     is Route.Sync ->
                         SyncScreen(sync = repository as? com.mundus.agenda.SyncApi, run = ::run)
+                    is Route.Appearance ->
+                        AppearanceScreen(
+                            themeMode = themeMode,
+                            onThemeMode = onThemeMode,
+                            palette = palette,
+                            onPalette = onPalette,
+                        )
+                    is Route.Database -> DatabaseScreen(board = board)
                     is Route.Statistics -> StatisticsScreen(board = board)
                     is Route.About -> AboutScreen()
                     is Route.Project ->
@@ -475,6 +491,7 @@ fun AgendaHome(
                 }
             }
 
+            val topFade = remember(current) { TopFadeConnection() }
             // adjustResize + edge-to-edge: pages keep focused fields above
             // the keyboard themselves; the quick-entry sheet rides it instead.
             Box(
@@ -483,6 +500,7 @@ fun AgendaHome(
                     .fillMaxWidth()
                     .then(if (createOpen) Modifier else Modifier.imePadding())
                     .hazeSource(hazeState)
+                    .nestedScroll(topFade)
             ) {
                 if (backPreview > 0f) {
                     BackGesturePreview(
@@ -497,6 +515,7 @@ fun AgendaHome(
                         label = "nav",
                     ) { r -> PageContent(r) }
                 }
+                TopFade(topFade.alpha)
             }
         }
 
@@ -610,6 +629,8 @@ fun routeKey(route: Route): String =
         is Route.Task -> "task:${route.id}"
         is Route.Sync -> "sync"
         is Route.Settings -> "settings"
+        is Route.Appearance -> "appearance"
+        is Route.Database -> "database"
         is Route.Statistics -> "statistics"
         is Route.About -> "about"
     }
@@ -618,6 +639,8 @@ fun parseRoute(key: String): Route =
     when (key.substringBefore(':')) {
         "sync" -> Route.Sync
         "settings" -> Route.Settings
+        "appearance" -> Route.Appearance
+        "database" -> Route.Database
         "statistics" -> Route.Statistics
         "about" -> Route.About
         "project" -> Route.Project(key.substringAfter(':'))
@@ -779,4 +802,29 @@ private fun TaskMenu(onDelete: () -> Unit) {
             }
         }
     }
+}
+
+/** Tracks how far the page has scrolled from its top, so the fade under
+ * the top bar appears only once content actually slides beneath it. */
+private class TopFadeConnection : NestedScrollConnection {
+    private var scrolled by mutableFloatStateOf(0f)
+    val alpha: Float get() = (scrolled / 48f).coerceIn(0f, 1f)
+
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        scrolled = (scrolled - consumed.y).coerceAtLeast(0f)
+        return Offset.Zero
+    }
+}
+
+@Composable
+private fun TopFade(alpha: Float) {
+    if (alpha <= 0f) return
+    val bg = AgendaTheme.colors.bg
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .graphicsLayer { this.alpha = alpha }
+            .background(Brush.verticalGradient(listOf(bg, bg.copy(alpha = 0f))))
+    )
 }
