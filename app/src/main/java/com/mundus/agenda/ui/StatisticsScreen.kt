@@ -124,7 +124,7 @@ fun StatisticsScreen(
                 .fillMaxSize()
                 .background(c.bg)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 48.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottomClearance())
     ) {
         // Share affordance, right-aligned (statistics.rs:201-223).
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

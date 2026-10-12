@@ -235,7 +235,7 @@ fun TaskListScreen(board: Board, list: SmartList, actions: TaskActions = TaskAct
         EmptyState(list)
         return
     }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
         if (list == SmartList.LOGBOOK && tasks.isNotEmpty()) {
             item(key = "header-tasks") { ASectionHeader("Задачи") }
         }
@@ -311,7 +311,7 @@ fun SettingsScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp, bottom = 96.dp)
+                .padding(top = 8.dp, bottom = bottomClearance())
     ) {
         ASectionHeader("Отображение")
         SettingsGroup {
@@ -617,7 +617,7 @@ fun ProjectScreen(
     }
     val active = tasks.filter { !it.isCompleted && !it.isCancelled }
     val done = tasks.filter { it.isCompleted || it.isCancelled }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
         items(active, key = { it.id }) { task ->
             TaskRow(board, task, modifier = Modifier.animateItem(), hideProjectMeta = hideProjectMeta, actions = actions)
             RowDivider()

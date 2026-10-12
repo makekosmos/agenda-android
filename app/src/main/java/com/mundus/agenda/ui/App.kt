@@ -700,7 +700,7 @@ fun OtherPage(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp, bottom = 96.dp)
+                .padding(top = 8.dp, bottom = bottomClearance())
     ) {
         updateManager?.let {
             UpdateBanner(it, Modifier.padding(bottom = 8.dp))

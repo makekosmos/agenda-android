@@ -15,6 +15,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -632,3 +636,14 @@ fun SheetField(
         },
     )
 }
+
+/**
+ * Space a scrolling page leaves under its last item so the floating tab
+ * bar / create button (56dp + 24dp margin above the nav bar) never covers
+ * something tappable, plus a 16dp breath.
+ */
+@Composable
+fun bottomClearance(): Dp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp
+
+@Composable
+fun bottomClearancePadding(): PaddingValues = PaddingValues(bottom = bottomClearance())
