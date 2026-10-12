@@ -205,6 +205,10 @@ fun SyncScreen(
     sync: SyncApi?,
     deviceName: String = android.os.Build.MODEL,
     run: (suspend () -> Unit) -> Unit = { block -> },
+    interval: Int = com.mundus.agenda.DEFAULT_SYNC_INTERVAL,
+    onInterval: (Int) -> Unit = {},
+    exactAlarms: () -> Boolean? = { null },
+    onExactAlarms: () -> Unit = {},
 ) {
     val c = AgendaTheme.colors
     var snap by remember { mutableStateOf<SyncSnapshot?>(null) }
@@ -213,10 +217,12 @@ fun SyncScreen(
     var openPeerId by remember { mutableStateOf<String?>(null) }
     var syncing by remember { mutableStateOf(false) }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var exact by remember { mutableStateOf(exactAlarms()) }
 
     LaunchedEffect(sync) {
         while (true) {
             snap = sync?.let { runCatching { it.syncSnapshot() }.getOrNull() }
+            exact = exactAlarms()
             delay(3000)
         }
     }
@@ -396,6 +402,7 @@ fun SyncScreen(
                 }
             }
         }
+        ScheduleSection(interval, onInterval, exact, onExactAlarms)
     }
 
     // Incoming consent (worktree modals.rs:91-190) uses the same sheet
@@ -535,4 +542,58 @@ private fun DeviceSheet(
             actions()
         }
     }
+}
+
+private fun intervalLabel(minutes: Int) = if (minutes == 60) "Каждый час" else "Каждые $minutes мин"
+
+/** Wall-clock slot interval (sync/SyncSlots.kt) and, on Android 12+, the
+ * exact-alarm access that keeps slots on the minute. */
+@Composable
+private fun ScheduleSection(
+    interval: Int,
+    onInterval: (Int) -> Unit,
+    exact: Boolean?,
+    onExactAlarms: () -> Unit,
+) {
+    val c = AgendaTheme.colors
+    var menuOpen by remember { mutableStateOf(false) }
+    ASectionHeader("Расписание")
+    SettingsGroup {
+        androidx.compose.foundation.layout.Box {
+            ARow(onClick = { menuOpen = true }) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Фоновая синхронизация", style = AgendaType.body, color = glyph, modifier = Modifier.weight(1f))
+                    Text(intervalLabel(interval).lowercase(), style = AgendaType.body, color = c.mutedFg)
+                }
+            }
+            AMenu(open = menuOpen, onDismiss = { menuOpen = false }) {
+                for (minutes in com.mundus.agenda.SYNC_INTERVALS) {
+                    AMenuItem(intervalLabel(minutes)) {
+                        menuOpen = false
+                        onInterval(minutes)
+                    }
+                }
+            }
+        }
+        if (exact != null) {
+            ADivider(indent = 44.dp)
+            ARow(onClick = if (exact) null else onExactAlarms) { glyph ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Точно по времени", style = AgendaType.body, color = c.fg, modifier = Modifier.weight(1f))
+                    Text(
+                        if (exact) "Вкл" else "Разрешить",
+                        style = AgendaType.body,
+                        color = if (exact) c.success else c.accent,
+                    )
+                }
+            }
+        }
+    }
+    Text(
+        "Все устройства синхронизируются в одно время: в начале часа и дальше по интервалу. " +
+            "Без точного времени запуск может опоздать на несколько минут.",
+        style = AgendaType.meta,
+        color = c.mutedFg,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }

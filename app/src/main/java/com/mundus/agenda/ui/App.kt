@@ -471,8 +471,31 @@ fun AgendaHome(
                             onSync = { navigate(Route.Sync) },
                             updateManager = updateManager,
                         )
-                    is Route.Sync ->
-                        SyncScreen(sync = repository as? com.mundus.agenda.SyncApi, run = ::run)
+                    is Route.Sync -> {
+                        val ctx = LocalContext.current
+                        var interval by remember { mutableStateOf(com.mundus.agenda.sync.SyncSlots.interval(ctx)) }
+                        SyncScreen(
+                            sync = repository as? com.mundus.agenda.SyncApi,
+                            run = ::run,
+                            interval = interval,
+                            onInterval = {
+                                interval = it
+                                com.mundus.agenda.sync.SyncSlots.setInterval(ctx, it)
+                            },
+                            exactAlarms = {
+                                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) null
+                                else com.mundus.agenda.sync.SyncSlots.exactAllowed(ctx)
+                            },
+                            onExactAlarms = {
+                                ctx.startActivity(
+                                    android.content.Intent(
+                                        android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                        android.net.Uri.parse("package:${ctx.packageName}"),
+                                    )
+                                )
+                            },
+                        )
+                    }
                     is Route.Appearance ->
                         AppearanceScreen(
                             themeMode = themeMode,

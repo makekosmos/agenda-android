@@ -1,5 +1,14 @@
 package com.mundus.agenda
 
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -85,4 +94,52 @@ interface SyncApi {
 
     /** `disconnect_peer {device_id}`. */
     suspend fun disconnectPeer(deviceId: String)
+}
+
+private fun SyncSnapshot.peerOnline() = peers.any { it.status == "online" }
+
+/**
+ * One background pass for the periodic worker. The engine has no "caught
+ * up" event and the OS freezes the process once the worker returns, so the
+ * pass redials, waits for a paired device to come online, then stays until
+ * [changes] has been quiet for [quiet] (or [cap] runs out). Returns whether
+ * a device was reached; with none online there is nobody to sync with.
+ */
+@OptIn(FlowPreview::class)
+suspend fun SyncApi.syncPass(
+    deviceName: String,
+    changes: Flow<*>,
+    connectTimeout: Duration = 2.minutes,
+    quiet: Duration = 5.seconds,
+    cap: Duration = 90.seconds,
+    poll: Duration = 1.seconds,
+): Boolean {
+    val snapshot = syncSnapshot()
+    when {
+        !snapshot.running -> startSync(deviceName)
+        !snapshot.peerOnline() -> restartSync(deviceName)
+    }
+    withTimeoutOrNull(connectTimeout) {
+        while (!syncSnapshot().peerOnline()) delay(poll)
+    } ?: return false
+    withTimeoutOrNull(cap) { changes.debounce(quiet).first() }
+    return true
+}
+
+/** Background sync intervals offered in settings, minutes; each divides an hour. */
+val SYNC_INTERVALS = listOf(5, 15, 30, 60)
+
+const val DEFAULT_SYNC_INTERVAL = 15
+
+/**
+ * The next background sync slot strictly after [now]: wall-clock multiples
+ * of [intervalMinutes] from local midnight (10:00, 10:15, ...), so every
+ * device on the same interval wakes at the same minute and finds the
+ * others online.
+ */
+fun nextSyncSlot(now: java.time.ZonedDateTime, intervalMinutes: Int): java.time.ZonedDateTime {
+    val local = now.toLocalDateTime()
+    val minuteOfDay = local.hour * 60 + local.minute
+    val next = (minuteOfDay / intervalMinutes + 1) * intervalMinutes
+    return local.toLocalDate().atStartOfDay().plusMinutes(next.toLong()).atZone(now.zone)
 }
