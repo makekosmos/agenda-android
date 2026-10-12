@@ -138,6 +138,8 @@ class ScreenshotTest {
     @Test fun databaseDark() = databaseShot("database-dark", true)
     @Test fun weekCatppuccinLight() = paletteShot("week-catppuccin-light", false, "catppuccin", Route.List(SmartList.WEEK))
     @Test fun weekDracula() = paletteShot("week-dracula", true, "dracula", Route.List(SmartList.WEEK))
+    @Test fun weekMundusLight() = paletteShot("week-mundus-light", false, "mundus", Route.List(SmartList.WEEK))
+    @Test fun weekMundusDark() = paletteShot("week-mundus-dark", true, "mundus", Route.List(SmartList.WEEK))
 
     @Test fun projectsLight() = shot("projects-light", false, Route.Projects)
     @Test fun projectsDark() = shot("projects-dark", true, Route.Projects)

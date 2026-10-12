@@ -403,8 +403,11 @@ fun AppearanceScreen(
     }
 }
 
-/** Agenda's own palette first, then zeron's families in registry order. */
-private val Palettes = listOf(AgendaPalette to "Agenda") + ZeronFamilies.map { it.id to it.name }
+/** The house palettes first — Agenda, then Mundus — then zeron's
+ * families in registry order. */
+private val Palettes =
+    listOf(AgendaPalette to "Agenda", MundusPalette to "Mundus") +
+        ZeronFamilies.map { it.id to it.name }
 
 /** Each tile is a tiny page in that palette's colors for the current
  * light/dark mode, so the choice is visual rather than a list of names. */

@@ -231,8 +231,26 @@ fun tagColor(name: String, fallback: Color): Color =
         else -> fallback
     }
 
-/** Built-in Agenda palette id; every other id is a zeron family. */
+/** Built-in Agenda palette id; every other id is a zeron family or the
+ * built-in [MundusPalette]. */
 const val AgendaPalette = "agenda"
+
+/** Built-in Mundus palette id. */
+const val MundusPalette = "mundus"
+
+/** Which row of [MundusAccents] this build resolves — the Mundus app it is. */
+const val MundusApp = "agenda"
+
+/** One app's brand accent in both appearances, as 0xRRGGBB. Values are the
+ * imago accent presets (appearance_editor/colors.rs). */
+class AppAccent(val light: Int, val dark: Int)
+
+/** Unlike the zeron themes, Mundus fixes the chrome and lets each app keep
+ * its own accent colour: the theme is this map, not a special case. */
+val MundusAccents: Map<String, AppAccent> =
+    mapOf(
+        "agenda" to AppAccent(light = 0x2563EB, dark = 0x60A5FA),
+    )
 
 /** [dark] is the variant actually shown: a dark-only zeron family stays
  * dark under a light system theme. */
@@ -244,9 +262,18 @@ private fun resolveTheme(palette: String, dark: Boolean): ResolvedTheme {
     val seed = ZeronFamilies.firstOrNull { it.id == palette }?.variant(dark)
     return when {
         seed != null -> ResolvedTheme(seed.toAgendaColors(), seed.dark)
+        palette == MundusPalette -> ResolvedTheme(mundusColors(dark), dark)
         dark -> ResolvedTheme(DarkColors, true)
         else -> ResolvedTheme(LightColors, false)
     }
+}
+
+/** Mundus chrome is the shared Agenda palette; only the accent is the
+ * app's own. */
+private fun mundusColors(dark: Boolean): AgendaColors {
+    val accent = MundusAccents.getValue(MundusApp)
+    return (if (dark) DarkColors else LightColors)
+        .withAccent(if (dark) accent.dark else accent.light, dark)
 }
 
 @Composable

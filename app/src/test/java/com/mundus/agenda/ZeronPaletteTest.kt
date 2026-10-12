@@ -3,6 +3,8 @@ package com.mundus.agenda
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import com.mundus.agenda.ui.AgendaPalette
+import com.mundus.agenda.ui.MundusAccents
+import com.mundus.agenda.ui.MundusApp
 import com.mundus.agenda.ui.ZeronFamilies
 import com.mundus.agenda.ui.paletteColors
 import org.junit.Assert.assertEquals
@@ -41,6 +43,25 @@ class ZeronPaletteTest {
     fun unknownIdFallsBackToAgenda() {
         assertEquals(paletteColors(AgendaPalette, false).bg, paletteColors("gone", false).bg)
         assertEquals(Color(0xFFF8F7F9), paletteColors(AgendaPalette, false).bg)
+    }
+
+    @Test
+    fun mundusKeepsAgendaChromeWithTheAppAccent() {
+        val light = paletteColors("mundus", dark = false)
+        val base = paletteColors(AgendaPalette, dark = false)
+        // Shared chrome: every non-accent token is Agenda's.
+        assertEquals(base.bg, light.bg)
+        assertEquals(base.fg, light.fg)
+        assertEquals(base.mutedFg, light.mutedFg)
+        assertEquals(base.border, light.border)
+        assertEquals(base.destructive, light.destructive)
+        // Accent is the app's own — Agenda's blue — in both appearances.
+        assertEquals(Color(0xFF2563EB), light.accent)
+        assertEquals(Color(0xFF60A5FA), paletteColors("mundus", dark = true).accent)
+        // The map, not a hardcode, is what resolves it.
+        val app = MundusAccents.getValue(MundusApp)
+        assertEquals(0x2563EB, app.light)
+        assertEquals(0x60A5FA, app.dark)
     }
 
     @Test
