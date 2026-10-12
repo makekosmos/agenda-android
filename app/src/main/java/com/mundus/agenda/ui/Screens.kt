@@ -71,9 +71,9 @@ private fun EmptyState(list: SmartList) {
             painterResource(empty.icon),
             contentDescription = null,
             tint = c.mutedFg.copy(alpha = 0.6f),
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(64.dp),
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
         Text(empty.title, style = AgendaType.body, color = c.mutedFg)
         Spacer(Modifier.height(2.dp))
         Text(
