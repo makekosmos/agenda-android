@@ -8,13 +8,15 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.mundus.agenda.AgendaApplication
+import com.mundus.agenda.syncPass
 import java.util.concurrent.TimeUnit
 
 /**
- * Periodic sync keepalive (program.md: WorkManager periodic + sync on
- * open + manual). The sync session inside the engine is continuous once
- * `start_sync` lands; the worker re-asserts it if the process restarted
- * or sync dropped.
+ * Periodic background sync (program.md: WorkManager periodic + sync on
+ * open + manual). Every ~15 min, network permitting, the worker holds the
+ * process awake for one [syncPass]: redial, wait for the paired device,
+ * stay until changes settle. Returning early would let the OS freeze the
+ * process before the connection is up.
  */
 class SyncWorker(context: Context, params: WorkerParameters) :
     CoroutineWorker(context, params) {
@@ -22,9 +24,7 @@ class SyncWorker(context: Context, params: WorkerParameters) :
     override suspend fun doWork(): Result {
         val repository = (applicationContext as AgendaApplication).repository
         return try {
-            if (!repository.syncSnapshot().running) {
-                repository.startSync(android.os.Build.MODEL)
-            }
+            repository.syncPass(android.os.Build.MODEL, repository.boardFlow())
             Result.success()
         } catch (_: Exception) {
             Result.retry()

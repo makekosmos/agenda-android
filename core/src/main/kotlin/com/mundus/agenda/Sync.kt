@@ -1,5 +1,13 @@
 package com.mundus.agenda
 
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -85,4 +93,34 @@ interface SyncApi {
 
     /** `disconnect_peer {device_id}`. */
     suspend fun disconnectPeer(deviceId: String)
+}
+
+private fun SyncSnapshot.peerOnline() = peers.any { it.status == "online" }
+
+/**
+ * One background pass for the periodic worker. The engine has no "caught
+ * up" event and the OS freezes the process once the worker returns, so the
+ * pass redials, waits for a paired device to come online, then stays until
+ * [changes] has been quiet for [quiet] (or [cap] runs out). Returns whether
+ * a device was reached; with none online there is nobody to sync with.
+ */
+@OptIn(FlowPreview::class)
+suspend fun SyncApi.syncPass(
+    deviceName: String,
+    changes: Flow<*>,
+    connectTimeout: Duration = 45.seconds,
+    quiet: Duration = 5.seconds,
+    cap: Duration = 90.seconds,
+    poll: Duration = 1.seconds,
+): Boolean {
+    val snapshot = syncSnapshot()
+    when {
+        !snapshot.running -> startSync(deviceName)
+        !snapshot.peerOnline() -> restartSync(deviceName)
+    }
+    withTimeoutOrNull(connectTimeout) {
+        while (!syncSnapshot().peerOnline()) delay(poll)
+    } ?: return false
+    withTimeoutOrNull(cap) { changes.debounce(quiet).first() }
+    return true
 }
