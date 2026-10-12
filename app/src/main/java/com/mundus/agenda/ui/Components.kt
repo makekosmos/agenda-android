@@ -469,7 +469,8 @@ fun ProjectDot() {
 }
 
 /**
- * Desktop `status_ring` (widgets.rs): Done = accent fill + accent-fg
+ * Desktop `status_ring` (widgets.rs): Deleted = muted fill + × (trashed
+ * wins over the underlying status), Done = accent fill + accent-fg
  * check, Canceled = muted ring + ×, Started = warn ring + half fill,
  * otherwise a plain muted ring. Ring sits in a 20dp grid cell so every
  * row shares the desktop `CONTENT_GRID_X` left line.
@@ -480,6 +481,7 @@ fun StatusRing(task: Task, onToggle: (Task) -> Unit = {}) {
     val c = AgendaTheme.colors
     val status =
         when {
+            task.isTrashed -> "deleted"
             task.isCompleted -> "done"
             task.isCancelled -> "canceled"
             task.status == "started" -> "started"
@@ -505,6 +507,13 @@ fun StatusRing(task: Task, onToggle: (Task) -> Unit = {}) {
         contentAlignment = Alignment.Center,
     ) {
         when (status) {
+            "deleted" ->
+                Box(
+                    Modifier.size(18.dp).clip(CircleShape).background(c.mutedFg),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AIcon(R.drawable.ic_status_x, tint = c.bg, modifier = Modifier.size(13.dp))
+                }
             "done" ->
                 Box(
                     Modifier.size(18.dp).clip(CircleShape).background(c.accent),
