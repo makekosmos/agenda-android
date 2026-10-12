@@ -667,50 +667,46 @@ private fun LazyListScope.taskRows(
     }
 }
 
-/** Search page, a bar root: the field takes the top bar's row, then every
- * task, narrowed to fuzzy matches once a query is typed. */
+/** The search page's title: a field in the shared top bar, focused on open. */
 @Composable
-fun SearchScreen(board: Board, actions: TaskActions = TaskActions(), initialQuery: String = "") {
+fun SearchField(query: String, onQueryChange: (String) -> Unit) {
     val c = AgendaTheme.colors
-    var query by rememberSaveable { mutableStateOf(initialQuery) }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(c.fg(0.06f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AIcon(R.drawable.ic_search, tint = c.mutedFg)
+        Spacer(Modifier.width(10.dp))
+        SheetField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = "Поиск задач",
+            style = AgendaType.body,
+            singleLine = true,
+            imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+            focusRequester = focus,
+        )
+    }
+}
+
+/** Search page, a bar root: every task, narrowed to fuzzy matches once
+ * [query] (typed in the top bar's [SearchField]) is non-blank. */
+@Composable
+fun SearchScreen(board: Board, query: String, actions: TaskActions = TaskActions()) {
     val tasks = searchTasks(board, query)
-    val titleLine = with(LocalDensity.current) { AgendaType.pageTitle.lineHeight.toDp() }
-    Column(Modifier.fillMaxSize()) {
-        Box(
-            Modifier.fillMaxWidth().height(maxOf(56.dp, titleLine + 20.dp)).padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(c.fg(0.06f))
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AIcon(R.drawable.ic_search, tint = c.mutedFg)
-                Spacer(Modifier.width(10.dp))
-                SheetField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = "Поиск задач",
-                    style = AgendaType.body,
-                    singleLine = true,
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Search,
-                    focusRequester = focus,
-                )
+    when {
+        tasks.isEmpty() && query.isBlank() -> SearchHint("Задач нет", null)
+        tasks.isEmpty() -> SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
+        else ->
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
+                taskRows(board, tasks, actions)
             }
-        }
-        when {
-            tasks.isEmpty() && query.isBlank() -> SearchHint("Задач нет", null)
-            tasks.isEmpty() -> SearchHint("Ничего не найдено", "По запросу «${query.trim()}» совпадений нет")
-            else ->
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = bottomClearancePadding()) {
-                    taskRows(board, tasks, actions)
-                }
-        }
     }
 }
 

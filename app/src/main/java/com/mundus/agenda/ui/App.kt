@@ -237,6 +237,7 @@ fun AgendaHome(
     // like desktop edit_project_title (app/projects.rs:111-114).
     var renamingProjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var renameDraft by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     // Per-list display options keyed like desktop `view_options_key`.
     var listOptions by rememberSaveable { mutableStateOf(HashMap<String, ListOptions>()) }
     val scope = rememberCoroutineScope()
@@ -395,6 +396,7 @@ fun AgendaHome(
     }
 
     val current = parseRoute(route)
+    LaunchedEffect(current) { if (current != Route.Search) searchQuery = "" }
     val title =
         when (val r = current) {
             is Route.Projects -> "Проекты"
@@ -427,11 +429,13 @@ fun AgendaHome(
             val renamingProject =
                 (current as? Route.Project)
                     ?.takeIf { renamingProjectId == it.id }
-            if (current != Route.Search) AgendaTopBar(
+            AgendaTopBar(
                 title = title,
                 onBack = if (stack.isNotEmpty()) ::back else null,
                 titleContent =
-                    renamingProject?.let { r ->
+                    if (current == Route.Search) {
+                        { SearchField(searchQuery) { searchQuery = it } }
+                    } else renamingProject?.let { r ->
                         {
                             InlineTitleEditor(
                                 initial = board.project(r.id)?.title ?: renameDraft,
@@ -482,7 +486,7 @@ fun AgendaHome(
                             actions = actions,
                             options = optionsKey(r)?.let { listOptions[it] } ?: ListOptions(),
                         )
-                    is Route.Search -> SearchScreen(board = board, actions = actions)
+                    is Route.Search -> SearchScreen(board = board, query = searchQuery, actions = actions)
                     is Route.Other ->
                         OtherScreen(
                             onAppearance = { navigate(Route.Appearance) },
