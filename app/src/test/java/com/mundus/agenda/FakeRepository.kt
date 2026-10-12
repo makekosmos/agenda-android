@@ -238,6 +238,12 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
         if (trashed) trashedTitles += task.title
     }
 
+    val deletedForever = mutableListOf<String>()
+
+    override suspend fun deleteForever(tasks: List<Task>) {
+        deletedForever += tasks.map { it.id }
+    }
+
     var createdProjects = mutableListOf<Project>()
 
     override suspend fun createProject(): String {

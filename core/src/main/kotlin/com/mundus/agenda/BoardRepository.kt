@@ -85,6 +85,9 @@ interface BoardRepository : AutoCloseable {
     /** Trash / restore (desktop `TrashTodo` / `RestoreTodo`). */
     suspend fun setTrashed(task: Task, trashed: Boolean)
 
+    /** Deletes these tasks for good; the engine syncs the deletion to peers. */
+    suspend fun deleteForever(tasks: List<Task>)
+
     suspend fun quickEntryPreview(
         rawTitle: String,
         selectedDate: String?,

@@ -1,5 +1,6 @@
 package com.mundus.agenda
 
+import com.mundus.agenda.SmartList
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasImeAction
@@ -143,6 +144,31 @@ class NavigationTest {
         }
         collect(composeTestRule.onRoot().fetchSemanticsNode())
         return texts
+    }
+
+    @Test
+    fun emptyingTrashNeedsSecondTapAndDeletesAllTrashed() {
+        val repo = FakeRepository()
+        composeTestRule.setContent {
+            AgendaTheme {
+                AgendaHome(
+                    board = board,
+                    repository = repo,
+                    initialRoute = com.mundus.agenda.ui.Route.List(SmartList.TRASH),
+                )
+            }
+        }
+        val click = androidx.compose.ui.semantics.SemanticsActions.OnClick
+        composeTestRule.onNodeWithContentDescription("Ещё").performSemanticsAction(click)
+        composeTestRule.onNodeWithText("Очистить корзину").performSemanticsAction(click)
+        composeTestRule.waitForIdle()
+        assertEquals(emptyList<String>(), repo.deletedForever)
+        val trashed = board.list(SmartList.TRASH)
+        composeTestRule
+            .onNodeWithText("Удалить навсегда", substring = true)
+            .performSemanticsAction(click)
+        composeTestRule.waitForIdle()
+        assertEquals(trashed.map { it.id }, repo.deletedForever)
     }
 
     @Test
