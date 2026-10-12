@@ -120,7 +120,7 @@ fun SyncScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp, bottom = 96.dp)
+                .padding(top = 8.dp, bottom = bottomClearance())
     ) {
         ASectionHeader("Статус")
         SettingsGroup {
