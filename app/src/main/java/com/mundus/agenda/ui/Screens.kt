@@ -19,6 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -284,6 +291,8 @@ fun SettingsScreen(
     board: Board,
     themeMode: String,
     onThemeMode: (String) -> Unit,
+    palette: String = AgendaPalette,
+    onPalette: (String) -> Unit = {},
     onAbout: () -> Unit,
     onStatistics: () -> Unit = {},
     onSync: () -> Unit = {},
@@ -316,6 +325,17 @@ fun SettingsScreen(
                 }
             }
         }
+        ASectionHeader("Тема")
+        PalettePicker(
+            selected = palette,
+            dark =
+                when (themeMode) {
+                    "light" -> false
+                    "dark" -> true
+                    else -> isSystemInDarkTheme()
+                },
+            onPick = onPalette,
+        )
         // The desktop «Обновления» card lives on the About page, which is
         // itself a Manager settings page (views/mod.rs:46-52, updates.rs:
         // 13-140) — on Android it sits in Settings directly.
@@ -346,6 +366,68 @@ fun SettingsScreen(
                     Spacer(Modifier.width(12.dp))
                     Text("О приложении", style = AgendaType.body, color = glyph)
                 }
+            }
+        }
+    }
+}
+
+/** Agenda's own palette first, then zeron's families in registry order. */
+private val Palettes = listOf(AgendaPalette to "Agenda") + ZeronFamilies.map { it.id to it.name }
+
+/** Each tile is a tiny page in that palette's colors for the current
+ * light/dark mode, so the choice is visual rather than a list of names. */
+@Composable
+private fun PalettePicker(selected: String, dark: Boolean, onPick: (String) -> Unit) {
+    val c = AgendaTheme.colors
+    val listState =
+        rememberLazyListState(Palettes.indexOfFirst { it.first == selected }.coerceAtLeast(0))
+    LazyRow(
+        state = listState,
+        contentPadding = PaddingValues(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(Palettes, key = { it.first }) { (id, name) ->
+            val p = paletteColors(id, dark)
+            val isSelected = id == selected
+            Column(
+                modifier =
+                    Modifier
+                        .width(92.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onPick(id) }
+                        .semantics { this.selected = isSelected },
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(p.bg)
+                            .border(
+                                if (isSelected) 2.dp else 1.dp,
+                                if (isSelected) c.accent else c.border,
+                                RoundedCornerShape(10.dp),
+                            )
+                            .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(Modifier.size(width = 44.dp, height = 6.dp).clip(CircleShape).background(p.fg))
+                    Box(Modifier.size(width = 60.dp, height = 5.dp).clip(CircleShape).background(p.mutedFg))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (dot in listOf(p.accent, p.success, p.warn, p.destructive)) {
+                            Box(Modifier.size(10.dp).clip(CircleShape).background(dot))
+                        }
+                    }
+                }
+                Text(
+                    name,
+                    style = AgendaType.label,
+                    color = if (isSelected) c.fg else c.mutedFg,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp, start = 2.dp),
+                )
             }
         }
     }

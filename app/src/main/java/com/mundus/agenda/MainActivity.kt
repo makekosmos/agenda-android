@@ -45,12 +45,15 @@ class MainActivity : ComponentActivity() {
                         "light" -> false
                         "dark" -> true
                         else -> androidx.compose.foundation.isSystemInDarkTheme()
-                    }
+                    },
+                palette = app.palette.value,
             ) {
                 AgendaApp(
                     app.repository,
                     themeMode = app.themeMode.value,
                     onThemeMode = app::setThemeMode,
+                    palette = app.palette.value,
+                    onPalette = app::setPalette,
                 )
             }
         }

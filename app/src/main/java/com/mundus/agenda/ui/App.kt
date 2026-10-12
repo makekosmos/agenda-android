@@ -109,6 +109,8 @@ fun AgendaApp(
     repository: BoardRepository,
     themeMode: String = "system",
     onThemeMode: (String) -> Unit = {},
+    palette: String = AgendaPalette,
+    onPalette: (String) -> Unit = {},
 ) {
     val viewModel: BoardViewModel = viewModel(factory = BoardViewModelFactory(repository))
     val state by viewModel.board.collectAsStateWithLifecycle()
@@ -127,7 +129,14 @@ fun AgendaApp(
                 )
             }
         is BoardState.Ready ->
-            AgendaHome(s.board, repository, themeMode = themeMode, onThemeMode = onThemeMode)
+            AgendaHome(
+                s.board,
+                repository,
+                themeMode = themeMode,
+                onThemeMode = onThemeMode,
+                palette = palette,
+                onPalette = onPalette,
+            )
     }
 }
 
@@ -191,6 +200,8 @@ fun AgendaHome(
     initialEditTaskId: String? = null,
     themeMode: String = "system",
     onThemeMode: (String) -> Unit = {},
+    palette: String = AgendaPalette,
+    onPalette: (String) -> Unit = {},
 ) {
     val initialKey = routeKey(initialEditTaskId?.let { Route.Task(it) } ?: initialRoute)
     var route by rememberSaveable { mutableStateOf(initialKey) }
@@ -407,6 +418,8 @@ fun AgendaHome(
                             board = board,
                             themeMode = themeMode,
                             onThemeMode = onThemeMode,
+                            palette = palette,
+                            onPalette = onPalette,
                             onAbout = { navigate(Route.About) },
                             onStatistics = { navigate(Route.Statistics) },
                             onSync = { navigate(Route.Sync) },

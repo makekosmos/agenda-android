@@ -16,12 +16,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mundus.agenda.ui.AgendaHome
 import com.mundus.agenda.ui.AgendaTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +57,33 @@ class NavigationTest {
             .onNodeWithText(label)
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun pickingPaletteRethemesApp() {
+        var seenBg = androidx.compose.ui.graphics.Color.Unspecified
+        composeTestRule.setContent {
+            var palette by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(com.mundus.agenda.ui.AgendaPalette)
+            }
+            AgendaTheme(darkTheme = false, palette = palette) {
+                seenBg = com.mundus.agenda.ui.AgendaTheme.colors.bg
+                AgendaHome(
+                    board = board,
+                    initialRoute = com.mundus.agenda.ui.Route.Settings,
+                    palette = palette,
+                    onPalette = { palette = it },
+                )
+            }
+        }
+        composeTestRule
+            .onNode(androidx.compose.ui.test.hasScrollToKeyAction())
+            .performScrollToKey("dracula")
+        composeTestRule
+            .onNodeWithText("Dracula")
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        composeTestRule.waitForIdle()
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF282A36), seenBg)
     }
 
     @Test

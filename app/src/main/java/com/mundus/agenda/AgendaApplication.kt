@@ -33,6 +33,18 @@ class AgendaApplication : Application() {
         prefs.edit().putString("theme", mode).apply()
     }
 
+    /** `AgendaPalette` or a zeron family id (ui/ZeronThemes.kt). */
+    val palette by lazy {
+        androidx.compose.runtime.mutableStateOf(
+            prefs.getString("palette", com.mundus.agenda.ui.AgendaPalette) ?: com.mundus.agenda.ui.AgendaPalette
+        )
+    }
+
+    fun setPalette(id: String) {
+        palette.value = id
+        prefs.edit().putString("palette", id).apply()
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {

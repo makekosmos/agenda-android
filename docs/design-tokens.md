@@ -36,6 +36,16 @@ Derived alpha mixes used by desktop chrome (`src/chrome.rs`):
 - task row separator: `border_mix(0.55)` — border at ~55% (`rows/task.rs`)
 - row hover: `fg_mix(0.04)`
 
+### Zeron palettes
+
+Settings → «Тема» also offers zeron's 19 built-in theme families
+(30 variants). `tools/gen_zeron_themes.py <zeron checkout>` copies the raw
+seeds from `crates/theme/src/builtins.rs` into `ui/ZeronThemes.kt`;
+`ui/ZeronPalette.kt` ports zeron's `variant()` / `AccentRoles::derive`
+and maps each role onto the tokens above (shell → sidebarBg, dialog →
+popover, accent wash → qeChipBg, ...). «Отображение» picks the light or dark
+variant. A family with one variant (Dracula, Nord, ...) keeps it.
+
 ## Typography
 
 Desktop base font is Inter, base size 13px (`theme.rs:16` `FONT_SIZE=13.0`,
