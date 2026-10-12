@@ -311,6 +311,8 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
         localDevice = com.mundus.agenda.SyncLocalDevice("dev-phone", "Pixel"),
     )
 
+    override suspend fun restartSync(deviceName: String) = startSync(deviceName)
+
     override suspend fun startSync(deviceName: String) {
         snapshot = snapshot.copy(running = true)
     }

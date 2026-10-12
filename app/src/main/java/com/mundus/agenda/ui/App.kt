@@ -234,9 +234,26 @@ fun AgendaHome(
     LaunchedEffect(Unit) { updateManager.checkOnStart() }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        // Background freezes the process and drops the peer connection; the
+        // engine then redials on a backoff of up to 60 s. Coming back with
+        // no peer online restarts sync so it redials at once. The first
+        // resume is the cold start AgendaApplication already covers.
+        var firstResume = true
         val obs =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) updateManager.checkIfStale()
+                if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+                updateManager.checkIfStale()
+                val sync = repository as? com.mundus.agenda.SyncApi
+                if (!firstResume && sync != null) {
+                    scope.launch {
+                        runCatching {
+                            if (sync.syncSnapshot().peers.none { it.status == "online" }) {
+                                sync.restartSync(android.os.Build.MODEL)
+                            }
+                        }
+                    }
+                }
+                firstResume = false
             }
         lifecycleOwner.lifecycle.addObserver(obs)
         onDispose {

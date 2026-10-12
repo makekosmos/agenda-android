@@ -59,6 +59,9 @@ interface SyncApi {
     /** `start_sync` — engine-mobile fills space/device defaults. */
     suspend fun startSync(deviceName: String)
 
+    /** `stop_sync` + `start_sync`: redials now instead of waiting out backoff. */
+    suspend fun restartSync(deviceName: String)
+
     /** `get_sync_snapshot`. */
     suspend fun syncSnapshot(): SyncSnapshot
 

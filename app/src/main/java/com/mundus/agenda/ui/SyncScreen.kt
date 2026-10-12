@@ -157,7 +157,7 @@ fun SyncScreen(
                 }
             }
             ADivider(indent = 44.dp)
-            ARow(onClick = { act { if (sync?.syncSnapshot()?.running != true) sync?.startSync(deviceName) } }) { glyph ->
+            ARow(onClick = { act { sync?.restartSync(deviceName) } }) { glyph ->
                 Text("Обновить", style = AgendaType.body, color = glyph)
             }
         }

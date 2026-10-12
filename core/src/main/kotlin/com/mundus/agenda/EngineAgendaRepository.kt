@@ -45,7 +45,7 @@ import kotlinx.serialization.json.put
  * agenda-core through the UniFFI exports — Kotlin only shuttles JSON.
  */
 class EngineAgendaRepository(
-    dataDir: String,
+    private val dataDir: String,
     private val dayCheckMillis: Long = 10_000,
     private val localDayProvider: () -> Pair<String, Int> = {
         val zone = ZoneId.systemDefault()
@@ -518,14 +518,28 @@ class EngineAgendaRepository(
 
     // -- SyncApi: pairing + sync status -------------------------------
 
+    // ark-core keeps the pairing ticket only in the running session's
+    // params, so a cold start would come up listen-only and neither side
+    // would dial. The ticket we entered is replayed on every start.
+    private val peerTicketFile get() = java.io.File(dataDir, "sync_peer_ticket")
+
     override suspend fun startSync(deviceName: String): Unit = withContext(Dispatchers.IO) {
+        val ticket = peerTicketFile.takeIf { it.exists() }?.readText()?.trim()?.ifEmpty { null }
         unwrap(
             engine.startSync(
-                buildJsonObject { put("device_name", deviceName) }.toString()
+                buildJsonObject {
+                    put("device_name", deviceName)
+                    if (ticket != null) put("iroh_peer_ticket", ticket)
+                }.toString()
             ),
             "start_sync",
         )
         Unit
+    }
+
+    override suspend fun restartSync(deviceName: String): Unit = withContext(Dispatchers.IO) {
+        if (syncSnapshot().running) unwrap(engine.stopSync(), "stop_sync")
+        startSync(deviceName)
     }
 
     override suspend fun syncSnapshot(): SyncSnapshot = withContext(Dispatchers.IO) {
@@ -545,6 +559,7 @@ class EngineAgendaRepository(
     override suspend fun connectWithPairingCode(code: String): String =
         withContext(Dispatchers.IO) {
             val data = unwrap(engine.connectWithPairingCode(code), "connect_with_pairing_code")
+            peerTicketFile.writeText(code.trim())
             (data as? JsonObject)?.get("status")?.jsonPrimitive?.content ?: "pending"
         }
 
@@ -565,6 +580,7 @@ class EngineAgendaRepository(
 
     override suspend fun disconnectPeer(deviceId: String): Unit = withContext(Dispatchers.IO) {
         call("disconnect_peer", buildJsonObject { put("device_id", deviceId) })
+        if (syncSnapshot().peers.isEmpty()) peerTicketFile.delete()
         Unit
     }
 
