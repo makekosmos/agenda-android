@@ -347,10 +347,11 @@ fun QuickEntrySheet(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     singleLine = true,
                     imeAction = androidx.compose.ui.text.input.ImeAction.Done,
-                    // No-suggestions input type: kills the IME candidate
-                    // strip and the accent composing underline Jack flagged
-                    // as a crooked autocomplete artifact (p9 item 3).
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii,
+                    // Plain text keyboard so the user can still switch the
+                    // input language (KOS-394). Autocorrect is off in
+                    // SheetField, which keeps the crooked autocomplete
+                    // artifact from p9 item 3 away.
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
                     keyboardActions =
                         androidx.compose.foundation.text.KeyboardActions(
                             onDone = { createAndContinue() }
