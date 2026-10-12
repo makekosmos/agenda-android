@@ -149,6 +149,15 @@ fun ADivider(modifier: Modifier = Modifier, indent: Dp = 0.dp) {
     )
 }
 
+/** Full-width band of the surface colour between items in a settings
+ * group — the rows read as separate blocks, not a joined list.
+ * [surface] is the colour behind the group: the page `bg` on settings
+ * screens, `popover` inside sheets. */
+@Composable
+fun SettingsDivider(surface: Color = AgendaTheme.colors.bg) {
+    Box(Modifier.fillMaxWidth().height(8.dp).background(surface))
+}
+
 /** Flat icon button — press dims through the same fg-8% fill. */
 @Composable
 fun AIconButton(
