@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -233,9 +234,9 @@ fun PropertyRow(
 
 /**
  * The single top bar every page shares: one 40dp back slot (empty on
- * home), the page title in `pageTitle` type at a fixed baseline. Home and
- * inner pages get identical geometry — same padding, height and text
- * metrics, so drilling in never shifts the title.
+ * home), the page title in `pageTitle` type, all centered in one fixed
+ * height. Home and inner pages get identical geometry, so drilling in
+ * never shifts the content.
  */
 @Composable
 fun AgendaTopBar(
@@ -245,8 +246,12 @@ fun AgendaTopBar(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val c = AgendaTheme.colors
+    // One height for every page, sized by the title line so a large font
+    // scale grows home and inner pages alike — drilling in never moves
+    // the content below the bar.
+    val titleLine = with(LocalDensity.current) { AgendaType.pageTitle.lineHeight.toDp() }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(top = 4.dp),
+        modifier = Modifier.fillMaxWidth().height(maxOf(56.dp, titleLine + 20.dp)).padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Nested pages carry no title: the circled chevron is the header.
@@ -265,7 +270,6 @@ fun AgendaTopBar(
                 color = c.fg,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(vertical = 10.dp),
             )
         }
         if (trailing != null) {
