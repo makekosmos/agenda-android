@@ -15,9 +15,8 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.SeekableTransitionState
-import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.unit.IntOffset
@@ -375,29 +374,51 @@ fun AgendaHome(
                 run { repository?.deleteProject(p) }
             },
         )
-    // Predictive back: gesture progress seeks the very transition the
-    // committed pop then animates to completion — the same fix androidx
-    // applied to NavHost for the "predictive back flick" (one
-    // SeekableTransitionState via rememberTransition, never a second
-    // transition layered on top). A bare KEYCODE_BACK delivers no
-    // progress events, so the seek never engages and the
-    // LaunchedEffect below plays the pop transition as usual.
-    val navSeek = remember { SeekableTransitionState(route) }
+    // Predictive back: gesture progress drives the same slide+fade pair the
+    // committed transition runs (forward = +it/4 in, -it/6 out; back
+    // reverses them). A bare KEYCODE_BACK delivers no progress events, so
+    // the flow completes empty and the committed back transition runs.
+    var backPreview by remember { mutableFloatStateOf(0f) }
+    // Set for the one pop a gesture commits: the gesture's own preview
+    // already played the exit, so AnimatedContent must swap instantly —
+    // replaying the Pop transition re-composes the leaving page and it
+    // flashes for a frame at the end.
+    var gesturePop by remember { mutableStateOf(false) }
     PredictiveBackHandler(enabled = stack.isNotEmpty()) { events ->
-        navMotion = NavMotion.Pop
-        val target = stack.last()
+        var maxProgress = 0f
         try {
-            events.collect { ev -> navSeek.seekTo(ev.progress, target) }
-            android.util.Log.d("AgendaNav", "back committed")
+            events.collect { ev ->
+                maxProgress = maxOf(maxProgress, ev.progress)
+                backPreview = ev.progress
+            }
+            android.util.Log.d("AgendaNav", "back committed (maxProgress=$maxProgress)")
             // The commit is already decided, so finishing it must not be
-            // interruptible.
+            // interruptible: a cancel here (a second gesture's started
+            // event, the handler's enabled flip after the stack empties)
+            // would skip back() and the catch below would snap the
+            // leaving page back to full opacity — the page would flash
+            // at the end of the exit animation.
             withContext(NonCancellable) {
-                navSeek.animateTo(target, tween(NAV_MS / 2, easing = EaseEmphasized))
+                // gestured = "the user saw a gesture preview" — the peak
+                // progress, not the last event: a release can deliver a
+                // trailing progress=0 event while the preview ran.
+                val gestured = maxProgress > 0f
+                if (gestured) {
+                    gesturePop = true
+                    animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
+                        backPreview = v
+                    }
+                }
+                // Pop while the preview still sits translated off-screen;
+                // only then drop it — the stack change and the graphicsLayer
+                // reset commit in the same frame.
                 back()
+                if (gestured) navMotion = NavMotion.None
+                backPreview = 0f
             }
         } catch (_: kotlinx.coroutines.CancellationException) {
-            android.util.Log.d("AgendaNav", "back cancelled")
-            navSeek.animateTo(route, tween(NAV_MS / 2, easing = EaseEmphasized))
+            android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
+            backPreview = 0f
         }
     }
 
@@ -419,14 +440,6 @@ fun AgendaHome(
         }
     val animate = animationsEnabled()
     val navMs = if (animate) NAV_MS else 0
-    // Non-gesture navigation (push, tab switch, back button, deep link):
-    // a gesture commit already animated the transition to `route`, so
-    // this only plays when the target genuinely moved.
-    LaunchedEffect(route) {
-        if (navSeek.targetState != route) {
-            navSeek.animateTo(route, tween(navMs))
-        }
-    }
 
     val hazeState = rememberHazeState()
     var glassLight by remember { mutableFloatStateOf(0.32f) }
@@ -590,10 +603,23 @@ fun AgendaHome(
                     .hazeSource(hazeState)
                     .nestedScroll(topFade)
             ) {
-                val navTx = rememberTransition(navSeek)
-                navTx.AnimatedContent(
-                    transitionSpec = { navTransition(navMotion, navMs) },
-                ) { key -> PageContent(parseRoute(key)) }
+                BackGesturePreview(
+                    progress = { backPreview },
+                    behind = { PageContent(stack.lastOrNull()?.let(::parseRoute) ?: current) },
+                ) {
+                    AnimatedContent(
+                        targetState = current,
+                        transitionSpec = {
+                            if (gesturePop) {
+                                gesturePop = false
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else {
+                                navTransition(navMotion, navMs)
+                            }
+                        },
+                        label = "nav",
+                    ) { r -> PageContent(r) }
+                }
                 TopFade(topFade.alpha)
             }
         }
