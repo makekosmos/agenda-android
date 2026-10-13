@@ -106,6 +106,10 @@ class BackFlashTest {
 
         val frames = framesUntilAppearanceGone()
         assert(frames >= 0) { "never landed on «Другое»" }
+        assert(frames < 14) {
+            "«Отображение» stayed composed $frames frames after commit — " +
+                "the exit transition replayed instead of settling the preview"
+        }
     }
 
     /** A fast flick can deliver a trailing progress=0 event before the
@@ -140,6 +144,37 @@ class BackFlashTest {
         assert(frames < 14) {
             "«Отображение» stayed composed $frames frames after commit — " +
                 "the exit transition replayed instead of settling the preview"
+        }
+    }
+
+    /** gesturePop must be reset once the gesture pop settles — and the
+     * transition spec must only read it. A later plain back press (no
+     * progress events) has to run the normal Pop transition: if the flag
+     * stuck true, «Другое» would be swapped out instantly and vanish
+     * within a frame or two of the press. */
+    @Test
+    fun backPressAfterGesturePopStillAnimates() {
+        openAppearancePage()
+
+        composeTestRule.mainClock.autoAdvance = false
+        val dispatcher = composeTestRule.activity.onBackPressedDispatcher
+        composeTestRule.runOnUiThread {
+            dispatcher.dispatchOnBackStarted(ev(0.05f))
+            dispatcher.dispatchOnBackProgressed(ev(0.6f))
+            dispatcher.onBackPressed()
+        }
+        val frames = framesUntilAppearanceGone()
+        assert(frames >= 0) { "never landed on «Другое»" }
+
+        composeTestRule.runOnUiThread { dispatcher.onBackPressed() }
+        var otherFrames = 0
+        repeat(30) {
+            composeTestRule.mainClock.advanceTimeByFrame()
+            if ("База данных" in texts()) otherFrames++
+        }
+        assert(otherFrames > 2) {
+            "«Другое» vanished $otherFrames frames after the back press — " +
+                "the Pop transition never ran (gesturePop stuck?)"
         }
     }
 }

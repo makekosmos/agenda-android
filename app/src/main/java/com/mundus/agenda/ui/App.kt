@@ -10,6 +10,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -88,8 +89,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface Route {
     data object Projects : Route
@@ -379,12 +384,23 @@ fun AgendaHome(
     // reverses them). A bare KEYCODE_BACK delivers no progress events, so
     // the flow completes empty and the committed back transition runs.
     var backPreview by remember { mutableFloatStateOf(0f) }
+    // The route the gesture previews, frozen when the gesture starts so a
+    // mid-gesture stack change can't swap what's behind the front page.
+    var previewRoute by remember { mutableStateOf<Route?>(null) }
     // Set for the one pop a gesture commits: the gesture's own preview
     // already played the exit, so AnimatedContent must swap instantly —
     // replaying the Pop transition re-composes the leaving page and it
-    // flashes for a frame at the end.
+    // flashes for a frame at the end. Read-only inside the transition
+    // spec: writing it there races per-child spec evaluation.
     var gesturePop by remember { mutableStateOf(false) }
+    // updateTransition exposes currentState/targetState, which lets the
+    // commit path wait until the pop has fully settled (old page
+    // uncomposed) before dropping the preview — a plain AnimatedContent
+    // still holds the old page one more frame and resetting backPreview
+    // then would flash it at full alpha.
+    val navTr = updateTransition(parseRoute(route), label = "nav")
     PredictiveBackHandler(enabled = stack.isNotEmpty()) { events ->
+        previewRoute = stack.lastOrNull()?.let(::parseRoute)
         var maxProgress = 0f
         try {
             events.collect { ev ->
@@ -402,23 +418,39 @@ fun AgendaHome(
                 // gestured = "the user saw a gesture preview" — the peak
                 // progress, not the last event: a release can deliver a
                 // trailing progress=0 event while the preview ran.
-                val gestured = maxProgress > 0f
-                if (gestured) {
-                    gesturePop = true
+                if (maxProgress > 0f) {
+                    // Finish the preview's exit; at progress 1 the front
+                    // is invisible and `behind` (the previous page,
+                    // frozen at gesture start) fills the screen.
                     animate(backPreview, 1f, animationSpec = tween(NAV_MS / 2, easing = EaseEmphasized)) { v, _ ->
                         backPreview = v
                     }
+                    val leaving = navTr.currentState
+                    gesturePop = true
+                    back()
+                    // Wait until the swap really finished — the
+                    // transition's currentState only catches up to the
+                    // new route on a later frame tick — then one frame
+                    // for the leaving page to uncompose. Only then is it
+                    // safe to drop the preview: behind and front now show
+                    // the same page, so nothing can flash through.
+                    withTimeoutOrNull(NAV_MS.toLong() * 2) {
+                        snapshotFlow { navTr.currentState != leaving && navTr.currentState == navTr.targetState }
+                            .first { it }
+                        withFrameNanos { }
+                    }
+                    navMotion = NavMotion.None
+                    gesturePop = false
+                } else {
+                    back()
                 }
-                // Pop while the preview still sits translated off-screen;
-                // only then drop it — the stack change and the graphicsLayer
-                // reset commit in the same frame.
-                back()
-                if (gestured) navMotion = NavMotion.None
                 backPreview = 0f
+                previewRoute = null
             }
         } catch (_: kotlinx.coroutines.CancellationException) {
             android.util.Log.d("AgendaNav", "back cancelled (maxProgress=$maxProgress)")
             backPreview = 0f
+            previewRoute = null
         }
     }
 
@@ -605,19 +637,16 @@ fun AgendaHome(
             ) {
                 BackGesturePreview(
                     progress = { backPreview },
-                    behind = { PageContent(stack.lastOrNull()?.let(::parseRoute) ?: current) },
+                    behind = { previewRoute?.let { PageContent(it) } },
                 ) {
-                    AnimatedContent(
-                        targetState = current,
+                    navTr.AnimatedContent(
                         transitionSpec = {
                             if (gesturePop) {
-                                gesturePop = false
                                 EnterTransition.None togetherWith ExitTransition.None
                             } else {
                                 navTransition(navMotion, navMs)
                             }
                         },
-                        label = "nav",
                     ) { r -> PageContent(r) }
                 }
                 TopFade(topFade.alpha)
