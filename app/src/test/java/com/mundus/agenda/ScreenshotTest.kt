@@ -39,6 +39,13 @@ import org.robolectric.annotation.GraphicsMode
 class ScreenshotTest {
     @get:Rule val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
+    // Version strings in «Другое»/Sync/About come from versionNameForUi;
+    // pin them so a release bump never breaks these goldens.
+    @org.junit.Before
+    fun pinVersion() {
+        com.mundus.agenda.ui.versionNameForUi = "0.0.0-test"
+    }
+
     private val board =
         runBlocking {
             (FakeRepository().boardFlow().first() as BoardState.Ready).board

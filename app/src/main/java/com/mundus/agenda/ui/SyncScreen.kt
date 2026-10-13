@@ -37,7 +37,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.annotation.DrawableRes
-import com.mundus.agenda.BuildConfig
 import com.mundus.agenda.R
 import com.mundus.agenda.SyncApi
 import com.mundus.agenda.SyncPeer
@@ -266,7 +265,7 @@ fun SyncScreen(
             DeviceRow(
                 platform = Platform.Android,
                 name = snap?.localDevice?.deviceName ?: deviceName,
-                detail = caption(Platform.Android, BuildConfig.VERSION_NAME),
+                detail = caption(Platform.Android, versionNameForUi),
                 onClick = null,
             ) {
                 Presence(

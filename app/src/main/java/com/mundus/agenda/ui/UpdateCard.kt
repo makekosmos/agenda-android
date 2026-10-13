@@ -27,6 +27,11 @@ import com.mundus.agenda.BuildConfig
 import com.mundus.agenda.updater.UpdateManager
 import com.mundus.agenda.updater.UpdateState
 
+/** The version string settings surfaces render («Другое» update card,
+ * the Sync «this device» row, About). Screenshot tests pin it so a
+ * release bump doesn't invalidate goldens. */
+var versionNameForUi = BuildConfig.VERSION_NAME
+
 /** What the single card button does on tap (updates.rs:20-52). */
 enum class UpdateAction {
     /** «Проверить обновления» — idle / not-available / error. */
@@ -200,7 +205,7 @@ fun UpdateSection(mgr: UpdateManager) {
     val context = LocalContext.current
     UpdateSection(
         state = mgr.state,
-        currentVersion = BuildConfig.VERSION_NAME,
+        currentVersion = versionNameForUi,
         onCheck = mgr::check,
         onDownloadOrInstall = {
             when (val s = mgr.state) {

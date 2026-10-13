@@ -683,7 +683,7 @@ fun AboutScreen() {
         Spacer(Modifier.height(16.dp))
         Text("Agenda", style = AgendaType.pageTitle, color = c.fg)
         Spacer(Modifier.height(4.dp))
-        Text("Версия ${com.mundus.agenda.BuildConfig.VERSION_NAME}", style = AgendaType.body, color = c.mutedFg)
+        Text("Версия $versionNameForUi", style = AgendaType.body, color = c.mutedFg)
         Spacer(Modifier.height(24.dp))
         SettingsGroup {
             Row(
