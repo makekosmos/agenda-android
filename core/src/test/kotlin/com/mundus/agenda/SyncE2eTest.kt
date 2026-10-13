@@ -136,15 +136,25 @@ class SyncE2eTest {
             )
             .jsonArray
 
+    // Title and completion do not depend on the project link, so these read
+    // with none. Full-task reads pass the link list of the engine they came from.
     private fun todoTitleOf(engineObjectJson: String): String? {
-        val todo = json.parseToJsonElement(taskFromEngineObject(engineObjectJson)).jsonObject
+        val todo =
+            json.parseToJsonElement(taskFromEngineObject(engineObjectJson, "[]")).jsonObject
         return todo["title"]?.jsonPrimitive?.content
     }
 
     private fun todoIsCompletedOf(engineObjectJson: String): Boolean {
-        val todo = json.parseToJsonElement(taskFromEngineObject(engineObjectJson)).jsonObject
+        val todo =
+            json.parseToJsonElement(taskFromEngineObject(engineObjectJson, "[]")).jsonObject
         return todo["is_completed"]?.jsonPrimitive?.boolean == true
     }
+
+    private fun phoneLinks(engine: MobileEngine): String =
+        phoneCall(engine, "list_object_links", buildJsonObject {}).toString()
+
+    private fun desktopLinks(): String =
+        desktopRpc("list_object_links", buildJsonObject {}).toString()
 
     private fun buildTaskObjectJson(
         title: String,
@@ -335,7 +345,8 @@ class SyncE2eTest {
                         todoTitleOf(it.toString()) == "Купить молоко"
                 }
             assertNotNull("phone lost its own milk task object", milkEngineObject)
-            val beforeTodoJson = taskFromEngineObject(milkEngineObject!!.toString())
+            val beforeTodoJson =
+                taskFromEngineObject(milkEngineObject!!.toString(), phoneLinks(phone))
             val doneTodo = buildJsonObject {
                 json.parseToJsonElement(beforeTodoJson).jsonObject.forEach { (k, v) -> put(k, v) }
                 put("is_completed", JsonPrimitive(true))
@@ -418,7 +429,9 @@ class SyncE2eTest {
                 }
             assertNotNull("phone lost the milk object after restart", milkAfterRestart)
             val renamedTodo = buildJsonObject {
-                json.parseToJsonElement(taskFromEngineObject(milkAfterRestart!!.toString()))
+                json.parseToJsonElement(
+                        taskFromEngineObject(milkAfterRestart!!.toString(), phoneLinks(phone))
+                    )
                     .jsonObject
                     .forEach { (k, v) -> put(k, v) }
                 put("title", JsonPrimitive("Купить молоко (телефон)"))
@@ -443,7 +456,8 @@ class SyncE2eTest {
                     it.jsonObject["id"]?.jsonPrimitive?.content == milkId
                 }
             assertNotNull("desktop lost the milk object", desktopMilk)
-            val desktopTodoJson = taskFromEngineObject(desktopMilk!!.toString())
+            val desktopTodoJson =
+                taskFromEngineObject(desktopMilk!!.toString(), desktopLinks())
             val completedTodo = buildJsonObject {
                 json.parseToJsonElement(desktopTodoJson).jsonObject.forEach { (k, v) ->
                     put(k, v)
@@ -484,14 +498,16 @@ class SyncE2eTest {
                         .firstOrNull { it.jsonObject["id"]?.jsonPrimitive?.content == milkId }
                         ?.toString()
                 phoneVer != null && deskVer != null &&
-                    taskFromEngineObject(phoneVer) == taskFromEngineObject(deskVer)
+                    taskFromEngineObject(phoneVer, phoneLinks(phone)) ==
+                        taskFromEngineObject(deskVer, desktopLinks())
             }
             val finalTodo =
                 json.parseToJsonElement(
                         taskFromEngineObject(
                             phoneTaskObjects(phone)
                                 .first { it.jsonObject["id"]?.jsonPrimitive?.content == milkId }
-                                .toString()
+                                .toString(),
+                            phoneLinks(phone),
                         )
                     )
                     .jsonObject

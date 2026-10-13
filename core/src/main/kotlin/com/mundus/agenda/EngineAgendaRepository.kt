@@ -31,6 +31,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+/** core.task's project link type (agenda-core `mapping::PROJECT_LINK`). */
+private const val PROJECT_LINK = "project"
+
 /**
  * The app's single boundary to the Engine: opens `MobileEngine` on
  * `dataDir` (`Context.filesDir` on Android), routes every read/write
@@ -77,13 +80,21 @@ class EngineAgendaRepository(
     private fun listObjects(typeId: String): JsonArray =
         call("list_objects_by_type", buildJsonObject { put("type_id", typeId) }).jsonArray
 
+    /** Every object link the Engine holds. Objects carry no links of their
+     * own, so a task's project is read from here. */
+    private fun listObjectLinks(): JsonArray =
+        call("list_object_links", buildJsonObject {}).jsonArray
+
     /** The local civil day the Rust rules need: `YYYY-MM-DD` + UTC offset.
      * Injectable so host tests can pin `today` against the golden dump. */
     internal fun localDay(): Pair<String, Int> = localDayProvider()
 
     private fun todoJsons(): List<String> =
         json.decodeFromString<List<String>>(
-            tasksFromEngineObjects(listObjects("core.task").toString())
+            tasksFromEngineObjects(
+                listObjects("core.task").toString(),
+                listObjectLinks().toString(),
+            )
         )
 
     /**
@@ -430,34 +441,64 @@ class EngineAgendaRepository(
         )
     }
 
-    /** `get_object` + `mapping::read` pair — the engine's current stored
-     * object and its decoded Todo, or nulls when the id is unknown. */
-    private fun currentTodo(id: String): Pair<JsonElement, Task?> {
+    /** A task as the engine holds it: the raw object, its decoded Todo, and
+     * its `project` link (the link id is what a relink deletes). `todo` is
+     * null when the id is unknown; `projectLink` when the task has no project. */
+    private class StoredTask(
+        val obj: JsonElement,
+        val todo: Task?,
+        val projectLink: JsonObject?,
+    )
+
+    /** `get_object` + the task's links, decoded by `mapping::read` — the same
+     * read `board()` makes, so a precondition compares like with like. */
+    private fun storedTask(id: String): StoredTask {
         val obj = call("get_object", buildJsonObject { put("id", id) })
         if (obj is JsonNull || (obj is JsonObject && obj.isEmpty())) {
-            return JsonNull to null
+            return StoredTask(JsonNull, null, null)
         }
-        return obj to json.decodeFromString(taskFromEngineObject(obj.toString()))
+        val links = listObjectLinks()
+        // First match, in the same list order the Rust read takes.
+        val projectLink =
+            links
+                .map { it.jsonObject }
+                .firstOrNull {
+                    it["sourceObjectId"]?.jsonPrimitive?.content == id &&
+                        it["linkType"]?.jsonPrimitive?.content == PROJECT_LINK
+                }
+        return StoredTask(
+            obj,
+            json.decodeFromString(taskFromEngineObject(obj.toString(), links.toString())),
+            projectLink,
+        )
     }
 
     /** Desktop `Store::save`: `before` is the precondition — when it no
      * longer matches the engine's stored object the write is rejected as a
-     * [WriteConflict] and nothing is written. */
+     * [WriteConflict] and nothing is written. A changed project is an object
+     * link, written after the task object (see [relinkProject]). */
     private fun save(before: Task?, todo: Task) {
         val (today, offset) = localDay()
         val now = Instant.now().toString()
-        val (currentObj, currentTodo) = currentTodo(todo.id)
+        val stored = storedTask(todo.id)
         if (before != null) {
-            if (currentTodo == null || currentTodo != before) {
+            if (stored.todo == null || stored.todo != before) {
                 throw WriteConflict("local: precondition failed (stale or missing)")
             }
-        } else if (currentTodo != null) {
+        } else if (stored.todo != null) {
             throw WriteConflict("local: object already exists")
+        }
+        val projectId = todo.projectId
+        val relink = stored.todo?.projectId != projectId
+        // The Engine enforces the link's foreign key: the project must be saved
+        // first. Checked before the task is written, so a refusal writes nothing.
+        if (relink && projectId != null && !projectObject(projectId).isPresent()) {
+            error("local: project $projectId is not saved yet")
         }
         val objectJson =
             taskToEngineObject(
                 json.encodeToString(todo),
-                existingObjectJson = if (currentTodo == null) null else currentObj.toString(),
+                existingObjectJson = if (stored.todo == null) null else stored.obj.toString(),
                 beforeTodoJson = before?.let { json.encodeToString(it) },
                 now = now,
                 today = today,
@@ -467,6 +508,31 @@ class EngineAgendaRepository(
             "upsert_object",
             buildJsonObject { put("object", json.parseToJsonElement(objectJson)) },
         )
+        if (relink) relinkProject(todo.id, stored.projectLink, projectId, now)
+    }
+
+    /** Desktop `relink_project`: the new `project` link is upserted, then the
+     * previous one is deleted. The read takes the first project link, so a
+     * delete that fails leaves the task on its old project until a retry
+     * converges; the desktop's delete-first order would instead leave the task
+     * with no project at all. Ids come from the endpoints (`projectLinkJson`),
+     * so re-placing a task in the same project is one row. */
+    private fun relinkProject(
+        taskId: String,
+        previous: JsonObject?,
+        projectId: String?,
+        now: String,
+    ) {
+        var newId: String? = null
+        if (projectId != null) {
+            val link = json.parseToJsonElement(projectLinkJson(taskId, projectId, now))
+            call("upsert_object_link", buildJsonObject { put("object_link", link) })
+            newId = link.jsonObject["id"]?.jsonPrimitive?.content
+        }
+        val oldId = previous?.get("id")?.jsonPrimitive?.content
+        if (oldId != null && oldId != newId) {
+            call("delete_object_link", buildJsonObject { put("id", oldId) })
+        }
     }
 
     /** Desktop `save_with_next`: write the completed todo, then the spawned
@@ -479,7 +545,7 @@ class EngineAgendaRepository(
         try {
             save(null, next)
         } catch (e: Exception) {
-            val (_, stored) = currentTodo(next.id)
+            val stored = storedTask(next.id).todo
             if (stored == next) return
             if (stored == null) {
                 runCatching { save(completed, before) }

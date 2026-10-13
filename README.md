@@ -15,8 +15,9 @@ database; refresh is event-driven via the change-subscription callback.
   UniFFI surface (`MobileEngine`, `ChangeListener`, sync ops) and adds thin
   exports over `agenda-core`: `parseQuickEntry`, `smartListIndices`,
   `taskFromEngineObject`/`taskToEngineObject` (the `core.task` 0.1.0 object
-  shape agenda-gpui writes; the project is an object link, read through
-  `links_in_object`). Path deps on the cortex and agenda-gpui
+  shape agenda-gpui writes; the project is an object link, read from the
+  `list_object_links` payload the readers take, since objects carry no
+  links). Path deps on the cortex and agenda-gpui
   worktrees until their PRs merge, then they become git deps pinned to SHAs.
 - `core/` — JVM Kotlin module with the generated UniFFI bindings (under
   `build/generated/uniffi`, not committed) and `AgendaRepository`, the
