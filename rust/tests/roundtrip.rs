@@ -69,7 +69,7 @@ fn task_roundtrip_through_engine() {
         let engine = agenda_mobile::MobileEngine::open(data_dir.clone()).expect("open");
 
         let object = to_object(&new_task("task-1", "Call mom"));
-        assert_eq!(object.contains("\"typeId\":\"com.kosmos.task\""), true);
+        assert_eq!(object.contains("\"typeId\":\"core.task\""), true);
         let upserted = call(
             &engine,
             "upsert_object",
@@ -80,7 +80,7 @@ fn task_roundtrip_through_engine() {
         let listed = call(
             &engine,
             "list_objects_by_type",
-            json!({"type_id": "com.kosmos.task"}),
+            json!({"type_id": "core.task"}),
         );
         let objects = listed.as_array().expect("list");
         assert_eq!(objects.len(), 1);

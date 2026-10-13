@@ -2,7 +2,7 @@
 //! engine-mobile's UniFFI surface (`MobileEngine`, `ChangeListener`,
 //! `ChangeSubscription`, sync ops) and adds thin UniFFI wrappers over the
 //! agenda-core rules Android needs now: quick-entry date parsing, smart-list
-//! filtering, and the `com.kosmos.task` object mapping agenda-gpui writes.
+//! filtering, and the `core.task` object mapping agenda-gpui writes.
 //!
 //! The clock is a host concern: every date-aware export takes `today`
 //! (`YYYY-MM-DD`) and `utc_offset_seconds` from Kotlin, never reads `Local::now`.
@@ -108,7 +108,8 @@ pub fn smart_list_indices(
 pub fn task_from_engine_object(object_json: String) -> Result<String, AgendaError> {
     let object: Value =
         serde_json::from_str(&object_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
-    let todo = agenda_core::mapping::read(&object).map_err(AgendaError::Mapping)?;
+    let todo = agenda_core::mapping::read(&object, &agenda_core::mapping::links_in_object(&object))
+        .map_err(AgendaError::Mapping)?;
     serde_json::to_string(&todo).map_err(|e| AgendaError::Mapping(e.to_string()))
 }
 
@@ -292,7 +293,7 @@ pub fn tasks_from_engine_objects(objects_json: String) -> Result<String, AgendaE
     let todos: Vec<String> = objects
         .iter()
         .map(|o| {
-            agenda_core::mapping::read(o)
+            agenda_core::mapping::read(o, &agenda_core::mapping::links_in_object(o))
                 .and_then(|t| serde_json::to_string(&t).map_err(|e| e.to_string()))
                 .map_err(AgendaError::Mapping)
         })

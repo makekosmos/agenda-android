@@ -69,31 +69,15 @@
       "deletedAt": null,
       "id": "dev-inbox-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": "Обратить внимание на секцию про ценообразование.",
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 0,
@@ -101,15 +85,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "inbox",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "inbox"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Перечитать бриф по лендингу",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -131,31 +122,15 @@
       "deletedAt": null,
       "id": "dev-inbox-2",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 1,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 1,
@@ -163,15 +138,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "inbox",
+          "period": "any"
+        },
         "priority": "low",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "inbox"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Записаться к стоматологу",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -193,31 +175,15 @@
       "deletedAt": null,
       "id": "dev-inbox-3",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 2,
@@ -225,15 +191,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "inbox",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "inbox"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Идея: виджет погоды в сайдбаре",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -255,31 +228,15 @@
       "deletedAt": null,
       "id": "dev-today-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": 35.0,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": true,
-          "is_trashed": false,
           "price": null,
-          "priority": 3,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 3,
@@ -290,15 +247,22 @@
             "dev-tag-focus"
           ]
         },
+        "planning": {
+          "date": null,
+          "kind": "today",
+          "period": "any"
+        },
         "priority": "high",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Созвон по дизайну",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -320,47 +284,37 @@
       "deletedAt": null,
       "id": "dev-today-2",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": "2026-10-12",
+        "deadline": "2026-10-12",
         "extensions": {
           "area_id": null,
           "billable": true,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": "2026-10-12",
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": 15000.0,
-          "priority": 0,
-          "project_id": "dev-proj-release",
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-12",
           "significance": null,
           "sort_order": 4,
           "status": "todo",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-12",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-12",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Отправить инвойс клиенту",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -382,31 +336,15 @@
       "deletedAt": null,
       "id": "dev-today-evening",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": "dev-area-life",
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": true,
-          "is_someday": false,
-          "is_today": true,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 5,
@@ -414,15 +352,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "today",
+          "period": "evening"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Почитать главу книги",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -444,32 +389,15 @@
       "deletedAt": null,
       "id": "dev-overdue-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": 20.0,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 3,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-11",
           "significance": null,
           "sort_order": 6,
           "status": "todo",
@@ -478,15 +406,22 @@
             "dev-tag-urgent"
           ]
         },
+        "planning": {
+          "date": "2026-10-11",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "high",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-11",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Вернуть правки по макетам",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -508,47 +443,56 @@
       "deletedAt": null,
       "id": "dev-checklist-1",
       "propsJson": {
-        "canceledAt": null,
-        "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "checklist": [
+          {
+            "done": true,
+            "id": "dev-checklist-1:item:0",
+            "rank": "000000",
+            "text": ""
+          },
+          {
+            "done": false,
+            "id": "dev-checklist-1:item:1",
+            "rank": "000001",
+            "text": ""
+          },
+          {
+            "done": false,
+            "id": "dev-checklist-1:item:2",
+            "rank": "000002",
+            "text": ""
+          }
+        ],
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": "dev-head-prep",
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": "dev-proj-release",
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-13",
           "significance": null,
           "sort_order": 7,
           "status": "todo",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-13",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-13",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Подготовить демо для команды",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -570,47 +514,37 @@
       "deletedAt": null,
       "id": "dev-week-2",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": 15.0,
           "heading_id": "dev-head-polish",
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": "dev-proj-release",
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-14",
           "significance": 7,
           "sort_order": 8,
           "status": "started",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-14",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-14",
-        "status": "inProgress"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "inProgress"
+        }
       },
       "title": "Ревью PR по навигации",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -632,31 +566,15 @@
       "deletedAt": null,
       "id": "dev-week-3",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": "2026-10-15",
+        "deadline": "2026-10-15",
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": "2026-10-15",
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": "dev-proj-home",
-          "recurrence_rule": null,
-          "reminder_date": "2026-10-15T09:00:00+03:00",
           "scheduled_date": null,
           "significance": null,
           "sort_order": 9,
@@ -664,15 +582,28 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "anytime",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": "2026-10-15T09:00:00+03:00",
-        "scheduledAt": null,
-        "status": "todo"
+        "reminders": [
+          {
+            "at": "2026-10-15T09:00:00+03:00",
+            "kind": "floating",
+            "timeZone": null
+          }
+        ],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Оплатить интернет",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -694,32 +625,15 @@
       "deletedAt": null,
       "id": "dev-week-4",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": "dev-area-life",
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-16",
           "significance": null,
           "sort_order": 10,
           "status": "todo",
@@ -728,15 +642,22 @@
             "dev-tag-home"
           ]
         },
+        "planning": {
+          "date": "2026-10-16",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-16",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Купить подарок Маше",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -758,48 +679,25 @@
       "deletedAt": null,
       "id": "dev-recurring-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": "dev-area-life",
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": {
-            "dayOfMonth": null,
-            "daysOfWeek": [
-              1,
-              3,
-              5
-            ],
-            "endDate": null,
-            "frequency": 1,
-            "interval": 1,
-            "recurrenceType": 0
-          },
-          "reminder_date": null,
-          "scheduled_date": "2026-10-12",
           "significance": null,
           "sort_order": 11,
           "status": "todo",
           "system_kind": null,
           "tag_ids": []
+        },
+        "planning": {
+          "date": "2026-10-12",
+          "kind": "date",
+          "period": "any"
         },
         "priority": "none",
         "recurrence": {
@@ -808,18 +706,21 @@
             3,
             5
           ],
-          "endDate": null,
+          "end": null,
           "frequency": "weekly",
           "interval": 1,
-          "recurrenceType": "fixed"
+          "kind": "calendar",
+          "timeZone": null
         },
-        "reminderAt": null,
-        "scheduledAt": "2026-10-12",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Поливать цветы",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -841,47 +742,37 @@
       "deletedAt": null,
       "id": "dev-next-week-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 2,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-20",
           "significance": null,
           "sort_order": 12,
           "status": "todo",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-20",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "medium",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-20",
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Запланировать отпуск",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -903,34 +794,15 @@
       "deletedAt": null,
       "id": "dev-someday-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": true,
-          "is_today": false,
-          "is_trashed": false,
-          "kosmos": {
-            "taskBucket": "backlog"
-          },
           "price": null,
-          "priority": 0,
-          "project_id": "dev-proj-someday",
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 13,
@@ -938,15 +810,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "someday",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "todo"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Собрать домашний кинотеатр",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -968,47 +847,37 @@
       "deletedAt": null,
       "id": "dev-done-today",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": "2026-10-12T09:30:00+03:00",
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": "2026-10-12T09:30:00+03:00",
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": true,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-12",
           "significance": null,
           "sort_order": 14,
           "status": "done",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-12",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-12",
-        "status": "done"
+        "reminders": [],
+        "state": {
+          "at": "2026-10-12T09:30:00+03:00",
+          "kind": "done"
+        }
       },
       "title": "Утренняя планёрка",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -1030,31 +899,15 @@
       "deletedAt": null,
       "id": "dev-done-yesterday",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": "2026-10-11T14:00:00+03:00",
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": "2026-10-11T14:00:00+03:00",
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": true,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 15,
@@ -1062,15 +915,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "anytime",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "done"
+        "reminders": [],
+        "state": {
+          "at": "2026-10-11T14:00:00+03:00",
+          "kind": "done"
+        }
       },
       "title": "Позвонить в банк",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -1092,47 +952,37 @@
       "deletedAt": null,
       "id": "dev-canceled-1",
       "propsJson": {
-        "canceledAt": "2026-10-12T12:00:00+00:00",
         "checklist": [],
-        "completedAt": "2026-10-12T11:00:00+03:00",
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": "2026-10-12T12:00:00+00:00",
-          "checklist_items": [],
-          "completed_at": "2026-10-12T11:00:00+03:00",
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": true,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": false,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
-          "scheduled_date": "2026-10-13",
           "significance": null,
           "sort_order": 16,
           "status": "canceled",
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": "2026-10-13",
+          "kind": "date",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": "2026-10-13",
-        "status": "canceled"
+        "reminders": [],
+        "state": {
+          "at": "2026-10-12T12:00:00+00:00",
+          "kind": "canceled"
+        }
       },
       "title": "Встреча с брокером",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -1154,31 +1004,15 @@
       "deletedAt": "2026-10-12T12:00:00+00:00",
       "id": "dev-trash-1",
       "propsJson": {
-        "canceledAt": null,
         "checklist": [],
-        "completedAt": null,
-        "dueAt": null,
+        "deadline": null,
         "extensions": {
           "area_id": null,
           "billable": false,
-          "cancelled_at": null,
-          "checklist_items": [],
-          "completed_at": null,
-          "created_at": "2026-10-12T09:00:00",
-          "deadline": null,
           "description": null,
+          "fuel_cost": null,
           "heading_id": null,
-          "is_cancelled": false,
-          "is_completed": false,
-          "is_evening": false,
-          "is_someday": false,
-          "is_today": false,
-          "is_trashed": true,
           "price": null,
-          "priority": 0,
-          "project_id": null,
-          "recurrence_rule": null,
-          "reminder_date": null,
           "scheduled_date": null,
           "significance": null,
           "sort_order": 17,
@@ -1186,15 +1020,22 @@
           "system_kind": null,
           "tag_ids": []
         },
+        "planning": {
+          "date": null,
+          "kind": "inbox",
+          "period": "any"
+        },
         "priority": "none",
         "recurrence": null,
-        "reminderAt": null,
-        "scheduledAt": null,
-        "status": "inbox"
+        "reminders": [],
+        "state": {
+          "at": null,
+          "kind": "open"
+        }
       },
       "title": "Черновик: старый план переезда",
-      "typeId": "com.kosmos.task",
-      "typeVersion": "1.1.0",
+      "typeId": "core.task",
+      "typeVersion": "0.1.0",
       "updatedAt": "2026-10-12T12:00:00+00:00"
     },
     {
@@ -1396,6 +1237,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-inbox-1",
       "is_cancelled": false,
@@ -1425,6 +1267,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-inbox-2",
       "is_cancelled": false,
@@ -1454,6 +1297,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-inbox-3",
       "is_cancelled": false,
@@ -1483,6 +1327,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": 35.0,
       "heading_id": null,
       "id": "dev-today-1",
       "is_cancelled": false,
@@ -1515,6 +1360,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": "2026-10-12",
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-today-2",
       "is_cancelled": false,
@@ -1544,6 +1390,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-today-evening",
       "is_cancelled": false,
@@ -1573,6 +1420,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": 20.0,
       "heading_id": null,
       "id": "dev-overdue-1",
       "is_cancelled": false,
@@ -1614,6 +1462,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": "dev-head-prep",
       "id": "dev-checklist-1",
       "is_cancelled": false,
@@ -1643,6 +1492,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": 15.0,
       "heading_id": "dev-head-polish",
       "id": "dev-week-2",
       "is_cancelled": false,
@@ -1672,6 +1522,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": "2026-10-15",
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-week-3",
       "is_cancelled": false,
@@ -1701,6 +1552,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-week-4",
       "is_cancelled": false,
@@ -1732,6 +1584,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-recurring-1",
       "is_cancelled": false,
@@ -1770,6 +1623,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-next-week-1",
       "is_cancelled": false,
@@ -1799,6 +1653,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-someday-1",
       "is_cancelled": false,
@@ -1828,6 +1683,7 @@
       "completed_at": "2026-10-12T09:30:00+03:00",
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-done-today",
       "is_cancelled": false,
@@ -1857,6 +1713,7 @@
       "completed_at": "2026-10-11T14:00:00+03:00",
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-done-yesterday",
       "is_cancelled": false,
@@ -1886,6 +1743,7 @@
       "completed_at": "2026-10-12T11:00:00+03:00",
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-canceled-1",
       "is_cancelled": true,
@@ -1915,6 +1773,7 @@
       "completed_at": null,
       "created_at": "2026-10-12T09:00:00",
       "deadline": null,
+      "fuel_cost": null,
       "heading_id": null,
       "id": "dev-trash-1",
       "is_cancelled": false,

@@ -45,11 +45,12 @@ path = "src/bin/uniffi-bindgen.rs"
 required-features = ["cli"]
 
 [dependencies]
-# Git deps pinned by rev (branch kos-370-android in each repo). To build
+# Git deps pinned by rev: agenda-core from claude/kos-397-agenda-core-task
+# (agenda-gpui), engine-mobile from the cortex core.task cutover head. To build
 # against local checkouts instead, copy rust/.cargo/config.example.toml to
 # rust/.cargo/config.toml (gitignored) and point the [patch] paths at them.
-engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "aa74da0c3c04aca62039feeddec3e4ffedf24cde" }
-agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "236dd1d209025bae91dde0c06a43359d52b5663f" }
+engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "b4e9e0ca2ccc4f426b1b6089f53dbcff4540f6cf" }
+agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "3303b5fb3c79d7e2baa9c355c7de7971548875c9" }
 frizbee = "=0.13.0"
 uniffi = "0.29"
 serde_json = "1"

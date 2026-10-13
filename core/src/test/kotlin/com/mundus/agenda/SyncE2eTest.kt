@@ -125,14 +125,14 @@ class SyncE2eTest {
         phoneCall(
                 engine,
                 "list_objects_by_type",
-                buildJsonObject { put("type_id", "com.kosmos.task") },
+                buildJsonObject { put("type_id", "core.task") },
             )
             .jsonArray
 
     private fun desktopTaskObjects(): JsonArray =
         desktopRpc(
                 "list_objects_by_type",
-                buildJsonObject { put("type_id", "com.kosmos.task") },
+                buildJsonObject { put("type_id", "core.task") },
             )
             .jsonArray
 

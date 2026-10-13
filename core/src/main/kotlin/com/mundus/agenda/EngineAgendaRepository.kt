@@ -83,7 +83,7 @@ class EngineAgendaRepository(
 
     private fun todoJsons(): List<String> =
         json.decodeFromString<List<String>>(
-            tasksFromEngineObjects(listObjects("com.kosmos.task").toString())
+            tasksFromEngineObjects(listObjects("core.task").toString())
         )
 
     /**
@@ -232,7 +232,7 @@ class EngineAgendaRepository(
 
     /** Quick-entry save: desktop `quick_entry_save` end to end — the
      * agenda-core decision (date words, @project mention, status rule)
-     * produces the full Todo, written as the same `com.kosmos.task` object
+     * produces the full Todo, written as the same `core.task` object
      * shape agenda-gpui produces. */
     override suspend fun quickEntry(
         rawTitle: String,
