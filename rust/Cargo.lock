@@ -40,7 +40,7 @@ dependencies = [
 [[package]]
 name = "agenda-core"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/agenda-gpui?rev=236dd1d209025bae91dde0c06a43359d52b5663f#236dd1d209025bae91dde0c06a43359d52b5663f"
+source = "git+https://github.com/makekosmos/agenda-gpui?rev=3303b5fb3c79d7e2baa9c355c7de7971548875c9#3303b5fb3c79d7e2baa9c355c7de7971548875c9"
 dependencies = [
  "chrono",
  "serde",
@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "ark-core"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/cortex?rev=aa74da0c3c04aca62039feeddec3e4ffedf24cde#aa74da0c3c04aca62039feeddec3e4ffedf24cde"
+source = "git+https://github.com/makekosmos/cortex?rev=170dd235b208342f4a667c5396516b362ea669be#170dd235b208342f4a667c5396516b362ea669be"
 dependencies = [
  "async-trait",
  "chrono",
@@ -816,7 +816,7 @@ checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 [[package]]
 name = "engine-mobile"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/cortex?rev=aa74da0c3c04aca62039feeddec3e4ffedf24cde#aa74da0c3c04aca62039feeddec3e4ffedf24cde"
+source = "git+https://github.com/makekosmos/cortex?rev=170dd235b208342f4a667c5396516b362ea669be#170dd235b208342f4a667c5396516b362ea669be"
 dependencies = [
  "ark-core",
  "serde_json",
