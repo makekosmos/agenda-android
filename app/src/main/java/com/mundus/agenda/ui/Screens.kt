@@ -43,6 +43,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -361,8 +363,16 @@ fun AppearanceScreen(
     onThemeMode: (String) -> Unit,
     palette: String = AgendaPalette,
     onPalette: (String) -> Unit = {},
+    accent: String? = null,
+    onAccent: (String?) -> Unit = {},
 ) {
     val c = AgendaTheme.colors
+    val dark =
+        when (themeMode) {
+            "light" -> false
+            "dark" -> true
+            else -> isSystemInDarkTheme()
+        }
     Column(
         modifier =
             Modifier
@@ -391,21 +401,17 @@ fun AppearanceScreen(
         Spacer(Modifier.height(24.dp))
         PalettePicker(
             selected = palette,
-            dark =
-                when (themeMode) {
-                    "light" -> false
-                    "dark" -> true
-                    else -> isSystemInDarkTheme()
-                },
+            dark = dark,
             onPick = onPalette,
         )
+        ASectionHeader("Акцент")
+        AccentPicker(selected = accent, dark = dark, onPick = onAccent)
     }
 }
 
-/** The house palettes first — Agenda, then Mundus — then zeron's
- * families in registry order. */
+/** The house palette first, then zeron's families in registry order. */
 private val Palettes =
-    listOf(AgendaPalette to "Agenda", MundusPalette to "Mundus") +
+    listOf(MundusPalette to "Mundus") +
         ZeronFamilies.map { it.id to it.name }
 
 /** Each tile is a tiny page in that palette's colors for the current
@@ -464,6 +470,91 @@ private fun PalettePicker(selected: String, dark: Boolean, onPick: (String) -> U
                 )
             }
         }
+    }
+}
+
+/** Accent swatches — desktop `accent_controls` (imago-gpui
+ * appearance_editor/colors.rs): a «Цвет темы» tile followed by one tile
+ * per [AccentPresets] in the current appearance's colour. */
+@Composable
+private fun AccentPicker(selected: String?, dark: Boolean, onPick: (String?) -> Unit) {
+    val c = AgendaTheme.colors
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item(key = "theme") {
+            AccentSwatch(desc = "Цвет темы", selected = selected == null, onClick = { onPick(null) }) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(c.accent(0.22f)),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    for ((h, a) in listOf(13.dp to 0.45f, 16.dp to 1.0f, 11.dp to 0.72f)) {
+                        Box(
+                            Modifier
+                                .size(width = 4.dp, height = h)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(c.accent(a))
+                        )
+                    }
+                }
+            }
+        }
+        items(AccentPresets, key = { it.name }) { p ->
+            AccentSwatch(desc = p.name, selected = selected == p.name, onClick = { onPick(p.name) }) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF shl 24 or (if (dark) p.dark else p.light)))
+                )
+            }
+        }
+    }
+}
+
+/** One 30dp swatch tile: 1dp fg border when selected (border otherwise),
+ * plus a 2dp accent underline — the desktop swatch() layout. */
+@Composable
+private fun AccentSwatch(
+    desc: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    sample: @Composable () -> Unit,
+) {
+    val c = AgendaTheme.colors
+    Column(
+        Modifier
+            .width(30.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .clickable(onClick = onClick)
+            .semantics {
+                contentDescription = desc
+                this.selected = selected
+            },
+    ) {
+        Box(
+            Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(c.card)
+                .border(1.dp, if (selected) c.fg else c.border, RoundedCornerShape(8.dp))
+                .padding(2.dp),
+        ) {
+            sample()
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp)
+                .height(2.dp)
+                .background(if (selected) c.accent else Color.Transparent)
+        )
     }
 }
 

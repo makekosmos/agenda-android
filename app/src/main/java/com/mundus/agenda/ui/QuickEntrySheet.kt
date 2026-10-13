@@ -414,10 +414,11 @@ fun QuickEntrySheet(
                             style = AgendaType.meta,
                             color = c.mutedFg,
                             maxLines = 1,
-                            modifier = Modifier.padding(start = 4.dp).weight(1f, fill = false),
+                            modifier = Modifier.padding(start = 4.dp).weight(1f),
                         )
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
-                    Spacer(Modifier.weight(1f))
                     val canSave = title.isNotBlank()
                     AIconButton(
                         R.drawable.ic_maximize,

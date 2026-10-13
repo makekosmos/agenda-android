@@ -34,16 +34,36 @@ class AgendaApplication : Application() {
         prefs.edit().putString("theme", mode).apply()
     }
 
-    /** `AgendaPalette`, `MundusPalette`, or a zeron family id (ui/ZeronThemes.kt). */
+    /** `MundusPalette` or a zeron family id (ui/ZeronThemes.kt). The
+     * retired "agenda" palette migrates to Mundus — same chrome with
+     * agenda's accent. */
     val palette by lazy {
         androidx.compose.runtime.mutableStateOf(
-            prefs.getString("palette", com.mundus.agenda.ui.AgendaPalette) ?: com.mundus.agenda.ui.AgendaPalette
+            when (val stored = prefs.getString("palette", null)) {
+                com.mundus.agenda.ui.AgendaPalette -> {
+                    prefs.edit().putString("palette", com.mundus.agenda.ui.MundusPalette).apply()
+                    com.mundus.agenda.ui.MundusPalette
+                }
+                null -> com.mundus.agenda.ui.MundusPalette
+                else -> stored
+            }
         )
     }
 
     fun setPalette(id: String) {
         palette.value = id
         prefs.edit().putString("palette", id).apply()
+    }
+
+    /** Accent preset name (ui/Theme.kt [AccentPresets]); null = «Цвет темы». */
+    val accent by lazy {
+        androidx.compose.runtime.mutableStateOf(prefs.getString("accent", null))
+    }
+
+    fun setAccent(name: String?) {
+        accent.value = name
+        if (name == null) prefs.edit().remove("accent").apply()
+        else prefs.edit().putString("accent", name).apply()
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

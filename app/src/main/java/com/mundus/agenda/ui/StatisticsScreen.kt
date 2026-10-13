@@ -3,16 +3,12 @@ package com.mundus.agenda.ui
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,12 +17,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -36,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -51,72 +42,81 @@ import java.io.File
 import java.time.LocalDate
 
 /**
- * Statistics page — desktop `src/pages/statistics.rs:199-296` layout order:
- * share button, profile stub, summary strip, «Активность» heatmap + month
+ * Statistics page — desktop `src/pages/statistics.rs:199-296` layout
+ * minus the share button (moved to the top bar, [rememberStatisticsShare])
+ * and the profile stub: summary strip, «Активность» heatmap + month
  * captions. `weeks` is fixed at 53 with horizontal scroll (mobile has no
  * viewport to adapt to; same data as desktop).
- *
- * Share renders the desktop share card to a PNG ([renderShareCard]) and
- * sends it via `ACTION_SEND` with the desktop copy-text string as
- * EXTRA_TEXT fallback (share.rs:128-130).
  */
 private const val HEAT_WEEKS = 53
 
 private val CELL = 12.dp
 private val GAP = 3.dp
 
+/** Share action for the top-bar button: renders the desktop share card
+ * to a PNG ([renderShareCard]) and sends it via `ACTION_SEND` with the
+ * desktop copy-text string as EXTRA_TEXT fallback (share.rs:128-130).
+ * [onShare] intercepts the text for tests/screenshots. */
+@Composable
+fun rememberStatisticsShare(
+    board: Board,
+    today: LocalDate = LocalDate.now(),
+    onShare: ((String) -> Unit)? = null,
+): () -> Unit {
+    val c = AgendaTheme.colors
+    val context = LocalContext.current
+    val stats = remember(board.todos, today) { statistics(board.todos, today) }
+    return {
+        if (onShare != null) {
+            onShare(stats.shareText)
+        } else {
+            val send =
+                Intent(Intent.ACTION_SEND).apply {
+                    putExtra(Intent.EXTRA_TEXT, stats.shareText)
+                    try {
+                        val file =
+                            File(context.cacheDir, "share/card.png").also { f ->
+                                f.parentFile?.mkdirs()
+                                renderShareCard(
+                                        context,
+                                        stats,
+                                        today,
+                                        ShareCardColors(
+                                            cardBg = c.sidebarBg.toArgb(),
+                                            border = c.border.toArgb(),
+                                            fg = c.fg.toArgb(),
+                                            muted = c.mutedFg.toArgb(),
+                                            accent = c.accent.toArgb(),
+                                        ),
+                                    )
+                                    .compress(Bitmap.CompressFormat.PNG, 100, f.outputStream())
+                            }
+                        val uri =
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.updates",
+                                file,
+                            )
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    } catch (_: Exception) {
+                        type = "text/plain" // image render failed — text-only fallback
+                    }
+                }
+            context.startActivity(Intent.createChooser(send, "Поделиться"))
+        }
+    }
+}
+
 @Composable
 fun StatisticsScreen(
     board: Board,
     today: LocalDate = LocalDate.now(),
-    onShare: ((String) -> Unit)? = null,
 ) {
     val c = AgendaTheme.colors
-    val context = LocalContext.current
     val stats = remember(board.todos, today) { statistics(board.todos, today) }
     val heat = remember(stats.days, today) { heatmap(stats.days, today, HEAT_WEEKS) }
-
-    fun share() {
-        if (onShare != null) {
-            onShare(stats.shareText)
-            return
-        }
-        val send =
-            Intent(Intent.ACTION_SEND).apply {
-                putExtra(Intent.EXTRA_TEXT, stats.shareText)
-                try {
-                    val file =
-                        File(context.cacheDir, "share/card.png").also { f ->
-                            f.parentFile?.mkdirs()
-                            renderShareCard(
-                                    context,
-                                    stats,
-                                    today,
-                                    ShareCardColors(
-                                        cardBg = c.sidebarBg.toArgb(),
-                                        border = c.border.toArgb(),
-                                        fg = c.fg.toArgb(),
-                                        muted = c.mutedFg.toArgb(),
-                                        accent = c.accent.toArgb(),
-                                    ),
-                                )
-                                .compress(Bitmap.CompressFormat.PNG, 100, f.outputStream())
-                        }
-                    val uri =
-                        FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.updates",
-                            file,
-                        )
-                    type = "image/png"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                } catch (_: Exception) {
-                    type = "text/plain" // image render failed — text-only fallback
-                }
-            }
-        context.startActivity(Intent.createChooser(send, "Поделиться"))
-    }
 
     Column(
         modifier =
@@ -126,47 +126,6 @@ fun StatisticsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = bottomClearance())
     ) {
-        // Share affordance, right-aligned (statistics.rs:201-223).
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            role = Role.Button,
-                            onClick = ::share,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.Share,
-                    contentDescription = "Поделиться",
-                    tint = c.fg.copy(alpha = 0.9f),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
-
-        // Profile stub: empty avatar + placeholder name (statistics.rs:225-248).
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, c.fg(0.12f), CircleShape)
-                    .background(c.fg(0.06f))
-            )
-            Text(
-                "Имя Фамилия",
-                style = AgendaType.input.copy(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
-                color = c.fg,
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-
         // Summary: a 2-column card grid — full labels, no truncation
         // (same five metrics as the desktop strip, statistics.rs:58-98).
         val items =

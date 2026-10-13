@@ -128,6 +128,8 @@ fun AgendaApp(
     onThemeMode: (String) -> Unit = {},
     palette: String = AgendaPalette,
     onPalette: (String) -> Unit = {},
+    accent: String? = null,
+    onAccent: (String?) -> Unit = {},
 ) {
     val viewModel: BoardViewModel = viewModel(factory = BoardViewModelFactory(repository))
     val state by viewModel.board.collectAsStateWithLifecycle()
@@ -153,6 +155,8 @@ fun AgendaApp(
                 onThemeMode = onThemeMode,
                 palette = palette,
                 onPalette = onPalette,
+                accent = accent,
+                onAccent = onAccent,
             )
     }
 }
@@ -217,6 +221,8 @@ fun AgendaHome(
     onThemeMode: (String) -> Unit = {},
     palette: String = AgendaPalette,
     onPalette: (String) -> Unit = {},
+    accent: String? = null,
+    onAccent: (String?) -> Unit = {},
 ) {
     val initialKey = routeKey(initialEditTaskId?.let { Route.Task(it) } ?: initialRoute)
     var route by rememberSaveable { mutableStateOf(initialKey) }
@@ -244,6 +250,7 @@ fun AgendaHome(
     var listOptions by rememberSaveable { mutableStateOf(HashMap<String, ListOptions>()) }
     val scope = rememberCoroutineScope()
     val c = AgendaTheme.colors
+    val statisticsShare = rememberStatisticsShare(board)
 
     // Self-update: one check ~5 s after start (cortex service.rs:275-283)
     // plus a >4h-stale re-check on resume.
@@ -460,6 +467,16 @@ fun AgendaHome(
                         current is Route.Task -> {
                             { TaskMenu(onDelete = { deleteTask(current.id) }) }
                         }
+                        current is Route.Statistics -> {
+                            {
+                                AIconButton(
+                                    R.drawable.ic_share,
+                                    desc = "Поделиться",
+                                    onClick = statisticsShare,
+                                    filled = true,
+                                )
+                            }
+                        }
                         current == Route.List(SmartList.TRASH) && board.count(SmartList.TRASH) > 0 -> {
                             {
                                 TrashMenu(count = board.count(SmartList.TRASH)) {
@@ -540,6 +557,8 @@ fun AgendaHome(
                             onThemeMode = onThemeMode,
                             palette = palette,
                             onPalette = onPalette,
+                            accent = accent,
+                            onAccent = onAccent,
                         )
                     is Route.Database -> DatabaseScreen(board = board)
                     is Route.Statistics -> StatisticsScreen(board = board)

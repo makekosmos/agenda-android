@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
+import com.mundus.agenda.ui.AccentPresets
 import com.mundus.agenda.ui.AgendaApp
 import com.mundus.agenda.ui.AgendaTheme
 import com.mundus.agenda.ui.DebugPairing
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
                         else -> androidx.compose.foundation.isSystemInDarkTheme()
                     },
                 palette = app.palette.value,
+                accent = AccentPresets.firstOrNull { it.name == app.accent.value },
             ) {
                 AgendaApp(
                     app.repository,
@@ -54,6 +56,8 @@ class MainActivity : ComponentActivity() {
                     onThemeMode = app::setThemeMode,
                     palette = app.palette.value,
                     onPalette = app::setPalette,
+                    accent = app.accent.value,
+                    onAccent = app::setAccent,
                 )
             }
         }

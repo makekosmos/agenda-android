@@ -80,7 +80,10 @@ class NavigationTest {
             }
         }
         composeTestRule
-            .onNode(androidx.compose.ui.test.hasScrollToKeyAction())
+            .onNode(
+                androidx.compose.ui.test.hasScrollToKeyAction()
+                    .and(androidx.compose.ui.test.hasAnyDescendant(hasText("Mundus")))
+            )
             .performScrollToKey("dracula")
         composeTestRule
             .onNodeWithText("Dracula")

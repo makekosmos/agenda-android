@@ -251,20 +251,44 @@ val MundusAccents: Map<String, AppAccent> =
         "agenda" to AppAccent(light = 0x2563EB, dark = 0x60A5FA),
     )
 
+/** One accent preset in both appearances, as 0xRRGGBB — desktop's PRESETS
+ * (imago-gpui appearance_editor/colors.rs). Picking one stores
+ * accent_source=custom; null means «Цвет темы». */
+data class AccentPreset(val name: String, val dark: Int, val light: Int)
+
+val AccentPresets =
+    listOf(
+        AccentPreset("Zeron", 0x8B7CF6, 0x5B43E8),
+        AccentPreset("Orange", 0xFB923C, 0xC2410C),
+        AccentPreset("Amber", 0xFBBF24, 0xA16207),
+        AccentPreset("Green", 0x4ADE80, 0x15803D),
+        AccentPreset("Cyan", 0x22D3EE, 0x0E7490),
+        AccentPreset("Blue", 0x60A5FA, 0x2563EB),
+        AccentPreset("Pink", 0xF472B6, 0xBE185D),
+    )
+
 /** [dark] is the variant actually shown: a dark-only zeron family stays
  * dark under a light system theme. */
 fun paletteColors(palette: String, dark: Boolean): AgendaColors = resolveTheme(palette, dark).colors
 
 private class ResolvedTheme(val colors: AgendaColors, val dark: Boolean)
 
-private fun resolveTheme(palette: String, dark: Boolean): ResolvedTheme {
+private fun resolveTheme(palette: String, dark: Boolean, accent: AccentPreset? = null): ResolvedTheme {
     val seed = ZeronFamilies.firstOrNull { it.id == palette }?.variant(dark)
-    return when {
-        seed != null -> ResolvedTheme(seed.toAgendaColors(), seed.dark)
-        palette == MundusPalette -> ResolvedTheme(mundusColors(dark), dark)
-        dark -> ResolvedTheme(DarkColors, true)
-        else -> ResolvedTheme(LightColors, false)
-    }
+    val resolved =
+        when {
+            seed != null -> ResolvedTheme(seed.toAgendaColors(), seed.dark)
+            palette == MundusPalette -> ResolvedTheme(mundusColors(dark), dark)
+            dark -> ResolvedTheme(DarkColors, true)
+            else -> ResolvedTheme(LightColors, false)
+        }
+    // accent_source=custom overrides the accent family on every palette
+    // (imago accent_source=custom), derived against the resolved dark flag.
+    if (accent == null) return resolved
+    return ResolvedTheme(
+        resolved.colors.withAccent(if (resolved.dark) accent.dark else accent.light, resolved.dark),
+        resolved.dark,
+    )
 }
 
 /** Mundus chrome is the shared Agenda palette; only the accent is the
@@ -279,9 +303,10 @@ private fun mundusColors(dark: Boolean): AgendaColors {
 fun AgendaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     palette: String = AgendaPalette,
+    accent: AccentPreset? = null,
     content: @Composable () -> Unit,
 ) {
-    val resolved = remember(palette, darkTheme) { resolveTheme(palette, darkTheme) }
+    val resolved = remember(palette, darkTheme, accent) { resolveTheme(palette, darkTheme, accent) }
     val c = resolved.colors
     val dark = resolved.dark
     val view = LocalView.current
