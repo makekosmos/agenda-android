@@ -511,28 +511,25 @@ class EngineAgendaRepository(
         if (relink) relinkProject(todo.id, stored.projectLink, projectId, now)
     }
 
-    /** Desktop `relink_project`: the new `project` link is upserted, then the
-     * previous one is deleted. The read takes the first project link, so a
-     * delete that fails leaves the task on its old project until a retry
-     * converges; the desktop's delete-first order would instead leave the task
-     * with no project at all. Ids come from the endpoints (`projectLinkJson`),
-     * so re-placing a task in the same project is one row. */
+    /** Desktop `relink_project`. A task that gets a project is placed by one
+     * `replace_object_link`: the engine removes the task's other `project`
+     * links in the same transaction, so a move leaves exactly one link. Ids
+     * come from the endpoints (`projectLinkJson`), so re-placing a task in the
+     * same project is one row. A task that loses its project has its previous
+     * link deleted. */
     private fun relinkProject(
         taskId: String,
         previous: JsonObject?,
         projectId: String?,
         now: String,
     ) {
-        var newId: String? = null
         if (projectId != null) {
             val link = json.parseToJsonElement(projectLinkJson(taskId, projectId, now))
-            call("upsert_object_link", buildJsonObject { put("object_link", link) })
-            newId = link.jsonObject["id"]?.jsonPrimitive?.content
+            call("replace_object_link", buildJsonObject { put("object_link", link) })
+            return
         }
-        val oldId = previous?.get("id")?.jsonPrimitive?.content
-        if (oldId != null && oldId != newId) {
-            call("delete_object_link", buildJsonObject { put("id", oldId) })
-        }
+        val oldId = previous?.get("id")?.jsonPrimitive?.content ?: return
+        call("delete_object_link", buildJsonObject { put("id", oldId) })
     }
 
     /** Desktop `save_with_next`: write the completed todo, then the spawned

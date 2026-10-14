@@ -3,6 +3,10 @@ package com.mundus.agenda
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,6 +43,15 @@ class WriteParityTest {
 
     private suspend fun task(id: String) =
         board(repository).task(id) ?: throw AssertionError("task $id missing from board")
+
+    /** The `project` object links whose source is this task. */
+    private fun projectLinks(taskId: String) =
+        repository.call("list_object_links", buildJsonObject {}).jsonArray
+            .map { it.jsonObject }
+            .filter {
+                it["sourceObjectId"]?.jsonPrimitive?.content == taskId &&
+                    it["linkType"]?.jsonPrimitive?.content == "project"
+            }
 
     @Test
     fun quickEntryParsesRussianDateWord() = runBlocking {
@@ -204,6 +217,18 @@ class WriteParityTest {
         assertFalse(t.isSomeday)
         assertEquals("dev-proj-home", t.projectId)
         assertTrue("dev-someday-1" in b.ids(SmartList.SOMEDAY))
+        // A move replaces the old project link: exactly one is left, to the new project.
+        val links = projectLinks("dev-someday-1")
+        assertEquals(1, links.size)
+        assertEquals("dev-proj-home", links.single()["targetObjectId"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun moveToNoProjectRemovesLink() = runBlocking {
+        repository.moveToProject(task("dev-week-3"), null)
+        val b = board(repository)
+        assertNull(b.task("dev-week-3")!!.projectId)
+        assertTrue(projectLinks("dev-week-3").isEmpty())
     }
 
     @Test
