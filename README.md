@@ -14,8 +14,10 @@ database; refresh is event-driven via the change-subscription callback.
 - `rust/` — crate `agenda-mobile` (cdylib + lib). Re-exports engine-mobile's
   UniFFI surface (`MobileEngine`, `ChangeListener`, sync ops) and adds thin
   exports over `agenda-core`: `parseQuickEntry`, `smartListIndices`,
-  `taskFromEngineObject`/`taskToEngineObject` (the `com.kosmos.task` object
-  shape agenda-gpui writes). Path deps on the cortex and agenda-gpui
+  `taskFromEngineObject`/`taskToEngineObject` (the `core.task` 0.1.0 object
+  shape agenda-gpui writes; the project is an object link, read from the
+  `list_object_links` payload the readers take, since objects carry no
+  links). Path deps on the cortex and agenda-gpui
   worktrees until their PRs merge, then they become git deps pinned to SHAs.
 - `core/` — JVM Kotlin module with the generated UniFFI bindings (under
   `build/generated/uniffi`, not committed) and `AgendaRepository`, the

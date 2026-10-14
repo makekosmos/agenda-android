@@ -2,11 +2,14 @@
 //! engine-mobile's UniFFI surface (`MobileEngine`, `ChangeListener`,
 //! `ChangeSubscription`, sync ops) and adds thin UniFFI wrappers over the
 //! agenda-core rules Android needs now: quick-entry date parsing, smart-list
-//! filtering, and the `com.kosmos.task` object mapping agenda-gpui writes.
+//! filtering, and the `core.task` object mapping agenda-gpui writes.
 //!
 //! The clock is a host concern: every date-aware export takes `today`
 //! (`YYYY-MM-DD`) and `utc_offset_seconds` from Kotlin, never reads `Local::now`.
 
+use std::collections::HashMap;
+
+use agenda_core::mapping::{Link, PROJECT_LINK};
 use agenda_core::{LocalDay, SmartList, Todo};
 use chrono::{FixedOffset, NaiveDate};
 use serde_json::{json, Value};
@@ -102,14 +105,69 @@ pub fn smart_list_indices(
         .collect())
 }
 
-/// Convert an Engine object (`get_object` / `list_objects_by_type` payload)
-/// into the agenda `Todo` JSON shape (agenda-core `mapping::read`).
+/// Project membership of every task, keyed by task id. The Engine never puts
+/// links on an object: a task's project is a `project` object link, listed by
+/// `list_object_links`. Desktop `project_links` groups that payload the same way.
+fn project_links_by_task(links_json: &str) -> Result<HashMap<String, Vec<Link>>, AgendaError> {
+    let links: Vec<Value> =
+        serde_json::from_str(links_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let mut by_task: HashMap<String, Vec<Link>> = HashMap::new();
+    for link in links
+        .iter()
+        .filter(|l| l["linkType"].as_str() == Some(PROJECT_LINK))
+    {
+        let (Some(id), Some(source), Some(target)) = (
+            link["id"].as_str(),
+            link["sourceObjectId"].as_str(),
+            link["targetObjectId"].as_str(),
+        ) else {
+            return Err(AgendaError::Mapping("link without id or endpoints".into()));
+        };
+        by_task.entry(source.to_owned()).or_default().push(Link {
+            id: id.to_owned(),
+            kind: PROJECT_LINK.to_owned(),
+            target: target.to_owned(),
+        });
+    }
+    Ok(by_task)
+}
+
+/// One `core.task` object read with its own links (agenda-core `mapping::read`).
+fn read_task(object: &Value, by_task: &HashMap<String, Vec<Link>>) -> Result<Todo, AgendaError> {
+    let links = object["id"]
+        .as_str()
+        .and_then(|id| by_task.get(id))
+        .map_or(&[][..], Vec::as_slice);
+    agenda_core::mapping::read(object, links).map_err(AgendaError::Mapping)
+}
+
+/// Convert an Engine object (`get_object` payload) into the agenda `Todo`
+/// JSON shape (agenda-core `mapping::read`). `links_json` is the
+/// `list_object_links` payload, which carries the task's project.
 #[uniffi::export]
-pub fn task_from_engine_object(object_json: String) -> Result<String, AgendaError> {
+pub fn task_from_engine_object(
+    object_json: String,
+    links_json: String,
+) -> Result<String, AgendaError> {
     let object: Value =
         serde_json::from_str(&object_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
-    let todo = agenda_core::mapping::read(&object).map_err(AgendaError::Mapping)?;
-    serde_json::to_string(&todo).map_err(|e| AgendaError::Mapping(e.to_string()))
+    let by_task = project_links_by_task(&links_json)?;
+    todo_to_json(&read_task(&object, &by_task)?)
+}
+
+/// The `project` object link that places a task in a project (desktop
+/// `relink_project`). The id comes from the endpoints, so the same placement
+/// written twice, or from two devices, is one row.
+#[uniffi::export]
+pub fn project_link_json(task_id: String, project_id: String, now: String) -> String {
+    json!({
+        "id": format!("lnk:{task_id}:{PROJECT_LINK}:{project_id}"),
+        "sourceObjectId": task_id,
+        "targetObjectId": project_id,
+        "linkType": PROJECT_LINK,
+        "createdAt": now,
+    })
+    .to_string()
 }
 
 /// Build the Engine object `upsert_object` expects from a `Todo` JSON
@@ -285,17 +343,18 @@ pub fn references_from_engine_object(object_json: String) -> Result<String, Agen
 
 /// Convert a `list_objects_by_type` payload (array of Engine objects) into
 /// an array of agenda `Todo` JSON — one FFI call for the whole board.
+/// `links_json` is the `list_object_links` payload (see `task_from_engine_object`).
 #[uniffi::export]
-pub fn tasks_from_engine_objects(objects_json: String) -> Result<String, AgendaError> {
+pub fn tasks_from_engine_objects(
+    objects_json: String,
+    links_json: String,
+) -> Result<String, AgendaError> {
     let objects: Vec<Value> =
         serde_json::from_str(&objects_json).map_err(|e| AgendaError::Invalid(e.to_string()))?;
+    let by_task = project_links_by_task(&links_json)?;
     let todos: Vec<String> = objects
         .iter()
-        .map(|o| {
-            agenda_core::mapping::read(o)
-                .and_then(|t| serde_json::to_string(&t).map_err(|e| e.to_string()))
-                .map_err(AgendaError::Mapping)
-        })
+        .map(|o| read_task(o, &by_task).and_then(|t| todo_to_json(&t)))
         .collect::<Result<_, _>>()?;
     Ok(json!(todos).to_string())
 }

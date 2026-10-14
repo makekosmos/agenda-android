@@ -48,8 +48,9 @@ class ConflictTest {
     private fun desktopSideRename(id: String, newTitle: String) {
         val current =
             repository.call("get_object", buildJsonObject { put("id", id) })
+        val links = repository.call("list_object_links", buildJsonObject {})
         val todo =
-            json.parseToJsonElement(taskFromEngineObject(current.toString()))
+            json.parseToJsonElement(taskFromEngineObject(current.toString(), links.toString()))
                 .jsonObject
                 .toMutableMap()
         todo["title"] = kotlinx.serialization.json.JsonPrimitive(newTitle)

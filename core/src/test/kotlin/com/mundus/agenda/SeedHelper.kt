@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -55,6 +56,30 @@ internal fun seededRepository(
     )
     for (obj in golden["objects"]!!.jsonArray) {
         repository.call("upsert_object", buildJsonObject { put("object", obj) })
+    }
+    // The golden objects carry no links, but a task's project is a `project`
+    // object link (desktop `relink_project`). Seed those from the golden's
+    // todos, after the objects they point at exist.
+    val seededAt = golden["today"]!!.jsonPrimitive.content
+    for (todo in golden["todos"]!!.jsonArray) {
+        val task = todo.jsonObject
+        val projectId = task["project_id"]?.jsonPrimitive?.contentOrNull ?: continue
+        val taskId = task["id"]!!.jsonPrimitive.content
+        repository.call(
+            "upsert_object_link",
+            buildJsonObject {
+                put(
+                    "object_link",
+                    buildJsonObject {
+                        put("id", "lnk:$taskId:project:$projectId")
+                        put("sourceObjectId", taskId)
+                        put("targetObjectId", projectId)
+                        put("linkType", "project")
+                        put("createdAt", seededAt)
+                    },
+                )
+            },
+        )
     }
     return repository to dataDir
 }

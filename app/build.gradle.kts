@@ -104,8 +104,8 @@ android {
         targetSdk = 35
         // -PagendaVersionCode / -PagendaVersionName override for scratch
         // builds (e.g. an older "installed" build in the updater e2e).
-        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "19").toInt()
-        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.18"
+        versionCode = ((findProperty("agendaVersionCode") as String?) ?: "20").toInt()
+        versionName = (findProperty("agendaVersionName") as String?) ?: "0.1.19"
         // Self-update feed BASE (manifest.json first, latest-android.yml
         // fallback — cortex feed.rs:15,63-93). Override with
         // -PagendaUpdateFeedBase=… for tests.
@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("dev.chrisbanes.haze:haze:1.6.10")
     implementation("dev.chrisbanes.haze:haze-materials:1.6.10")
     testImplementation(libs.junit)

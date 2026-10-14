@@ -40,7 +40,7 @@ billable/price, significance («значимость» 1–10),
 sort_order. `Project` (status 0/1/2, deadline, area_id, sort_order) and `Tag`
 (title + color) in the same file. Engine object mapping
 `crates/agenda-core/src/mapping.rs` (`read`/`write_at`, type
-`com.kosmos.task` v1.1.0; project mapping `src/store/projects.rs`).
+`core.task` v0.1.0 since KOS-397; project is an object link; project mapping `src/store/projects.rs`).
 
 ## Task operations
 
