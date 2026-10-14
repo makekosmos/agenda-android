@@ -72,8 +72,11 @@ cat "$DESK/engine.lock.json"
 echo "== running SyncE2eTest =="
 # cleanTest: the env var is not a Gradle input, so a green run would cache
 # :core:test UP-TO-DATE and the next invocation would skip the test entirely.
+# --no-build-cache: the build cache can still restore a previous :core:test
+# result (FROM-CACHE) without running it, which would report a pass that never
+# ran against the engine. gradle.properties enables the cache, so turn it off here.
 SYNC_E2E_DESKTOP_LOCK="$DESK/engine.lock.json" \
-    ./gradlew :core:cleanTest :core:test --tests com.mundus.agenda.SyncE2eTest
+    ./gradlew --no-build-cache :core:cleanTest :core:test --tests com.mundus.agenda.SyncE2eTest
 STATUS=$?
 
 echo "== engine stdout tail =="
