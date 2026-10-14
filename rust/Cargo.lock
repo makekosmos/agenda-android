@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "ark-core"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/cortex?rev=823546f6f4fd93be5f302740ec479547e947da93#823546f6f4fd93be5f302740ec479547e947da93"
+source = "git+https://github.com/makekosmos/cortex?rev=cb5ec576#cb5ec57602025e0d956b9f1a41e991122d5e05e3"
 dependencies = [
  "async-trait",
  "chrono",
@@ -804,7 +804,7 @@ checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 [[package]]
 name = "engine-mobile"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/cortex?rev=823546f6f4fd93be5f302740ec479547e947da93#823546f6f4fd93be5f302740ec479547e947da93"
+source = "git+https://github.com/makekosmos/cortex?rev=cb5ec576#cb5ec57602025e0d956b9f1a41e991122d5e05e3"
 dependencies = [
  "ark-core",
  "serde_json",
