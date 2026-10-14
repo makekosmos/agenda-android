@@ -46,12 +46,12 @@ required-features = ["cli"]
 
 [dependencies]
 # Git deps pinned by rev: agenda-core from claude/kos-397-agenda-core-task
-# (agenda-gpui, ed21c0f), engine-mobile from cortex claude/kos-397-core-task-android
-# (37978eae, has the replace_object_link op and the Windows temp-dir hardening). ark-core is pulled in
+# (agenda-gpui, ed21c0f), engine-mobile from cortex main
+# (main 2274842f, has the replace_object_link op and the Windows temp-dir hardening). ark-core is pulled in
 # through the same cortex rev. To build
 # against local checkouts instead, copy rust/.cargo/config.example.toml to
 # rust/.cargo/config.toml (gitignored) and point the [patch] paths at them.
-engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "37978eae" }
+engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "2274842f62a5d964a7c9fa4d24a04a44442251f0" }
 agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "ed21c0f3a70d31428033bf0a91891a8cd0835846" }
 frizbee = "=0.13.0"
 uniffi = "0.29"

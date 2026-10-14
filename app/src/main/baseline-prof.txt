@@ -1,0 +1,35 @@
+# Hand-written startup baseline profile (KOS-397). HSP = hot, startup, post-startup.
+# App
+HSPLcom/mundus/agenda/**->**(**)**
+Lcom/mundus/agenda/**;
+# UniFFI bindings (engine-mobile, agenda-mobile) and JNA
+HSPLcom/mundus/engine/**->**(**)**
+Lcom/mundus/engine/**;
+HSPLuniffi/**->**(**)**
+Luniffi/**;
+HSPLcom/sun/jna/**->**(**)**
+Lcom/sun/jna/**;
+# Compose runtime / ui / foundation / material3 / animation
+HSPLandroidx/compose/runtime/**->**(**)**
+Landroidx/compose/runtime/**;
+HSPLandroidx/compose/ui/**->**(**)**
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/foundation/**->**(**)**
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/material3/**->**(**)**
+Landroidx/compose/material3/**;
+HSPLandroidx/compose/animation/**->**(**)**
+Landroidx/compose/animation/**;
+# Activity / lifecycle glue used on first frame
+HSPLandroidx/activity/**->**(**)**
+Landroidx/activity/**;
+HSPLandroidx/lifecycle/**->**(**)**
+Landroidx/lifecycle/**;
+# Haze
+HSPLdev/chrisbanes/haze/**->**(**)**
+Ldev/chrisbanes/haze/**;
+# Coroutines / serialization on the startup path
+HSPLkotlinx/coroutines/**->**(**)**
+Lkotlinx/coroutines/**;
+HSPLkotlinx/serialization/json/**->**(**)**
+Lkotlinx/serialization/json/**;
