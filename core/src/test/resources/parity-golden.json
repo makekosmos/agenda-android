@@ -1004,6 +1004,7 @@
       "id": "dev-proj-release",
       "propsJson": {
         "color": null,
+        "dueAt": null,
         "extensions": {
           "areaId": "dev-area-work",
           "sortOrder": 0
@@ -1030,6 +1031,7 @@
       "id": "dev-proj-home",
       "propsJson": {
         "color": null,
+        "dueAt": null,
         "extensions": {
           "areaId": "dev-area-life",
           "sortOrder": 1
@@ -1056,6 +1058,7 @@
       "id": "dev-proj-someday",
       "propsJson": {
         "color": null,
+        "dueAt": null,
         "extensions": {
           "areaId": "dev-area-life",
           "sortOrder": 2
@@ -1082,6 +1085,7 @@
       "id": "dev-proj-archive",
       "propsJson": {
         "color": null,
+        "dueAt": null,
         "extensions": {
           "areaId": "dev-area-work",
           "sortOrder": 3

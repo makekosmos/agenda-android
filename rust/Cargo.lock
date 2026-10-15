@@ -40,7 +40,7 @@ dependencies = [
 [[package]]
 name = "agenda-core"
 version = "0.1.0"
-source = "git+https://github.com/makekosmos/agenda-gpui?rev=867c2de1b8f67fc2ce5af50b378b76a3f82a500e#867c2de1b8f67fc2ce5af50b378b76a3f82a500e"
+source = "git+https://github.com/makekosmos/agenda-gpui?rev=c612a8fbd10ca9e115a00edbaa991ce02b545399#c612a8fbd10ca9e115a00edbaa991ce02b545399"
 dependencies = [
  "chrono",
  "serde",
