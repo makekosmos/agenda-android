@@ -4,7 +4,6 @@ package com.mundus.agenda
 enum class SortKey(val label: String) {
     DEFAULT("По умолчанию"),
     DATE("По дате"),
-    PRIORITY("По приоритету"),
     TITLE("По названию"),
 }
 
@@ -37,7 +36,6 @@ fun sortTasks(board: Board, tasks: List<Task>, key: SortKey): List<Task> =
     when (key) {
         SortKey.DEFAULT -> tasks
         SortKey.DATE -> tasks.sortedWith(compareBy({ board.dateView(it).dateKey ?: "9999" }, { it.sortOrder }))
-        SortKey.PRIORITY -> tasks.sortedWith(compareByDescending<Task> { it.priority }.thenBy { it.sortOrder })
         SortKey.TITLE -> tasks.sortedWith(compareBy({ it.title.lowercase() }, { it.sortOrder }))
     }
 

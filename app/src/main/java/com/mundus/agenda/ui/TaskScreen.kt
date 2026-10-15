@@ -67,7 +67,7 @@ fun TaskScreen(
 
     LaunchedEffect(repository) { nextMonday = repository?.nextMondayKey() }
 
-    val dateKey = task.deadline ?: task.scheduledDate
+    val dateKey = task.scheduledDate
     LaunchedEffect(task.id, dateKey, task.isToday, task.isSomeday) {
         if (repository == null) return@LaunchedEffect
         dateLabel =

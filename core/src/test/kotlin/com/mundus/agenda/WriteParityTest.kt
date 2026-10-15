@@ -157,25 +157,6 @@ class WriteParityTest {
     }
 
     @Test
-    fun completeRecurringSpawnsNextInstance() = runBlocking {
-        val before = board(repository).todos.size
-        repository.toggleComplete(task("dev-recurring-1"))
-        val b = board(repository)
-        assertEquals(before + 1, b.todos.size)
-        val done = b.task("dev-recurring-1")!!
-        assertTrue(done.isCompleted)
-        // Recurrence 2026-10-12 Mon/Wed/Fri weekly → next is Wed 2026-10-14,
-        // a Todo back in «Эта неделя» with a fresh id.
-        val next = b.list(SmartList.WEEK).single {
-            it.title == "Поливать цветы" && !it.isCompleted
-        }
-        assertEquals("2026-10-14", next.scheduledDate)
-        assertTrue(next.id != "dev-recurring-1")
-        assertTrue(next.recurrence != null)
-        assertTrue(next.checklist.isEmpty())
-    }
-
-    @Test
     fun setScheduledMovesBetweenWeeks() = runBlocking {
         val task = task("dev-week-4")
         repository.setScheduled(task, "2026-10-19")

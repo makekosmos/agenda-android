@@ -6,9 +6,9 @@ import org.junit.Test
 class ListOptionsTest {
     private val tasks =
         listOf(
-            Task("a", "Бета", priority = 1, projectId = "p2", sortOrder = 0),
-            Task("b", "альфа", priority = 3, isCompleted = true, sortOrder = 1),
-            Task("c", "Гамма", priority = 3, projectId = "p1", sortOrder = 2),
+            Task("a", "Бета", projectId = "p2", sortOrder = 0),
+            Task("b", "альфа", isCompleted = true, sortOrder = 1),
+            Task("c", "Гамма", projectId = "p1", sortOrder = 2),
             Task("d", "Дельта альфа", projectId = "gone", sortOrder = 3),
             Task("e", "Альфа старая", isTrashed = true, sortOrder = 4),
         )
@@ -32,7 +32,6 @@ class ListOptionsTest {
     fun sortsLikeDesktop() {
         assertEquals("abcd", ids(sortTasks(board, live, SortKey.DEFAULT)))
         assertEquals("badc", ids(sortTasks(board, live, SortKey.DATE)))
-        assertEquals("bcad", ids(sortTasks(board, live, SortKey.PRIORITY)))
         assertEquals("bacd", ids(sortTasks(board, live, SortKey.TITLE)))
     }
 
