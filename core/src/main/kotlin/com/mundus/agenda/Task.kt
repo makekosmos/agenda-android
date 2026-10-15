@@ -13,9 +13,7 @@ data class Task(
     val id: String,
     val title: String,
     val notes: String? = null,
-    val priority: Int = 0,
     @SerialName("scheduled_date") val scheduledDate: String? = null,
-    val deadline: String? = null,
     @SerialName("reminder_date") val reminderDate: String? = null,
     @SerialName("is_today") val isToday: Boolean = false,
     @SerialName("is_evening") val isEvening: Boolean = false,
@@ -32,10 +30,8 @@ data class Task(
     @SerialName("area_id") val areaId: String? = null,
     @SerialName("tag_ids") val tagIds: List<String> = emptyList(),
     val checklist: List<ChecklistItem> = emptyList(),
-    val recurrence: RecurrenceRule? = null,
     val billable: Boolean = false,
     val price: Double? = null,
-    val significance: Int? = null,
     @SerialName("sort_order") val sortOrder: Int = 0,
 )
 
@@ -43,19 +39,10 @@ data class Task(
 data class ChecklistItem(@SerialName("is_completed") val isCompleted: Boolean = false)
 
 @Serializable
-data class RecurrenceRule(
-    val frequency: Int = 0,
-    val interval: Int = 1,
-    @SerialName("recurrence_type") val recurrenceType: Int = 0,
-    @SerialName("days_of_week") val daysOfWeek: List<Int> = emptyList(),
-)
-
-@Serializable
 data class Project(
     val id: String,
     val title: String,
     val status: Int = 0,
-    val deadline: String? = null,
     val sortOrder: Int = 0,
     val areaId: String? = null,
 )
@@ -70,7 +57,6 @@ data class TaskDateView(
     val label: String = "",
     val conflict: Boolean = false,
     val overdue: Boolean = false,
-    val deadlineLabel: String? = null,
     val reminderLabel: String? = null,
     val completedLabel: String? = null,
     val createdLabel: String? = null,

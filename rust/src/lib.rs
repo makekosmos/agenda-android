@@ -277,7 +277,6 @@ fn date_view_json(todo: &Todo, day: &LocalDay) -> Value {
         "label": label,
         "conflict": conflict,
         "overdue": agenda_core::is_overdue(todo, day),
-        "deadlineLabel": instant_label(&todo.deadline, day),
         "reminderLabel": instant_label(&todo.reminder_date, day),
         "completedLabel": instant_label(&todo.completed_at, day),
         "createdLabel": instant_label(&Some(todo.created_at.clone()), day),
@@ -467,8 +466,7 @@ pub fn quick_entry_new_task(
     todo_to_json(&t)
 }
 
-/// Checkbox toggle, done arm (desktop `complete_todo`): Done fields only —
-/// recurrence spawning is `task_next_recurrence`, mirroring save_completion.
+/// Checkbox toggle, done arm (desktop `complete_todo`): Done fields only.
 #[uniffi::export]
 pub fn task_complete(todo_json: String, now: String) -> Result<String, AgendaError> {
     let mut t = parse_todo(&todo_json)?;
@@ -489,25 +487,6 @@ pub fn task_set_status(
     todo_to_json(&t)
 }
 
-/// The next instance `complete_todo` writes beside the completed task —
-/// None when the recurrence rule yields no date.
-#[uniffi::export]
-pub fn task_next_recurrence(
-    before_todo_json: String,
-    completed_todo_json: String,
-    new_id: String,
-    sort_order: i32,
-    now: String,
-    today: String,
-    utc_offset_seconds: i32,
-) -> Result<Option<String>, AgendaError> {
-    let day = local_day(&today, utc_offset_seconds)?;
-    let before = parse_todo(&before_todo_json)?;
-    let completed = parse_todo(&completed_todo_json)?;
-    agenda_core::next_recurrence_todo(&before, &completed, &day, new_id, sort_order, &now)
-        .map(|t| todo_to_json(&t))
-        .transpose()
-}
 
 /// «На неделю» (desktop `move_to_week`).
 #[uniffi::export]

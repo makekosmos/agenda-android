@@ -283,26 +283,13 @@ class EngineAgendaRepository(
         // Both arms are no-ops on trashed rows (desktop complete_todo /
         // set_todo_status guards).
         if (task.isTrashed) return@withContext
-        val (today, offset) = localDay()
         val now = Instant.now().toString()
         val beforeJson = json.encodeToString(task)
         if (taskStatusName(beforeJson) == "done") {
             save(task, json.decodeFromString(taskSetStatus(beforeJson, "todo", now)))
             return@withContext
         }
-        val completed = json.decodeFromString<Task>(taskComplete(beforeJson, now))
-        val next =
-            taskNextRecurrence(
-                    beforeJson,
-                    json.encodeToString(completed),
-                    UUID.randomUUID().toString(),
-                    todoJsons().size,
-                    now,
-                    today,
-                    offset,
-                )
-                ?.let { json.decodeFromString<Task>(it) }
-        saveWithNext(task, completed, next)
+        save(task, json.decodeFromString(taskComplete(beforeJson, now)))
     }
 
     override suspend fun setStatus(task: Task, status: String): Unit =
@@ -530,25 +517,6 @@ class EngineAgendaRepository(
         }
         val oldId = previous?.get("id")?.jsonPrimitive?.content ?: return
         call("delete_object_link", buildJsonObject { put("id", oldId) })
-    }
-
-    /** Desktop `save_with_next`: write the completed todo, then the spawned
-     * recurrence; on a lost acknowledgement re-read before deciding — a
-     * stored-but-unacked next still counts as saved, a missing one rolls
-     * the completion back. */
-    private fun saveWithNext(before: Task, completed: Task, next: Task?) {
-        save(before, completed)
-        if (next == null) return
-        try {
-            save(null, next)
-        } catch (e: Exception) {
-            val stored = storedTask(next.id).todo
-            if (stored == next) return
-            if (stored == null) {
-                runCatching { save(completed, before) }
-            }
-            throw e
-        }
     }
 
     override suspend fun quickEntryPreview(

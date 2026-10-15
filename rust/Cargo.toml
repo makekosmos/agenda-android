@@ -45,14 +45,14 @@ path = "src/bin/uniffi-bindgen.rs"
 required-features = ["cli"]
 
 [dependencies]
-# Git deps pinned by rev: agenda-core from claude/kos-397-agenda-core-task
-# (agenda-gpui, ed21c0f), engine-mobile from cortex main
+# Git deps pinned by rev: agenda-core from main
+# (agenda-gpui, ec4139c), engine-mobile from cortex main
 # (main 2274842f, has the replace_object_link op and the Windows temp-dir hardening). ark-core is pulled in
 # through the same cortex rev. To build
 # against local checkouts instead, copy rust/.cargo/config.example.toml to
 # rust/.cargo/config.toml (gitignored) and point the [patch] paths at them.
 engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "2274842f62a5d964a7c9fa4d24a04a44442251f0" }
-agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "ed21c0f3a70d31428033bf0a91891a8cd0835846" }
+agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "ec4139c9b540843568afd7bf2ecb3cd07174f5ec" }
 frizbee = "=0.13.0"
 uniffi = "0.29"
 serde_json = "1"

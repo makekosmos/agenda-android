@@ -19,20 +19,18 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
         listOf(
             task("dev-inbox-1", "Перечитать бриф по лендингу")
                 .copy(notes = "Обратить внимание на секцию про ценообразование."),
-            task("dev-inbox-2", "Записаться к стоматологу").copy(priority = 1),
+            task("dev-inbox-2", "Записаться к стоматологу"),
             task("dev-inbox-3", "Идея: виджет погоды в сайдбаре"),
             task("dev-today-1", "Созвон по дизайну")
                 .copy(
                     status = "todo",
                     isToday = true,
-                    priority = 3,
                     tagIds = listOf("dev-tag-urgent", "dev-tag-focus"),
                 ),
             task("dev-today-2", "Отправить инвойс клиенту")
                 .copy(
                     status = "todo",
                     scheduledDate = day,
-                    deadline = day,
                     billable = true,
                     price = 15000.0,
                     projectId = "dev-proj-release",
@@ -43,7 +41,6 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                 .copy(
                     status = "todo",
                     scheduledDate = "2026-10-11",
-                    priority = 3,
                     tagIds = listOf("dev-tag-urgent"),
                 ),
             task("dev-checklist-1", "Подготовить демо для команды")
@@ -65,12 +62,10 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                     scheduledDate = "2026-10-14",
                     projectId = "dev-proj-release",
                     headingId = "dev-head-polish",
-                    significance = 7,
                 ),
             task("dev-week-3", "Оплатить интернет")
                 .copy(
                     status = "todo",
-                    deadline = "2026-10-15",
                     reminderDate = "2026-10-15T09:00:00",
                     projectId = "dev-proj-home",
                 ),
@@ -86,10 +81,9 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                     status = "todo",
                     scheduledDate = day,
                     areaId = "dev-area-life",
-                    recurrence = RecurrenceRule(frequency = 1, interval = 1, daysOfWeek = listOf(1, 3, 5)),
                 ),
             task("dev-next-week-1", "Запланировать отпуск")
-                .copy(status = "todo", scheduledDate = "2026-10-20", priority = 2),
+                .copy(status = "todo", scheduledDate = "2026-10-20"),
             task("dev-someday-1", "Собрать домашний кинотеатр")
                 .copy(status = "deferred", isSomeday = true, projectId = "dev-proj-someday"),
             task("dev-done-today", "Утренняя планёрка")
@@ -114,7 +108,7 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
 
     private val projects =
         listOf(
-            Project("dev-proj-release", "Релиз Agenda 1.0", status = 0, deadline = "2026-10-22", sortOrder = 0, areaId = "dev-area-work"),
+            Project("dev-proj-release", "Релиз Agenda 1.0", status = 0, sortOrder = 0, areaId = "dev-area-work"),
             Project("dev-proj-home", "Дом и быт", status = 0, sortOrder = 1, areaId = "dev-area-life"),
             Project("dev-proj-someday", "Путешествие в Японию", status = 1, sortOrder = 2, areaId = "dev-area-life"),
             Project("dev-proj-archive", "Старый сайт", status = 2, sortOrder = 3, areaId = "dev-area-work"),
@@ -164,7 +158,7 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                 ).mapValues { (_, ids) -> ids.map { id -> tasks.first { it.id == id } } },
             dateViews =
                 tasks.associate { t ->
-                    val key = t.deadline ?: t.scheduledDate
+                    val key = t.scheduledDate
                     t.id to
                         TaskDateView(
                             dateKey = key,
@@ -180,12 +174,6 @@ class FakeRepository : BoardRepository, com.mundus.agenda.SyncApi {
                             overdue =
                                 key != null && key < day && !t.isCompleted && !t.isCancelled &&
                                     t.status != "inbox" && !t.isSomeday,
-                            deadlineLabel =
-                                t.deadline?.let {
-                                    java.time.LocalDate.parse(it.take(10)).let { d ->
-                                        "${d.dayOfMonth} окт"
-                                    }
-                                },
                             reminderLabel =
                                 t.reminderDate?.take(16)?.replace('T', ' '),
                             completedLabel =

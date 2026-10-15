@@ -83,8 +83,7 @@ class SeedParityTest {
                 for (todo in golden["todos"]!!.jsonArray) {
                     val id = todo.jsonObject["id"]!!.jsonPrimitive.content
                     val wantsDate =
-                        todo.jsonObject["scheduled_date"]?.jsonPrimitive?.content != null ||
-                            todo.jsonObject["deadline"]?.jsonPrimitive?.content != null
+                        todo.jsonObject["scheduled_date"]?.jsonPrimitive?.content != null
                     if (wantsDate) {
                         assertTrue("no dateView for $id", board.dateViews.containsKey(id))
                     }

@@ -48,8 +48,7 @@ interface BoardRepository : AutoCloseable {
     // since the board was rendered is rejected as a WriteConflict.
 
     /** Checkbox toggle (desktop `CompleteTodo`): done → Todo via
-     * `set_todo_status`, otherwise `complete_todo` incl. the recurrence
-     * spawn. No-op on trashed rows. */
+     * `set_todo_status`, otherwise `complete_todo`. No-op on trashed rows. */
     suspend fun toggleComplete(task: Task)
 
     /** Status transition (desktop `set_todo_status`, non-Done arm only). */
