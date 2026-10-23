@@ -5,5 +5,5 @@
 [patch."https://github.com/makekosmos/cortex"]
 engine-mobile = { path = "/path/to/cortex/runtime/crates/engine-mobile" }
 
-[patch."https://github.com/makekosmos/agenda-gpui"]
+[patch."https://github.com/makekosmos/agenda-unified"]
 agenda-core = { path = "/path/to/agenda-gpui/crates/agenda-core" }
