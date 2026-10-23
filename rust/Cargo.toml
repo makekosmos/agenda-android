@@ -52,7 +52,7 @@ required-features = ["cli"]
 # against local checkouts instead, copy rust/.cargo/config.example.toml to
 # rust/.cargo/config.toml (gitignored) and point the [patch] paths at them.
 engine-mobile = { git = "https://github.com/makekosmos/cortex", rev = "2274842f62a5d964a7c9fa4d24a04a44442251f0" }
-agenda-core = { git = "https://github.com/makekosmos/agenda-gpui", rev = "ec4139c9b540843568afd7bf2ecb3cd07174f5ec" }
+agenda-core = { git = "https://github.com/makekosmos/agenda-unified", rev = "ec4139c9b540843568afd7bf2ecb3cd07174f5ec" }
 frizbee = "=0.13.0"
 uniffi = "0.29"
 serde_json = "1"

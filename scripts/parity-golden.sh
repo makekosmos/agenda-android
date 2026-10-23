@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates core/src/test/resources/parity-golden.json from desktop code:
-# `seed-parity` lives in agenda-core (makekosmos/agenda-gpui, $AGENDA_GPUI_DIR) and
+# `seed-parity` lives in agenda-core (makekosmos/agenda-unified, $AGENDA_GPUI_DIR) and
 # prints the seed dataset as engine objects plus agenda-core's expected
 # smart-list/project/tag contents for a fixed LocalDay (Monday UTC+3).
 set -euo pipefail
